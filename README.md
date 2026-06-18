@@ -1,6 +1,7 @@
 # SystemOS
 
 > A privacy-first, offline-first personal growth operating system inspired by Solo Leveling.
+![Uploading image.png…]()
 
 ---
 
