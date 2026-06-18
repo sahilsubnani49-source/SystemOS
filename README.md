@@ -1,0 +1,446 @@
+# SystemOS
+
+> A privacy-first, offline-first personal growth operating system inspired by Solo Leveling.
+
+---
+
+# Overview
+
+SystemOS transforms real-world actions into RPG mechanics.
+
+Users progress through life by completing quests, gaining experience, unlocking skills, earning titles, and defeating increasingly difficult challenges.
+
+Unlike traditional productivity applications, SystemOS is designed as an engine for long-term human progression.
+
+The system prioritizes:
+
+* Privacy
+* Local ownership of data
+* Modularity
+* Offline capability
+* AI-assisted progression
+* Gamification
+
+SystemOS is inspired by:
+
+* Solo Leveling
+* Skyrim
+* Persona
+* Diablo
+* Elden Ring
+
+---
+
+# Philosophy
+
+SystemOS is based on four principles.
+
+## Local First
+
+The user's device is the source of truth.
+
+All persistent data belongs to the user.
+
+---
+
+## Stateless Backend
+
+The backend exists only to generate responses.
+
+It does not maintain user accounts or store historical data.
+
+---
+
+## Engine-Centric Design
+
+Business logic belongs inside the SystemOS Engine.
+
+The UI only displays state.
+
+---
+
+## Modular Architecture
+
+Every subsystem should be independently extensible.
+
+New modules should be addable without modifying the core engine.
+
+---
+
+# High-Level Architecture
+
+```text
+User
+ ↓
+
+Presentation Layer
+
+ ↓
+
+Application Layer
+
+ ↓
+
+SystemOS Engine
+
+ ↓
+
+Repositories
+
+ ↓
+
+Drift ORM
+
+ ↓
+
+SQLite Database
+```
+
+---
+
+# Main Systems
+
+SystemOS consists of multiple independent systems.
+
+## Core Engine
+
+Responsible for:
+
+* Experience calculations
+* Level progression
+* Rewards
+* Achievements
+* Titles
+* Skill trees
+* Quest state transitions
+
+---
+
+## Quest System
+
+Generates and manages:
+
+* Daily quests
+* Weekly quests
+* Rank-up trials
+* Urgent quests
+
+---
+
+## Player System
+
+Represents the player's stats and progression.
+
+Base attributes:
+
+* Strength
+* Agility
+* Stamina
+* Intelligence
+* Perception
+* Discipline
+* Creativity
+* Mindfulness
+
+---
+
+## Inventory System
+
+Stores:
+
+* Gold
+* Consumables
+* Skill scrolls
+* Cosmetic items
+* Titles
+
+---
+
+## Skill Tree System
+
+Controls character specialization and progression.
+
+---
+
+## Achievement System
+
+Tracks milestones and rewards consistency.
+
+---
+
+## Shadow Army System
+
+Represents habits as evolving soldiers.
+
+Examples:
+
+* Running
+* Reading
+* Coding
+* Meditation
+
+---
+
+## Dungeon System
+
+Groups related quests into larger objectives.
+
+Examples:
+
+* Fitness Dungeon
+* Coding Dungeon
+* Knowledge Dungeon
+
+---
+
+## Boss Raid System
+
+Provides weekly and monthly challenges.
+
+---
+
+## AI System
+
+AI components include:
+
+### Quest Master
+
+Generates daily quests.
+
+### Architect
+
+Balances difficulty.
+
+### Shadow Monarch
+
+Creates long-term progression plans.
+
+### Beru
+
+Acts as a motivational companion.
+
+### Sung Jin-Woo
+
+Provides narrative flavor.
+
+---
+
+## Analytics System
+
+Tracks:
+
+* Streaks
+* Heatmaps
+* Completion rates
+* Burnout patterns
+* Peak productivity periods
+
+---
+
+## Notification System
+
+Provides immersive system messages.
+
+Examples:
+
+```text
+[Daily Quest has arrived.]
+
+[Level Increased.]
+
+[Penalty countdown initiated.]
+
+[New title acquired.]
+```
+
+---
+
+## Memory System
+
+Maintains local long-term memory.
+
+Stores:
+
+* Goals
+* Journals
+* Victories
+* Failures
+
+Uses local vector databases for semantic retrieval.
+
+---
+
+# Supported Platforms
+
+Primary platforms:
+
+* Android
+* iOS
+
+Future platforms:
+
+* Windows
+* macOS
+* Linux
+* Web Dashboard
+
+---
+
+# Technology Stack
+
+Frontend:
+
+* Flutter
+* Riverpod
+* Drift ORM
+* SQLite
+
+Backend:
+
+* FastAPI
+* Pydantic
+
+AI Providers:
+
+* Gemini
+* OpenAI
+* Claude
+* DeepSeek
+* Ollama
+
+Animations:
+
+* Rive
+* Lottie
+
+Notifications:
+
+* WorkManager
+* flutter_local_notifications
+
+---
+
+# Repository Structure
+
+```text
+docs/
+src/
+backend/
+scripts/
+tests/
+assets/
+```
+
+Documentation is split into multiple files to improve maintainability and allow AI coding agents to understand the system more effectively.
+
+---
+
+# Documentation Index
+
+## Product
+
+* PRODUCT_VISION.md
+
+---
+
+## Architecture
+
+* ARCHITECTURE.md
+* TECH_STACK.md
+* PROJECT_STRUCTURE.md
+
+---
+
+## Persistence
+
+* DATABASE.md
+* DOMAIN_MODELS.md
+* EVENT_SYSTEM.md
+
+---
+
+## Core Systems
+
+* GAME_ENGINE.md
+* PLAYER_SYSTEM.md
+* QUEST_SYSTEM.md
+* SKILL_TREE_SYSTEM.md
+* INVENTORY_SYSTEM.md
+* TITLE_SYSTEM.md
+* ACHIEVEMENT_SYSTEM.md
+
+---
+
+## Advanced Systems
+
+* SHADOW_ARMY_SYSTEM.md
+* DUNGEON_SYSTEM.md
+* BOSS_RAID_SYSTEM.md
+
+---
+
+## AI
+
+* AI_SYSTEM.md
+* AI_PROMPTS.md
+* MEMORY_SYSTEM.md
+
+---
+
+## Infrastructure
+
+* API_SPECIFICATION.md
+* SECURITY.md
+* BACKUP_AND_SYNC.md
+
+---
+
+## Platform Systems
+
+* NOTIFICATION_SYSTEM.md
+* ANALYTICS_SYSTEM.md
+* VOICE_SYSTEM.md
+* WEARABLES_SYSTEM.md
+* MULTIPLAYER_SYSTEM.md
+
+---
+
+## Planning
+
+* ROADMAP.md
+
+---
+
+## Architecture Decision Records
+
+Located under:
+
+```text
+docs/ADR/
+```
+
+These documents explain major architectural decisions and the rationale behind them.
+
+---
+
+# Guiding Principle
+
+The UI is replaceable.
+
+The backend is replaceable.
+
+The database is replaceable.
+
+The AI provider is replaceable.
+
+The engine is permanent.
+
+Every system should be designed around protecting and extending the engine.
+
+---
+
+# Ultimate Objective
+
+SystemOS exists to help users become stronger in the real world through consistent action while maintaining complete ownership of their data.
+
+

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SystemOS - Core Engine Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for RPG Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="system-overlay"></div>
+    
+    <header class="app-header">
+        <div class="logo-area">
+            <span class="logo-glow">SYSTEM<b>OS</b></span>
+            <span class="system-status"><span class="pulse-indicator"></span>ONLINE</span>
+        </div>
+        <div class="user-badge" id="player-badge">
+            <i class="fa-solid fa-shield-halved badge-icon"></i>
+            <span id="player-rank">RANK: E-RANK</span>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <!-- LEFT COLUMN: Character Card & Profile Settings -->
+        <section class="left-column">
+            <div class="glass-card character-card">
+                <div class="card-glow"></div>
+                <div class="character-title">PLAYER PROGRESSION</div>
+                <div class="character-name" id="player-name">Sung Jin-Woo</div>
+                
+                <div class="level-indicator">
+                    <span class="lvl-label">LEVEL</span>
+                    <span class="lvl-val" id="player-lvl">1</span>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-header">
+                        <span>EXP PROGRESS</span>
+                        <span id="player-exp-ratio">75 / 100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="player-exp-bar" style="width: 75%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card context-card">
+                <div class="card-glow"></div>
+                <h3 class="section-title"><i class="fa-solid fa-brain icon-color"></i> User Circumstance (Context)</h3>
+                <p class="description-text">Update your real-life context below to watch the AI adapt generated rewards dynamically.</p>
+                <textarea id="bio-input" rows="4" placeholder="Describe your daily routine, relationship status, active hobbies, or professional focus..."></textarea>
+                
+                <div class="preference-row">
+                    <label for="model-preference">AI Model Channel:</label>
+                    <select id="model-preference">
+                        <option value="local">Offline Local (Ollama / Llama3)</option>
+                        <option value="cloud">Cloud Premium (Gemini / Claude)</option>
+                    </select>
+                </div>
+                
+                <button class="primary-btn" id="save-bio-btn">
+                    <i class="fa-solid fa-rotate-right"></i> Recalibrate Engine Context
+                </button>
+            </div>
+        </section>
+
+        <!-- CENTER COLUMN: Active Quests -->
+        <section class="center-column">
+            <div class="glass-card main-quests-card">
+                <div class="card-glow"></div>
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fa-solid fa-compass icon-color"></i> Active Quest Logs</h3>
+                    <button class="scram-btn" id="reset-system-btn" title="SCRAM Reset State">
+                        <i class="fa-solid fa-radiation"></i> SCRAM
+                    </button>
+                </div>
+                <div class="quests-list" id="quests-container">
+                    <!-- Dynamic quests load here -->
+                    <div class="loader">Loading Quest Logs...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Stats & Inventory -->
+        <section class="right-column">
+            <div class="glass-card stats-card">
+                <div class="card-glow"></div>
+                <h3 class="section-title"><i class="fa-solid fa-chart-simple icon-color"></i> Attributes</h3>
+                <div class="stats-grid" id="stats-container">
+                    <!-- Dynamic stats load here -->
+                </div>
+            </div>
+
+            <div class="glass-card inventory-card">
+                <div class="card-glow"></div>
+                <h3 class="section-title"><i class="fa-solid fa-backpack icon-color"></i> Dynamic Inventory</h3>
+                <p class="description-text">AI-generated items derived from your completed quests.</p>
+                <div class="inventory-grid" id="inventory-container">
+                    <div class="empty-state">No dynamic loot acquired. Complete a quest above!</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- REWARD MODAL POPUP -->
+    <div class="modal-overlay" id="reward-modal">
+        <div class="loot-box-glowing">
+            <div class="modal-card" id="modal-card-content">
+                <!-- Modal Item Content Loaded Dynamically -->
+            </div>
+            <button class="modal-close-btn" id="close-modal-btn">CLAIM REWARD</button>
+        </div>
+    </div>
+
+    <!-- SCRAM WARNING MODAL -->
+    <div class="modal-overlay" id="scram-modal">
+        <div class="scram-box-glowing">
+            <div class="modal-card scram-alert-card">
+                <div class="modal-title-announcement" style="color: #ff5252; text-shadow: 0 0 10px rgba(255, 82, 82, 0.5);">[ ☢️ SCRAM PROTOCOL INITIALIZED ☢️ ]</div>
+                <p class="description-text" style="color: #ff5252; font-weight: bold; font-size: 14px; text-align: center; margin-bottom: 12px;">
+                    Activating the SCRAM sequence will permanently incinerate all progression logs!
+                </p>
+                <p class="description-text" style="text-align: center; margin-bottom: 18px;">
+                    This action cannot be undone. You will lose all levels, stats, and custom AI items.
+                </p>
+                <div style="margin-top: 15px;">
+                    <label class="modal-section-title" for="scram-confirm-input" style="display: block; text-align: center;">Type "WIPE" in all capitals to authorize:</label>
+                    <input type="text" id="scram-confirm-input" class="scram-input-field" placeholder="WIPE" autocomplete="off">
+                </div>
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="primary-btn" id="scram-execute-btn" style="background: linear-gradient(90deg, #d32f2f, #f44336); box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3); flex: 1;">EXECUTE WIPE</button>
+                    <button class="primary-btn" id="scram-abort-btn" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-color); box-shadow: none; flex: 1;">ABORT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script File -->
+    <script src="app.js"></script>
+</body>
+</html>
