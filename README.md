@@ -2,6 +2,12 @@
 
 > A privacy-first, offline-first personal growth operating system inspired by Solo Leveling.
 
+
+
+
+<img width="736" height="414" alt="image" src="https://github.com/user-attachments/assets/20b4e8ba-51eb-4639-9b10-9207f32086b7" />
+
+
 ---
 
 # Overview
