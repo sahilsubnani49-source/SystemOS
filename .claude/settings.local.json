@@ -1,3 +1,25 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Recraft__generate_image",
+      "Bash(curl -s -o stat-strength.png \"https://img.recraft.ai/HDl8a-hv1dPPhNdCE8mxhWI5TeZEaI0fqVmo27j7SdM/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/cfa1b0cd-6ca4-4725-bf04-27085430a7ac\")",
+      "Bash(curl -s -o stat-agility.png \"https://img.recraft.ai/gF8v2u7OP2uNk19NZRvKZsGFGYCCvT1fZH8K2uxG06M/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/9d826b8d-6652-4544-9328-ca8457ee6f02\")",
+      "Bash(curl -s -o stat-vitality.png \"https://img.recraft.ai/omi0snlT0sbMFKXLu-1aO-r9yVb-dtvxeCZxugzjX_Y/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/a90c9d25-8c4f-48ec-ad88-fb5227ccb403\")",
+      "Bash(curl -s -o stat-intelligence.png \"https://img.recraft.ai/dewsv1fYCaB-G1AMuIAIv6j8mh9sg5Jkzyli2hgLtcI/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/4346ca1c-7442-42e0-92df-c5797f3f6953\")",
+      "Bash(curl -s -o stat-sense.png \"https://img.recraft.ai/s6jvJbmVbmh5wPaUPAMjMxu0p19PJdhCSvc4pH8ptsY/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/ce1b4e62-c8d1-4f0a-8a21-62fc55a4caa7\")",
+      "Bash(curl -s -o ui-notification-banner.png \"https://img.recraft.ai/0btkxQtOKzyJjWpzFDHxNHMnwqyyCflYb950DWoO1jw/rs:fit:2048:1024:0/raw:1/plain/abs://external/images/62848cc2-2367-425e-873c-d7084abb12ac\")",
+      "Bash(curl -s -o ui-status-window.png \"https://img.recraft.ai/GFZd3HobsE94BMtN-OphN_9O5I_tnUj_a7003w7EWmA/rs:fit:1024:1820:0/raw:1/plain/abs://external/images/0b684272-abe4-4ca9-b160-ac3915ec3207\")",
+      "Bash(curl -s -o item-dungeon-key.png \"https://img.recraft.ai/duha_Qxm04aZC9Guo4WArluyf6PY115IR8QoDRraCYQ/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/b719f41f-15fc-4dd8-b3fd-56a45bcc25ce\")",
+      "Bash(curl -s -o item-skill-scroll.png \"https://img.recraft.ai/8S_vpvcrHfz6qz8sBSWCiD8lh60yPracXiiQtOnqR2w/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/34fb8d44-a540-462d-8f22-a804b286c5b3\")",
+      "Bash(curl -s -o item-potion.png \"https://img.recraft.ai/Hu0ibxPMhv9nWtfGL9GVdxjsFV-Gtsu6-YdosJ6oWvU/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/5319e95a-f13f-4e98-8e27-750b13aacf8f\")",
+      "Bash(curl -s -o item-shop-merchant.png \"https://img.recraft.ai/o4suSVEBWq-bSVmRF_WY_MxjHxHNnKtyNEzzJ1_CsTs/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/33bd5e90-91ed-4f8b-b6d6-88deed29742c\")",
+      "Bash(curl -s -o rank-E.png \"https://img.recraft.ai/NMKjyWtM30LrcxOnPiLv70NdMieunyN5TgVyt_3Rn5k/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/86b77531-7f5c-4094-b914-c86494381ae9\")",
+      "Bash(curl -s -o rank-D.png \"https://img.recraft.ai/-NjZSvQtihfJDWbiuGzc9uGRfkXNlpRUWPhHnt9Ki94/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/bc99d3bb-77bb-4cb4-a207-a610e66afadf\")",
+      "Bash(curl -s -o rank-C.png \"https://img.recraft.ai/f_ceY3kqr3r5UpUi7TfsuSKf-HJ-YFFKfr-LuleIZNg/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/0d1a2dd4-f02a-4705-b89b-2357a0bb3914\")",
+      "Bash(curl -s -o rank-B.png \"https://img.recraft.ai/3r2rSSYYWXkkyswNS3h0INbL3JDnMnw7QeDrHhvbODA/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/2c122d6e-7635-491a-a2c8-76696cbb8ce7\")",
+      "Bash(curl -s -o rank-A.png \"https://img.recraft.ai/veDpDeIf9i8HhZMh45ohw-2FmOz1AhGutNscsnrM3Hc/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/398bb273-d4f1-4a7e-a581-23dbb0d4b9fd\")",
+      "Bash(python3 -c \"import ast; [ast.parse\\(open\\(f\\).read\\(\\), f\\) for f in ['app/main.py','app/services/quest_generator.py','app/services/reward_generator.py']]; print\\('syntax OK'\\)\")"
+    ]
+  },
   "outputStyle": "Learning"
 }

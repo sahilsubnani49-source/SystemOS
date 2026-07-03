@@ -9,7 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.services.reward_generator import generate_reward, synthesize_fallback_reward
-from app.services.quest_generator import generate_quests, synthesize_fallback_quests
+from app.services.quest_generator import (
+    generate_goal_campaign,
+    generate_dungeon,
+    generate_campaign_strategy,
+)
+from app.services.nutrition_advisor import (
+    generate_nutrition_advice,
+    synthesize_fallback_nutrition,
+)
 
 load_dotenv()
 
@@ -34,7 +42,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -83,8 +91,65 @@ class ProfileUpdateRequest(BaseModel):
     model_preference: Optional[str] = "cloud"
 
 
-class QuestGenerateRequest(BaseModel):
-    quest_count: Optional[int] = 5
+class GoalPlanRequest(BaseModel):
+    """Input for the goal-driven campaign pipeline."""
+    goal: str = Field(min_length=1, description="What the player wants to achieve")
+    context: Optional[str] = Field(default="", description="Open-ended life context shaping the quests")
+    duration_days: int = Field(default=30, ge=1, le=120, description="Timeline the campaign spans")
+    level: int = Field(default=1, ge=1, description="Player level for difficulty calibration")
+    model_preference: Optional[str] = "cloud"
+    quests_per_day: int = Field(default=2, ge=1, le=5)
+    approved_plan: Optional[str] = None
+
+
+class GoalStrategyRequest(BaseModel):
+    """Input for the Stage-1 strategy step — plan preview / revision before structuring."""
+    goal: str = Field(min_length=1)
+    context: Optional[str] = Field(default="")
+    duration_days: int = Field(default=30, ge=1, le=120)
+    level: int = Field(default=1, ge=1)
+    model_preference: Optional[str] = "cloud"
+    quests_per_day: int = Field(default=2, ge=1, le=5)
+    previous_plan: Optional[str] = None   # present → revision mode
+    feedback: Optional[str] = None
+
+
+class NutritionExercise(BaseModel):
+    name: str
+    mode: str                      # "reps" | "seconds"
+    current_target: int
+    days_trained: int
+    completed_today: bool
+
+
+class NutritionRequest(BaseModel):
+    height_cm: float = Field(ge=100, le=250)
+    weight_kg: float = Field(ge=25, le=300)
+    exercises: List[NutritionExercise] = []
+    model_preference: Optional[str] = "cloud"
+
+
+class DungeonGenerateRequest(BaseModel):
+    """Input for on-demand mock-exam dungeon generation (earned via keys)."""
+    goal: str = Field(min_length=1)
+    context: Optional[str] = ""
+    level: int = Field(default=1, ge=1)
+    model_preference: Optional[str] = "cloud"
+
+
+class CompleteQuestRequest(BaseModel):
+    """Optional body for quest completion.
+
+    The new goal flow is stateless — quests live on the device, not in the server's
+    mock `quests_state`. When the quest_id is unknown to the server, these fields let
+    the Architect still generate context-aware loot.
+    """
+    category: Optional[str] = None
+    bio: Optional[str] = None
+    model_preference: Optional[str] = None
+    # The device decides the drop rarity (and whether a reward drops at all), so it
+    # passes the rolled rarity here. If absent, the server rolls its own.
+    rarity: Optional[str] = None
 
 
 class SpecialEffect(BaseModel):
@@ -129,108 +194,198 @@ async def get_quests():
     return quests_state
 
 
-@app.post("/api/quests/generate")
-async def generate_quests_endpoint(req: QuestGenerateRequest):
+@app.post("/api/goals/strategy")
+async def plan_strategy(req: GoalStrategyRequest):
     """
-    Calls the LangChain Quest Master with the player's bio + aspirations.
-    Replaces quests_state with AI-generated quests.
-    Falls back to the rule-based generator if the LLM fails.
-    """
-    global quests_state
+    The Architect (Stage 1) — turns a GOAL + TIMELINE into a strategy blueprint the
+    player can preview, approve, or refine before the full structuring pass runs.
 
+    Revision mode: if `previous_plan` is present, the strategy is rewritten to apply
+    `feedback`. No internal fallback in the service, so on any failure this returns an
+    empty plan with ai_generated=False — the client treats that as "Architect unreachable".
+    """
+    logger.info(
+        "[Architect] Strategy goal=%r duration=%d level=%d revision=%s model=%s",
+        req.goal, req.duration_days, req.level, bool(req.previous_plan), req.model_preference,
+    )
+    try:
+        plan = await generate_campaign_strategy(
+            goal=req.goal,
+            context=req.context or "",
+            duration_days=req.duration_days,
+            level=req.level,
+            model_preference=req.model_preference or "cloud",
+            quests_per_day=req.quests_per_day,
+            previous_plan=req.previous_plan,
+            feedback=req.feedback,
+        )
+        return {"plan": plan, "ai_generated": True}
+    except Exception as e:
+        logger.warning("[Architect] Strategy generation failed (%s). Returning empty plan.", e)
+        return {"plan": "", "ai_generated": False}
+
+
+@app.post("/api/goals/plan")
+async def plan_goal(req: GoalPlanRequest):
+    """
+    The Quest Master — turns a GOAL + TIMELINE into a full campaign of dated quests
+    via the three-stage pipeline (plan → schedule → structure-in-weekly-batches).
+
+    Stateless: the campaign is returned for the device to persist. The pipeline has
+    its own deterministic fallback, so this always returns a full set of dated quests.
+    """
     from datetime import datetime, timezone
 
-    bio = player_state["bio"]
-    aspirations = player_state["aspirations"]
-    level = player_state["level"]
-    model_preference = player_state["model_preference"]
-    quest_count = req.quest_count or 5
-    ai_generated = False
+    logger.info(
+        "[Quest Master] Planning campaign goal=%r duration=%d level=%d model=%s",
+        req.goal, req.duration_days, req.level, req.model_preference,
+    )
+    result = await generate_goal_campaign(
+        goal=req.goal,
+        context=req.context or "",
+        duration_days=req.duration_days,
+        level=req.level,
+        model_preference=req.model_preference or "cloud",
+        quests_per_day=req.quests_per_day,
+        approved_plan=req.approved_plan,
+    )
 
-    try:
-        logger.info(f"[Quest Master] Generating {quest_count} quests for level={level} model={model_preference}")
-        new_quests = await generate_quests(
-            bio=bio,
-            aspirations=aspirations,
-            level=level,
-            model_preference=model_preference,
-            quest_count=quest_count,
-        )
-        ai_generated = True
-        logger.info(f"[Quest Master] Generated {len(new_quests)} quests via AI.")
-    except Exception as e:
-        logger.warning(f"[Quest Master] AI generation failed ({e}). Using rule-based fallback.")
-        new_quests = synthesize_fallback_quests(aspirations, quest_count)
-
-    quests_state = new_quests
+    # An empty plan string means the pipeline degraded to the rule-based fallback.
+    ai_generated = bool(result.get("plan"))
+    logger.info(
+        "[Quest Master] Campaign ready: %d quests across %d days (ai=%s).",
+        len(result["quests"]), req.duration_days, ai_generated,
+    )
 
     return {
-        "quests": quests_state,
+        "plan": result["plan"],
+        "schedule": result["schedule"],
+        "quests": result["quests"],
+        "goal_title": req.goal,
+        "duration_days": req.duration_days,
         "ai_generated": ai_generated,
         "generation_context": {
-            "aspirations_used": aspirations,
-            "bio_used": bio,
+            "goal_used": req.goal,
+            "context_used": req.context or "",
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "model_used": model_preference,
+            "model_used": req.model_preference or "cloud",
         },
     }
 
 
-@app.post("/api/quests/{quest_id}/complete")
-async def complete_quest(quest_id: str):
+@app.post("/api/dungeons/generate")
+async def generate_dungeon_endpoint(req: DungeonGenerateRequest):
     """
-    Marks a quest as completed, applies XP/level-up, and generates a
-    context-aware reward item via the LangChain Architect agent.
-    Falls back to the rule-based generator if AI is unavailable.
+    The Gatekeeper — generates a single mock-exam Dungeon for the player's goal.
+    Called on-demand when the device awards a dungeon key (21 completed days).
+    Has a deterministic fallback, so it always returns a dungeon.
+    """
+    logger.info("[Gatekeeper] Generating dungeon for goal=%r level=%d", req.goal, req.level)
+    dungeon = await generate_dungeon(
+        goal=req.goal,
+        context=req.context or "",
+        level=req.level,
+        model_preference=req.model_preference or "cloud",
+    )
+    return {"dungeon": dungeon}
+
+
+@app.post("/api/nutrition/protein")
+async def nutrition_protein(req: NutritionRequest):
+    """
+    The Nutritionist — computes a personalized daily protein target from the player's
+    body metrics + training load. Degrades in place: on AI failure it returns the
+    deterministic rule-based estimate (mirrors the reward endpoint), always HTTP 200.
+    """
+    exercises = [e.model_dump() for e in req.exercises]
+    try:
+        logger.info(
+            "[Nutritionist] Protein advice height=%.1f weight=%.1f exercises=%d model=%s",
+            req.height_cm, req.weight_kg, len(exercises), req.model_preference,
+        )
+        result = await generate_nutrition_advice(
+            req.height_cm,
+            req.weight_kg,
+            exercises,
+            req.model_preference or "cloud",
+        )
+        result["ai_generated"] = True
+        return result
+    except Exception as e:
+        logger.warning("[Nutritionist] AI generation failed (%s). Using rule-based fallback.", e)
+        result = synthesize_fallback_nutrition(req.height_cm, req.weight_kg, exercises)
+        result["ai_generated"] = False
+        return result
+
+
+@app.post("/api/quests/{quest_id}/complete")
+async def complete_quest(quest_id: str, req: Optional[CompleteQuestRequest] = None):
+    """
+    Generates a context-aware reward item via the LangChain Architect agent.
+
+    Two modes:
+      • Legacy mock mode — if quest_id exists in the in-memory quests_state, marks it
+        complete and applies server-side XP/level-up (unchanged behavior).
+      • Stateless goal mode — if quest_id is unknown (quests live on the device), uses
+        the optional request body (category, bio, model_preference) to generate loot
+        without mutating server state.
     """
     global player_state
 
-    # 1. Validate quest
     quest = next((q for q in quests_state if q["id"] == quest_id), None)
-    if not quest:
-        raise HTTPException(status_code=404, detail="Quest not found")
-    if quest["is_completed"]:
-        raise HTTPException(status_code=400, detail="Quest already completed")
+    body = req or CompleteQuestRequest()
 
-    # 2. Mark complete
-    quest["is_completed"] = True
+    # Resolve generation inputs: request body wins, then the mock quest, then defaults.
+    category = body.category or (quest["category"] if quest else None)
+    if not category:
+        raise HTTPException(
+            status_code=400,
+            detail="Unknown quest_id — provide `category` in the request body to generate a reward.",
+        )
+    bio = body.bio or player_state["bio"]
+    model_preference = body.model_preference or player_state["model_preference"]
 
-    # 3. Apply XP + level-up
-    xp_gained = quest["xp_reward"]
-    player_state["experience"] += xp_gained
-
+    # Legacy mock-state path: mark complete + apply server XP/level-up.
+    xp_gained = 0
     level_up = False
-    if player_state["experience"] >= player_state["experience_to_next_level"]:
-        level_up = True
-        player_state["level"] += 1
-        player_state["experience"] -= player_state["experience_to_next_level"]
-        player_state["experience_to_next_level"] = int(player_state["experience_to_next_level"] * 1.5)
-        for stat in player_state["stats"]:
-            player_state["stats"][stat] += 1
+    quest_title = "Quest"
+    if quest:
+        if quest["is_completed"]:
+            raise HTTPException(status_code=400, detail="Quest already completed")
+        quest["is_completed"] = True
+        quest_title = quest["title"]
+        xp_gained = quest["xp_reward"]
+        player_state["experience"] += xp_gained
+        while player_state["experience"] >= player_state["experience_to_next_level"]:
+            level_up = True
+            player_state["level"] += 1
+            player_state["experience"] -= player_state["experience_to_next_level"]
+            player_state["experience_to_next_level"] = int(player_state["experience_to_next_level"] * 1.5)
+            for stat in player_state["stats"]:
+                player_state["stats"][stat] += 1
 
-    # 4. Generate reward — LangChain first, rule-based fallback
+    # Generate reward — LangChain first, rule-based fallback.
     reward_dict: dict
     ai_generated = False
-
     try:
-        logger.info(f"[Architect] Generating reward for category={quest['category']} model={player_state['model_preference']}")
+        logger.info("[Architect] Generating reward for category=%s model=%s", category, model_preference)
         reward_dict = await generate_reward(
-            bio=player_state["bio"],
-            category=quest["category"],
-            model_preference=player_state["model_preference"],
+            bio=bio,
+            category=category,
+            model_preference=model_preference,
+            rarity=body.rarity,
         )
         ai_generated = True
-        logger.info(f"[Architect] AI reward generated: {reward_dict['name']} ({reward_dict['rarity']})")
+        logger.info("[Architect] AI reward generated: %s (%s)", reward_dict["name"], reward_dict["rarity"])
     except Exception as e:
-        logger.warning(f"[Architect] AI generation failed ({e}). Using rule-based fallback.")
-        reward_dict = synthesize_fallback_reward(player_state["bio"], quest["category"])
+        logger.warning("[Architect] AI generation failed (%s). Using rule-based fallback.", e)
+        reward_dict = synthesize_fallback_reward(bio, category, body.rarity)
 
     inventory_state.append(reward_dict)
 
-    # 5. Return response
     return {
         "status": "success",
-        "quest_completed": quest["title"],
+        "quest_completed": quest_title,
         "xp_gained": xp_gained,
         "level_up": level_up,
         "new_level": player_state["level"],

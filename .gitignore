@@ -1,0 +1,22 @@
+# --- Secrets / environment ---
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# --- Python ---
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# --- Node / Expo ---
+node_modules/
+.expo/
+dist/
+*.log
+
+# --- OS ---
+.DS_Store

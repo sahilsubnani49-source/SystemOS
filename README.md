@@ -89,7 +89,7 @@ Repositories
 
  ↓
 
-Drift ORM
+expo-sqlite
 
  ↓
 
@@ -290,15 +290,18 @@ Future platforms:
 
 Frontend:
 
-* Flutter
-* Riverpod
-* Drift ORM
-* SQLite
+* React Native
+* Expo
+* TypeScript
+* Zustand
+* React Navigation
+* expo-sqlite
 
 Backend:
 
 * FastAPI
 * Pydantic
+* LangChain + LangGraph
 
 AI Providers:
 
@@ -308,15 +311,80 @@ AI Providers:
 * DeepSeek
 * Ollama
 
-Animations:
+Notifications & background tasks:
 
-* Rive
-* Lottie
+* expo-notifications
+* expo-background-fetch
 
-Notifications:
+---
 
-* WorkManager
-* flutter_local_notifications
+# Getting Started (Local Development)
+
+This repo has two parts: a **FastAPI backend** (`backend/`) and a **React Native (Expo)
+mobile app** (`mobile/`). The app is offline-first — it runs **without** the backend
+(using rule-based fallbacks); the backend is only needed for AI-generated quests and
+reward items.
+
+## Prerequisites
+
+* **Python 3.12+** (backend)
+* **Node.js 18+ and npm** (mobile app)
+* **Expo Go** app on your phone — only if running on a physical device
+* *(Optional)* an AI provider key (Anthropic / OpenAI / Google) or a local
+  **Ollama** install — only if you want AI-generated content
+
+## 1. Backend (FastAPI)
+
+```bash
+# From the repo root
+source venv/bin/activate                      # virtualenv lives at the repo root
+pip install -r backend/requirements.txt
+
+# (Optional) configure AI providers — the backend runs without this
+cp backend/.env.example backend/.env
+# then edit backend/.env and set at least one of
+# ANTHROPIC_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY
+# (or set OLLAMA_BASE_URL for local AI)
+
+# Start the API server
+cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Verify it's up:
+
+```bash
+curl http://localhost:8000/health
+# → {"status":"healthy","system":"SystemOS Backend","version":"0.2.0"}
+```
+
+## 2. Mobile app (Expo / React Native)
+
+```bash
+cd mobile
+npm install
+npm start            # starts the Expo dev server
+```
+
+Then launch the app:
+
+* Press **`i`** to open the **iOS Simulator** (macOS + Xcode), or run `npm run ios`
+* Press **`a`** to open an **Android Emulator**, or run `npm run android`
+* Or scan the QR code with the **Expo Go** app on a physical device
+
+## Running on a physical device
+
+Simulators reach the backend at `localhost`. A physical device cannot — edit
+`mobile/src/core/env.ts` and set `PHYSICAL_DEVICE_IP` to your computer's local network
+IP (e.g. `192.168.1.42`):
+
+```ts
+const PHYSICAL_DEVICE_IP = '192.168.1.42'; // your machine's LAN IP
+```
+
+The phone and your computer must be on the **same Wi-Fi network**.
+
+> Find your IP — macOS: System Settings → Wi-Fi → Details · Linux: `ip addr show` ·
+> Windows: `ipconfig`.
 
 ---
 
