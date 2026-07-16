@@ -3,6 +3,7 @@ import { Player } from '../models/Player';
 export interface IPlayerRepository {
   getPlayer(): Promise<Player | null>;
   savePlayer(player: Player): Promise<void>;
+  updateName(name: string): Promise<void>;
   updateBio(bio: string): Promise<void>;
   updateAspirations(aspirations: string): Promise<void>;
   /** Award one dungeon key; returns the new key total. */

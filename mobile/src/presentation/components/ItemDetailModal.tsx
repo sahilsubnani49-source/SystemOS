@@ -1,6 +1,15 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, RarityColors, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  RarityColors,
+  withAlpha,
+} from '../../core/theme';
 import { DynamicItem } from '../../domain/models/DynamicItem';
 
 const TYPE_ICON: Record<string, string> = { token: '🎟️', potion: '🧪', weapon: '⚔️' };
@@ -41,13 +50,18 @@ export function ItemDetailModal({ item, onClose, onUse }: Props) {
             <Text style={styles.description}>{item.description}</Text>
 
             <Text style={styles.note}>
-              Redeeming marks this reward as spent and removes it permanently. Go enjoy it — you earned it.
+              Redeeming marks this reward as spent and removes it permanently. Go enjoy it — you
+              earned it.
             </Text>
           </ScrollView>
 
           {onUse && (
             <Pressable
-              style={({ pressed }) => [styles.useBtn, { backgroundColor: glow }, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.useBtn,
+                { backgroundColor: glow },
+                pressed && styles.pressed,
+              ]}
               onPress={() => onUse(item.id)}
             >
               <Text style={styles.useText}>REDEEM</Text>

@@ -1,6 +1,15 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, RarityColors, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  RarityColors,
+  withAlpha,
+} from '../../core/theme';
 import { DynamicItem } from '../../domain/models/DynamicItem';
 
 const TYPE_ICON: Record<string, string> = { token: '🎟️', potion: '🧪', weapon: '⚔️' };
@@ -29,10 +38,14 @@ export function ItemCard({ item, onPress }: Props) {
     >
       <View style={styles.header}>
         <Text style={styles.icon}>{TYPE_ICON[item.type] ?? '🎁'}</Text>
-        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.name}
+        </Text>
         <Text style={[styles.rarity, { color: rarityColor }]}>{item.rarity}</Text>
       </View>
-      <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+      <Text style={styles.description} numberOfLines={2}>
+        {item.description}
+      </Text>
       <Text style={styles.typeLabel}>{TYPE_LABEL[item.type] ?? TYPE_LABEL.token}</Text>
     </Pressable>
   );

@@ -66,7 +66,11 @@ export const ApiDataSource = {
   },
 
   async updateProfile(bio: string, modelPreference: string, aspirations?: string): Promise<void> {
-    await api.post('/api/profile', { bio, model_preference: modelPreference, aspirations: aspirations ?? '' });
+    await api.post('/api/profile', {
+      bio,
+      model_preference: modelPreference,
+      aspirations: aspirations ?? '',
+    });
   },
 
   async getQuests(): Promise<ApiQuest[]> {

@@ -23,10 +23,7 @@ import { useTrainingStore, DAILY_GYM_HOURS_CAP } from '../stores/useTrainingStor
 import { LevelUpText } from '../components/LevelUpText';
 import { GymHoursModal } from '../components/GymHoursModal';
 import { ProteinCalcModal } from '../components/ProteinCalcModal';
-import {
-  EXERCISE_CATALOG,
-  nextMilestone,
-} from '../../data/services/TrainingProgressionService';
+import { EXERCISE_CATALOG, nextMilestone } from '../../data/services/TrainingProgressionService';
 import { todayDateStr } from '../../core/dateUtils';
 
 /** Short human date (e.g. "Jul 2") for the "as of" nutrition sub-line. */
@@ -310,7 +307,7 @@ function DailyTraining({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,

@@ -135,10 +135,18 @@ interface ButtonVisual {
  */
 function buttonVisual(style: DialogButtonStyle | undefined, tone: DialogTone): ButtonVisual {
   if (style === 'destructive') {
-    return { borderColor: Colors.error, textColor: Colors.error, background: withAlpha(Colors.error, 0.1) };
+    return {
+      borderColor: Colors.error,
+      textColor: Colors.error,
+      background: withAlpha(Colors.error, 0.1),
+    };
   }
   if (style === 'cancel') {
-    return { borderColor: Colors.textSecondary, textColor: Colors.textSecondary, background: 'transparent' };
+    return {
+      borderColor: Colors.textSecondary,
+      textColor: Colors.textSecondary,
+      background: 'transparent',
+    };
   }
   const accent = tone === 'warning' ? Colors.error : Colors.accent;
   return { borderColor: accent, textColor: accent, background: withAlpha(accent, 0.1) };

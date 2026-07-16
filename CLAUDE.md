@@ -58,14 +58,12 @@ npm run format
 ### FastAPI Backend (`backend/`)
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
-
-# Install dependencies
-pip install -r backend/requirements.txt
+# Virtualenv lives at backend/venv (create once with: python3 -m venv backend/venv)
+# Use `python -m pip` — the repo path contains spaces/&, which breaks the pip script's shebang.
+backend/venv/bin/python -m pip install -r backend/requirements.txt
 
 # Run (from repo root)
-cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd backend && ./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Backend API routes:

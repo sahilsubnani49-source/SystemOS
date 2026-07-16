@@ -28,12 +28,23 @@ function apiPlayerToDomain(api: ApiPlayer): Player {
   };
 }
 
+/**
+ * Validate a proposed Hunter name before it is saved.
+ * Returns an error message to show the user, or null if the name is acceptable.
+ * The raw (untrimmed) input is passed in so trimming rules are decided here.
+ */
+export function validateHunterName(name: string): string | null {
+  // TODO(human)
+  return null;
+}
+
 interface PlayerState {
   player: Player | null;
   loading: boolean;
   error: string | null;
   load: () => Promise<void>;
   syncFromApi: (apiPlayer: ApiPlayer) => Promise<void>;
+  updateName: (name: string) => Promise<void>;
   updateBio: (bio: string) => Promise<void>;
   updateAspirations: (aspirations: string) => Promise<void>;
   applyLevelUp: (newLevel: number, newExp: number, newExpRequired: number) => void;
@@ -81,6 +92,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ player, loading: false, error: null });
   },
 
+  updateName: async (name: string) => {
+    const { player } = get();
+    if (!player) return;
+    // Name is local identity only — the stateless backend never stores it,
+    // so unlike bio/aspirations there is no API call to make here.
+    await repo.updateName(name);
+    set({ player: { ...player, name } });
+  },
+
   updateBio: async (bio: string) => {
     const { player } = get();
     if (!player) return;
@@ -108,7 +128,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   applyLevelUp: (newLevel, newExp, newExpRequired) => {
     const { player } = get();
     if (!player) return;
-    const updated = { ...player, level: newLevel, experience: newExp, experienceToNextLevel: newExpRequired };
+    const updated = {
+      ...player,
+      level: newLevel,
+      experience: newExp,
+      experienceToNextLevel: newExpRequired,
+    };
     repo.savePlayer(updated);
     set({ player: updated });
   },

@@ -1,6 +1,15 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, RankColors, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  RankColors,
+  withAlpha,
+} from '../../core/theme';
 import { Quest } from '../../domain/models/Quest';
 import { useCountdownSeconds, formatDuration, EFFORT_SECONDS } from '../hooks/useElapsed';
 
@@ -22,11 +31,17 @@ interface Props {
   completing?: boolean;
 }
 
-export function QuestDetailModal({ quest, onClose, onAccept, onComplete, completing = false }: Props) {
+export function QuestDetailModal({
+  quest,
+  onClose,
+  onAccept,
+  onComplete,
+  completing = false,
+}: Props) {
   // Hooks must run unconditionally — compute the countdown even when quest is null.
   const remaining = useCountdownSeconds(
     quest && !quest.isCompleted ? quest.acceptedAt : null,
-    quest ? EFFORT_SECONDS[quest.difficulty] ?? 3600 : 0,
+    quest ? (EFFORT_SECONDS[quest.difficulty] ?? 3600) : 0,
   );
   if (!quest) return null;
   const accent = RankColors[quest.difficulty] ?? Colors.primary;

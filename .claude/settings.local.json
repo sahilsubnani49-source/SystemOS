@@ -18,7 +18,21 @@
       "Bash(curl -s -o rank-C.png \"https://img.recraft.ai/f_ceY3kqr3r5UpUi7TfsuSKf-HJ-YFFKfr-LuleIZNg/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/0d1a2dd4-f02a-4705-b89b-2357a0bb3914\")",
       "Bash(curl -s -o rank-B.png \"https://img.recraft.ai/3r2rSSYYWXkkyswNS3h0INbL3JDnMnw7QeDrHhvbODA/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/2c122d6e-7635-491a-a2c8-76696cbb8ce7\")",
       "Bash(curl -s -o rank-A.png \"https://img.recraft.ai/veDpDeIf9i8HhZMh45ohw-2FmOz1AhGutNscsnrM3Hc/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/398bb273-d4f1-4a7e-a581-23dbb0d4b9fd\")",
-      "Bash(python3 -c \"import ast; [ast.parse\\(open\\(f\\).read\\(\\), f\\) for f in ['app/main.py','app/services/quest_generator.py','app/services/reward_generator.py']]; print\\('syntax OK'\\)\")"
+      "Bash(python3 -c \"import ast; [ast.parse\\(open\\(f\\).read\\(\\), f\\) for f in ['app/main.py','app/services/quest_generator.py','app/services/reward_generator.py']]; print\\('syntax OK'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(\"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/venv/bin/pip\" list)",
+      "Bash(\"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/backend/venv/bin/pip\" list)",
+      "Bash(\"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/backend/venv/bin/python\" -c \"import fastapi, langgraph; print\\('backend venv has fastapi+langgraph'\\)\")",
+      "Bash(awk -F: '{print $3}')",
+      "Bash(rm -rf node_modules .expo)",
+      "Bash(npm install *)",
+      "Bash(npx expo *)",
+      "Bash(npx expo-doctor *)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(rm .eslintrc.js)",
+      "Bash(npm uninstall *)"
     ]
   },
   "outputStyle": "Learning"

@@ -3,11 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { TrainingExercise } from '../../domain/models/TrainingExercise';
 import { GymSession } from '../../domain/models/GymSession';
 import { TrainingRepository } from '../../data/repositories/TrainingRepository';
-import { EXERCISE_CATALOG, onExerciseCompleted } from '../../data/services/TrainingProgressionService';
 import {
-  NutritionResult,
-  computeLocalNutrition,
-} from '../../data/services/NutritionService';
+  EXERCISE_CATALOG,
+  onExerciseCompleted,
+} from '../../data/services/TrainingProgressionService';
+import { NutritionResult, computeLocalNutrition } from '../../data/services/NutritionService';
 import { ApiDataSource } from '../../data/datasources/ApiDataSource';
 import { getMeta, setMeta, deleteMeta } from '../../data/services/AppMeta';
 import { usePlayerStore } from './usePlayerStore';
@@ -137,7 +137,8 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     const updated = await trainingRepo.completeExercise(id, today);
 
     // XP is based on the target they just completed (pre-progression).
-    const xp = updated.mode === 'reps' ? updated.currentTarget : Math.round(updated.currentTarget / 2);
+    const xp =
+      updated.mode === 'reps' ? updated.currentTarget : Math.round(updated.currentTarget / 2);
 
     // Progression check — may raise the target and fire [Training Intensified.] internally.
     const prog = onExerciseCompleted(updated);

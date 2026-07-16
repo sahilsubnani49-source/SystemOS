@@ -27,18 +27,17 @@ export const MutationQueue = {
   async push(type: MutationType, payload: Record<string, unknown>): Promise<void> {
     await ensureTable();
     const db = await getDb();
-    await db.runAsync(
-      'INSERT INTO mutation_queue (type, payload, created_at) VALUES (?, ?, ?)',
-      [type, JSON.stringify(payload), new Date().toISOString()],
-    );
+    await db.runAsync('INSERT INTO mutation_queue (type, payload, created_at) VALUES (?, ?, ?)', [
+      type,
+      JSON.stringify(payload),
+      new Date().toISOString(),
+    ]);
   },
 
   async getAll(): Promise<PendingMutation[]> {
     await ensureTable();
     const db = await getDb();
-    return db.getAllAsync<PendingMutation>(
-      'SELECT * FROM mutation_queue ORDER BY created_at ASC',
-    );
+    return db.getAllAsync<PendingMutation>('SELECT * FROM mutation_queue ORDER BY created_at ASC');
   },
 
   async remove(id: number): Promise<void> {

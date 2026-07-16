@@ -343,8 +343,8 @@ reward items.
 
 ```bash
 # From the repo root
-source venv/bin/activate                      # virtualenv lives at the repo root
-pip install -r backend/requirements.txt
+python3 -m venv backend/venv                  # once — virtualenv lives at backend/venv
+backend/venv/bin/python -m pip install -r backend/requirements.txt
 
 # (Optional) configure AI providers — the backend runs without this
 cp backend/.env.example backend/.env
@@ -376,6 +376,70 @@ Then launch the app:
 * Press **`i`** to open the **iOS Simulator** (macOS + Xcode), or run `npm run ios`
 * Press **`a`** to open an **Android Emulator**, or run `npm run android`
 * Or scan the QR code with the **Expo Go** app on a physical device
+
+## Testing on an Android Emulator (development build)
+
+> ⚠️ **This app runs on Expo SDK 56, which the public Expo Go app does not support**
+> — scanning the QR with Expo Go shows `incompatible SDK version`. Android testing
+> uses a **development build**: a custom dev client you compile once, then reload over
+> Metro exactly like Expo Go.
+
+### One-time setup
+
+1. **Install JDK 17.** The Android build needs 17; a newer default JDK fails with
+   `Unsupported class file major version NN`. It installs *alongside* your existing JDK
+   (does not replace it):
+   ```bash
+   brew install openjdk@17
+   ```
+2. **Android SDK + an emulator** (via Android Studio → Device Manager → create e.g. a
+   Pixel 8 / API 35 AVD). Make sure `~/.zshrc` exports the SDK tools:
+   ```bash
+   export ANDROID_HOME=$HOME/Library/Android/sdk
+   export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+   ```
+3. **Build & install the dev client** — first build takes ~10 min (downloads the NDK and
+   build-tools once), then it's cached:
+   ```bash
+   export JAVA_HOME=/opt/homebrew/opt/openjdk@17   # only needed for the native build
+   cd mobile
+   npx expo run:android
+   ```
+   This compiles the app, installs it into the running emulator, and launches it.
+
+### Every run after that (fast path, ~30s — no rebuild)
+
+```bash
+# 1. Boot the emulator (software GPU avoids a common graphics crash)
+emulator -avd Pixel8 -gpu swiftshader_indirect &
+
+# 2. Serve JS and open the app
+cd mobile
+npx expo start --dev-client        # then press  a
+```
+
+Only re-run `npx expo run:android` when you change **native** code/dependencies or
+`app.json` — plain JS/TS edits just need Metro (the fast path above).
+
+### Emulator networking (only for AI features)
+
+An emulator reaches your Mac at the special alias **`10.0.2.2`**, *not* your Wi-Fi IP. To
+use a local backend, start it with `--host 0.0.0.0` and set in `mobile/src/core/env.ts`:
+```ts
+const PHYSICAL_DEVICE_IP = '10.0.2.2'; // emulator → host Mac (use your LAN IP for a real phone)
+```
+The app works fully offline without this; it's only needed for AI-generated quests/rewards.
+
+### Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `incompatible SDK version` (Expo Go) | Expected — Expo Go can't run SDK 56. Use the dev build above. |
+| `Unsupported class file major version NN` | Default JDK too new. `export JAVA_HOME=/opt/homebrew/opt/openjdk@17` before building. |
+| Emulator crashes / `SIGABRT` / won't boot | Free disk space (keep **>10 GB**) and boot with `-gpu swiftshader_indirect`. |
+| App loads but data empty + `Network error` logs | Backend unreachable — normal offline. Start backend + use `10.0.2.2` for AI. |
+
+---
 
 ## Running on a physical device
 

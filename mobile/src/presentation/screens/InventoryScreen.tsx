@@ -69,7 +69,9 @@ export function InventoryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>{items.length} item{items.length !== 1 ? 's' : ''} collected</Text>
+        <Text style={styles.subtitle}>
+          {items.length} item{items.length !== 1 ? 's' : ''} collected
+        </Text>
 
         {/* Folders */}
         <View style={styles.folderRow}>
@@ -103,11 +105,7 @@ export function InventoryScreen() {
         onClose={() => setOpenFolder(null)}
       />
 
-      <ItemDetailModal
-        item={selected}
-        onClose={() => setSelected(null)}
-        onUse={handleUse}
-      />
+      <ItemDetailModal item={selected} onClose={() => setSelected(null)} onUse={handleUse} />
     </SafeAreaView>
   );
 }
@@ -115,7 +113,7 @@ export function InventoryScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,

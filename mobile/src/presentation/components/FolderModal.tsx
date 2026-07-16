@@ -1,5 +1,13 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Colors, FontSize, Fonts, Radius, Shadow, Spacing, withAlpha } from '../../core/theme';
 import { ItemCard } from './ItemCard';
 import { DynamicItem, ItemType } from '../../domain/models/DynamicItem';
@@ -30,7 +38,7 @@ export function FolderModal({ visible, folder, items, onSelectItem, onClose }: P
       <View style={styles.backdrop}>
         <View style={[styles.panel, { maxHeight: height * 0.7 }]}>
           <Text style={styles.header}>
-            {folder.icon}  [ {folder.label} ]
+            {folder.icon} [ {folder.label} ]
           </Text>
           <Text style={styles.count}>
             {items.length} ITEM{items.length !== 1 ? 'S' : ''}

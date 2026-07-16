@@ -53,14 +53,46 @@ interface FallbackEntry {
 }
 
 const FALLBACK_TABLE: Record<string, FallbackEntry> = {
-  stamina: { type: 'token', name: 'Token of Leisure', description: 'Spend 10 minutes on a hobby purely for joy — no goals, just fun.' },
-  agility: { type: 'token', name: 'Token of Leisure', description: 'Spend 10 minutes on a hobby purely for joy — no goals, just fun.' },
-  strength: { type: 'token', name: 'Token of Indulgence', description: 'Enjoy a favorite snack or treat you have been putting off.' },
-  intelligence: { type: 'potion', name: 'Potion of Stillness', description: 'Step away from the screen and do nothing but rest for 10 minutes.' },
-  discipline: { type: 'token', name: 'Token of Gaming', description: 'Play your favorite game, guilt-free, for 10 minutes.' },
-  creativity: { type: 'token', name: 'Token of Leisure', description: 'Spend 10 minutes creating something just for the fun of it.' },
-  perception: { type: 'token', name: 'Token of Friendship', description: 'Call or message a friend and chat freely for 10 minutes.' },
-  mindfulness: { type: 'potion', name: 'Potion of Sleep', description: 'Take a guilt-free 10-minute nap or quiet unplug to recharge.' },
+  stamina: {
+    type: 'token',
+    name: 'Token of Leisure',
+    description: 'Spend 10 minutes on a hobby purely for joy — no goals, just fun.',
+  },
+  agility: {
+    type: 'token',
+    name: 'Token of Leisure',
+    description: 'Spend 10 minutes on a hobby purely for joy — no goals, just fun.',
+  },
+  strength: {
+    type: 'token',
+    name: 'Token of Indulgence',
+    description: 'Enjoy a favorite snack or treat you have been putting off.',
+  },
+  intelligence: {
+    type: 'potion',
+    name: 'Potion of Stillness',
+    description: 'Step away from the screen and do nothing but rest for 10 minutes.',
+  },
+  discipline: {
+    type: 'token',
+    name: 'Token of Gaming',
+    description: 'Play your favorite game, guilt-free, for 10 minutes.',
+  },
+  creativity: {
+    type: 'token',
+    name: 'Token of Leisure',
+    description: 'Spend 10 minutes creating something just for the fun of it.',
+  },
+  perception: {
+    type: 'token',
+    name: 'Token of Friendship',
+    description: 'Call or message a friend and chat freely for 10 minutes.',
+  },
+  mindfulness: {
+    type: 'potion',
+    name: 'Potion of Sleep',
+    description: 'Take a guilt-free 10-minute nap or quiet unplug to recharge.',
+  },
 };
 
 const DEFAULT_FALLBACK: FallbackEntry = {

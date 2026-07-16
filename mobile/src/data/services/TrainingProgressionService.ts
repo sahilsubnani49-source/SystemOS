@@ -11,11 +11,35 @@ export interface ExerciseCatalogEntry {
 
 /** The fixed set of bodyweight exercises the player can enrol in. */
 export const EXERCISE_CATALOG: readonly ExerciseCatalogEntry[] = [
-  { name: 'Push-ups', muscleGroup: 'Chest & Triceps', mode: 'reps', defaultBaseline: 10, maxTarget: 100 },
-  { name: 'Squats', muscleGroup: 'Legs & Glutes', mode: 'reps', defaultBaseline: 15, maxTarget: 100 },
+  {
+    name: 'Push-ups',
+    muscleGroup: 'Chest & Triceps',
+    mode: 'reps',
+    defaultBaseline: 10,
+    maxTarget: 100,
+  },
+  {
+    name: 'Squats',
+    muscleGroup: 'Legs & Glutes',
+    mode: 'reps',
+    defaultBaseline: 15,
+    maxTarget: 100,
+  },
   { name: 'Sit-ups', muscleGroup: 'Core', mode: 'reps', defaultBaseline: 15, maxTarget: 100 },
-  { name: 'Pull-ups', muscleGroup: 'Back & Biceps', mode: 'reps', defaultBaseline: 3, maxTarget: 30 },
-  { name: 'Plank', muscleGroup: 'Core & Shoulders', mode: 'seconds', defaultBaseline: 30, maxTarget: 300 },
+  {
+    name: 'Pull-ups',
+    muscleGroup: 'Back & Biceps',
+    mode: 'reps',
+    defaultBaseline: 3,
+    maxTarget: 30,
+  },
+  {
+    name: 'Plank',
+    muscleGroup: 'Core & Shoulders',
+    mode: 'seconds',
+    defaultBaseline: 30,
+    maxTarget: 300,
+  },
   { name: 'Burpees', muscleGroup: 'Full Body', mode: 'reps', defaultBaseline: 8, maxTarget: 60 },
 ];
 
@@ -63,7 +87,11 @@ export function onExerciseCompleted(exercise: TrainingExercise): {
   }
 
   const newStepIndex = exercise.stepIndex + 1;
-  const newTarget = computeNextTarget(exercise.currentTarget, exercise.stepIndex, exercise.maxTarget);
+  const newTarget = computeNextTarget(
+    exercise.currentTarget,
+    exercise.stepIndex,
+    exercise.maxTarget,
+  );
 
   NotificationService.send(
     '[Training Intensified.]',

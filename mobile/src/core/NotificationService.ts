@@ -45,10 +45,7 @@ export const NotificationService = {
   },
 
   async sendRewardReceived(itemName: string, rarity: string): Promise<void> {
-    await NotificationService.send(
-      '[Item Acquired.]',
-      `${rarity} item obtained: ${itemName}.`,
-    );
+    await NotificationService.send('[Item Acquired.]', `${rarity} item obtained: ${itemName}.`);
   },
 
   async sendPenaltyWarning(): Promise<void> {

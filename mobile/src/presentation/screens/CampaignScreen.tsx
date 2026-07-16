@@ -9,7 +9,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, Typography, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  Typography,
+  withAlpha,
+} from '../../core/theme';
 import { useGoalStore } from '../stores/useGoalStore';
 import { useQuestStore } from '../stores/useQuestStore';
 import { usePlayerStore } from '../stores/usePlayerStore';
@@ -35,8 +44,14 @@ export function CampaignScreen() {
     clearError,
     abandonCampaign,
   } = useGoalStore();
-  const { dungeons, lockedDungeons, reportDungeon, load: loadQuests, lastReward, clearLastReward } =
-    useQuestStore();
+  const {
+    dungeons,
+    lockedDungeons,
+    reportDungeon,
+    load: loadQuests,
+    lastReward,
+    clearLastReward,
+  } = useQuestStore();
   const player = usePlayerStore((s) => s.player);
   const systemAlert = useSystemDialog();
 
@@ -85,7 +100,10 @@ export function CampaignScreen() {
     await loadQuests();
     setShowForm(false);
     resetForm();
-    systemAlert('[New Campaign Initiated.]', 'Your path is forged. Check the Quests tab for today.');
+    systemAlert(
+      '[New Campaign Initiated.]',
+      'Your path is forged. Check the Quests tab for today.',
+    );
   };
 
   const handleCreate = async () => {
@@ -104,22 +122,21 @@ export function CampaignScreen() {
       await loadQuests();
       setShowForm(false);
       resetForm();
-      systemAlert('[New Campaign Initiated.]', 'Your path is forged. Check the Quests tab for today.');
+      systemAlert(
+        '[New Campaign Initiated.]',
+        'Your path is forged. Check the Quests tab for today.',
+      );
     } catch {
       // error surfaced via store state
     }
   };
 
   const handleEnterDungeon = (questId: string, title: string, instructions: string) => {
-    systemAlert(
-      `[Gate] ${title}`,
-      `${instructions}\n\nDid you clear this Gate?`,
-      [
-        { text: 'Not yet', style: 'cancel' },
-        { text: 'Failed', style: 'destructive', onPress: () => reportDungeon(questId, false, null) },
-        { text: 'Passed', onPress: () => reportDungeon(questId, true, null) },
-      ],
-    );
+    systemAlert(`[Gate] ${title}`, `${instructions}\n\nDid you clear this Gate?`, [
+      { text: 'Not yet', style: 'cancel' },
+      { text: 'Failed', style: 'destructive', onPress: () => reportDungeon(questId, false, null) },
+      { text: 'Passed', onPress: () => reportDungeon(questId, true, null) },
+    ]);
   };
 
   const handleAbandon = (g: Goal) => {
@@ -235,7 +252,7 @@ export function CampaignScreen() {
                   {planning ? (
                     <View style={styles.btnRow}>
                       <ActivityIndicator color={Colors.textPrimary} />
-                      <Text style={styles.btnText}>  Drafting strategy…</Text>
+                      <Text style={styles.btnText}> Drafting strategy…</Text>
                     </View>
                   ) : (
                     <Text style={styles.btnText}>CONSULT THE ARCHITECT</Text>
@@ -251,7 +268,7 @@ export function CampaignScreen() {
                     {creating ? (
                       <View style={styles.btnRow}>
                         <ActivityIndicator color={Colors.accent} />
-                        <Text style={styles.forgeAnywayText}>  Forging campaign…</Text>
+                        <Text style={styles.forgeAnywayText}> Forging campaign…</Text>
                       </View>
                     ) : (
                       <Text style={styles.forgeAnywayText}>FORGE WITHOUT REVIEW</Text>
@@ -335,7 +352,7 @@ function CampaignCard({ goal, available, locked, onEnterDungeon, onAbandon }: Ca
                 onEnterDungeon(d.id, d.title, d.dungeonChallenge?.instructions ?? d.description)
               }
             >
-              <Text style={styles.dungeonTitle}>⚔️  {d.title}</Text>
+              <Text style={styles.dungeonTitle}>⚔️ {d.title}</Text>
               <Text style={styles.dungeonDesc} numberOfLines={2}>
                 {d.dungeonChallenge?.successCriteria ?? d.description}
               </Text>
@@ -368,7 +385,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   container: { padding: Spacing.lg, gap: Spacing.md },
   title: { ...Typography.title },
   intro: {
@@ -457,7 +474,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.surfaceBorder,
   },
   inputMultiline: { minHeight: 100, textAlignVertical: 'top', lineHeight: 18 },
-  error: { color: Colors.error, fontFamily: Fonts.pixel, fontSize: FontSize.sm, textAlign: 'center' },
+  error: {
+    color: Colors.error,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.sm,
+    textAlign: 'center',
+  },
   btn: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.md,

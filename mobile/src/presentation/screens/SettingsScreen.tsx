@@ -9,8 +9,17 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, Typography, withAlpha } from '../../core/theme';
-import { usePlayerStore } from '../stores/usePlayerStore';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  Typography,
+  withAlpha,
+} from '../../core/theme';
+import { usePlayerStore, validateHunterName } from '../stores/usePlayerStore';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useInventoryStore } from '../stores/useInventoryStore';
 import { useTrainingStore } from '../stores/useTrainingStore';
@@ -19,14 +28,30 @@ import { useSystemDialog } from '../components/SystemDialog';
 import { ENV } from '../../core/env';
 
 export function SettingsScreen() {
-  const { player, updateBio } = usePlayerStore();
+  const { player, updateBio, updateName } = usePlayerStore();
   const { reset: resetQuests } = useQuestStore();
   const { clear: clearInventory } = useInventoryStore();
   const systemAlert = useSystemDialog();
 
   const [bio, setBio] = useState(player?.bio ?? '');
+  const [name, setName] = useState(player?.name ?? '');
   const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const isCloud = player?.modelPreference === 'cloud';
+
+  const handleSaveName = async () => {
+    const error = validateHunterName(name);
+    if (error) {
+      systemAlert('[System]', error);
+      return;
+    }
+    const cleaned = name.trim();
+    setSavingName(true);
+    await updateName(cleaned);
+    setName(cleaned);
+    setSavingName(false);
+    systemAlert('[System]', `Identity updated. You are now known as ${cleaned}.`);
+  };
 
   const handleSaveBio = async () => {
     setSaving(true);
@@ -88,7 +113,7 @@ export function SettingsScreen() {
       '[System]',
       count > 0
         ? `Daily reset complete. ${count} of today's quest${count > 1 ? 's' : ''} can be attempted again.`
-        : "No quests scheduled for today to reset.",
+        : 'No quests scheduled for today to reset.',
     );
   };
 
@@ -101,18 +126,42 @@ export function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Campaigns</Text>
           <Text style={styles.sectionDesc}>
-            Quests are now generated from a goal and a timeline. Open the 🎯 Campaign tab to
-            declare a goal, set how many days you have, and let the Quest Master forge your
-            full plan of dated quests.
+            Quests are now generated from a goal and a timeline. Open the 🎯 Campaign tab to declare
+            a goal, set how many days you have, and let the Quest Master forge your full plan of
+            dated quests.
           </Text>
+        </View>
+
+        {/* Hunter name editor */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Hunter Name</Text>
+          <Text style={styles.sectionDesc}>
+            The name the System addresses you by across the app.
+          </Text>
+          <TextInput
+            style={styles.nameInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Sung Jin-Woo"
+            placeholderTextColor={Colors.textSecondary}
+            autoCapitalize="words"
+            maxLength={30}
+          />
+          <TouchableOpacity
+            style={[styles.btn, savingName && styles.btnDisabled]}
+            onPress={handleSaveName}
+            disabled={savingName}
+          >
+            <Text style={styles.btnText}>{savingName ? 'Saving...' : 'Save Name'}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bio editor */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Biography</Text>
           <Text style={styles.sectionDesc}>
-            Tell the Architect about your life. The more detail you provide, the more
-            personalized your reward items will be.
+            Tell the Architect about your life. The more detail you provide, the more personalized
+            your reward items will be.
           </Text>
           <TextInput
             style={styles.bioInput}
@@ -185,7 +234,7 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,
@@ -225,6 +274,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.pixel,
     fontSize: FontSize.sm,
     lineHeight: 16,
+  },
+  nameInput: {
+    backgroundColor: Colors.background,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    color: Colors.textPrimary,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.sm,
+    borderWidth: 1,
+    borderColor: Colors.surfaceBorder,
   },
   bioInput: {
     backgroundColor: Colors.background,

@@ -101,7 +101,7 @@ export function PlanReviewCard({ onForged }: Props) {
         {creating ? (
           <View style={styles.btnRow}>
             <ActivityIndicator color={Colors.textPrimary} />
-            <Text style={styles.primaryBtnText}>  Forging quests…</Text>
+            <Text style={styles.primaryBtnText}> Forging quests…</Text>
           </View>
         ) : (
           <Text style={styles.primaryBtnText}>APPROVE & FORGE</Text>
@@ -114,7 +114,9 @@ export function PlanReviewCard({ onForged }: Props) {
         onPress={() => setShowFeedback((v) => !v)}
         disabled={busy}
       >
-        <Text style={styles.secondaryBtnText}>{showFeedback ? 'CLOSE FEEDBACK' : 'REGENERATE'}</Text>
+        <Text style={styles.secondaryBtnText}>
+          {showFeedback ? 'CLOSE FEEDBACK' : 'REGENERATE'}
+        </Text>
       </TouchableOpacity>
 
       {showFeedback && (
@@ -136,7 +138,7 @@ export function PlanReviewCard({ onForged }: Props) {
             {planning ? (
               <View style={styles.btnRow}>
                 <ActivityIndicator color={Colors.accent} />
-                <Text style={styles.secondaryBtnText}>  Revising…</Text>
+                <Text style={styles.secondaryBtnText}> Revising…</Text>
               </View>
             ) : (
               <Text style={styles.secondaryBtnText}>SUBMIT FEEDBACK</Text>

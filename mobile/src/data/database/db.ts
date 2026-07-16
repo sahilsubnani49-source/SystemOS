@@ -1,12 +1,28 @@
 import * as SQLite from 'expo-sqlite';
 import { CREATE_TABLES_SQL } from './schema';
 
-let _db: SQLite.SQLiteDatabase | null = null;
+// Cache the in-flight PROMISE, not the resolved db. Bootstrap loads 4 stores in
+// parallel, so 4 callers hit getDb() at once; if we cached only the resolved db,
+// all 4 would slip past a `if (_db)` guard before any finished and call
+// openDatabaseAsync() concurrently — racing to create the files/SQLite directory.
+// SDK 56's expo-sqlite rejects that race ("path already points to a non-normal
+// file"). Caching the promise collapses N concurrent opens into one.
+let _dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (_db) return _db;
+export function getDb(): Promise<SQLite.SQLiteDatabase> {
+  if (!_dbPromise) {
+    // If the open rejects, drop the cached promise so the next caller retries a
+    // fresh open instead of re-awaiting a permanently-rejected one.
+    _dbPromise = openAndMigrate().catch((err) => {
+      _dbPromise = null;
+      throw err;
+    });
+  }
+  return _dbPromise;
+}
 
-  _db = await SQLite.openDatabaseAsync('systemos.db');
+async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
+  const _db = await SQLite.openDatabaseAsync('systemos.db');
 
   // Enable WAL mode for better concurrent read performance
   await _db.execAsync('PRAGMA journal_mode = WAL;');

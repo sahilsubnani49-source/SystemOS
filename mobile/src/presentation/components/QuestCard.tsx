@@ -1,6 +1,15 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, RankColors, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  RankColors,
+  withAlpha,
+} from '../../core/theme';
 import { Quest } from '../../domain/models/Quest';
 import { useCountdownSeconds, formatDuration, EFFORT_SECONDS } from '../hooks/useElapsed';
 
@@ -64,8 +73,9 @@ export function QuestCard({
           <Text style={styles.xp}>+{quest.xpReward} XP</Text>
         )}
 
-        {showActions && !quest.isCompleted && (
-          quest.acceptedAt ? (
+        {showActions &&
+          !quest.isCompleted &&
+          (quest.acceptedAt ? (
             <Pressable
               style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
               onPress={() => onComplete?.(quest.id)}
@@ -79,8 +89,7 @@ export function QuestCard({
             >
               <Text style={styles.acceptText}>Accept</Text>
             </Pressable>
-          )
-        )}
+          ))}
       </View>
     </View>
   );

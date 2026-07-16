@@ -27,10 +27,7 @@ async function getMetaValue(key: string): Promise<string | null> {
 
 async function setMetaValue(key: string, value: string): Promise<void> {
   const db = await getDb();
-  await db.runAsync(
-    'INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)',
-    [key, value],
-  );
+  await db.runAsync('INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)', [key, value]);
 }
 
 export const DailyResetService = {

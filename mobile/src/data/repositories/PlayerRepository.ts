@@ -26,9 +26,7 @@ function rowToPlayer(row: Record<string, unknown>): Player {
 export class PlayerRepository implements IPlayerRepository {
   async getPlayer(): Promise<Player | null> {
     const db = await getDb();
-    const row = await db.getFirstAsync<Record<string, unknown>>(
-      'SELECT * FROM players LIMIT 1',
-    );
+    const row = await db.getFirstAsync<Record<string, unknown>>('SELECT * FROM players LIMIT 1');
     return row ? rowToPlayer(row) : null;
   }
 
@@ -75,17 +73,31 @@ export class PlayerRepository implements IPlayerRepository {
 
   async setRank(rank: string): Promise<void> {
     const db = await getDb();
-    await db.runAsync('UPDATE players SET rank = ? WHERE id = (SELECT id FROM players LIMIT 1)', [rank]);
+    await db.runAsync('UPDATE players SET rank = ? WHERE id = (SELECT id FROM players LIMIT 1)', [
+      rank,
+    ]);
+  }
+
+  async updateName(name: string): Promise<void> {
+    const db = await getDb();
+    await db.runAsync('UPDATE players SET name = ? WHERE id = (SELECT id FROM players LIMIT 1)', [
+      name,
+    ]);
   }
 
   async updateBio(bio: string): Promise<void> {
     const db = await getDb();
-    await db.runAsync('UPDATE players SET bio = ? WHERE id = (SELECT id FROM players LIMIT 1)', [bio]);
+    await db.runAsync('UPDATE players SET bio = ? WHERE id = (SELECT id FROM players LIMIT 1)', [
+      bio,
+    ]);
   }
 
   async updateAspirations(aspirations: string): Promise<void> {
     const db = await getDb();
-    await db.runAsync('UPDATE players SET aspirations = ? WHERE id = (SELECT id FROM players LIMIT 1)', [aspirations]);
+    await db.runAsync(
+      'UPDATE players SET aspirations = ? WHERE id = (SELECT id FROM players LIMIT 1)',
+      [aspirations],
+    );
   }
 
   /**

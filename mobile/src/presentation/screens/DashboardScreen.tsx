@@ -3,7 +3,16 @@ import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors, FontSize, Fonts, Spacing, Radius, Shadow, Typography, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Spacing,
+  Radius,
+  Shadow,
+  Typography,
+  withAlpha,
+} from '../../core/theme';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useInventoryStore } from '../stores/useInventoryStore';
@@ -29,7 +38,12 @@ export function DashboardScreen() {
             below so the top-right corner stays clear of the on-device overlay. */}
         <View style={styles.header}>
           <Text style={styles.welcome}>WELCOME BACK,</Text>
-          <Text style={styles.playerName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55}>
+          <Text
+            style={styles.playerName}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.55}
+          >
             {player?.name ?? '—'}
           </Text>
           <View style={styles.rankWrap}>
@@ -90,7 +104,7 @@ export function DashboardScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,

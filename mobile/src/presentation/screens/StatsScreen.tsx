@@ -1,7 +1,16 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, Typography, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  Typography,
+  withAlpha,
+} from '../../core/theme';
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { STAT_KEYS, StatKey } from '../../core/constants';
 
@@ -98,27 +107,25 @@ export function StatsScreen() {
                 <View style={styles.pill}>
                   <Text style={styles.pillText}>{(player.rank ?? 'E-Rank').toUpperCase()}</Text>
                 </View>
-                <View style={[styles.pill, { backgroundColor: player.modelPreference === 'local' ? '#1B5E20' : '#0D47A1' }]}>
+                <View
+                  style={[
+                    styles.pill,
+                    { backgroundColor: player.modelPreference === 'local' ? '#1B5E20' : '#0D47A1' },
+                  ]}
+                >
                   <Text style={styles.pillText}>
                     {player.modelPreference === 'local' ? '🔒 LOCAL AI' : '☁️ CLOUD AI'}
                   </Text>
                 </View>
               </View>
-              {player.bio && (
-                <Text style={styles.bio}>{player.bio}</Text>
-              )}
+              {player.bio && <Text style={styles.bio}>{player.bio}</Text>}
             </View>
 
             {/* Stats */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Attributes</Text>
               {STAT_KEYS.map((key) => (
-                <StatBar
-                  key={key}
-                  label={key}
-                  value={player.stats[key]}
-                  icon={STAT_ICONS[key]}
-                />
+                <StatBar key={key} label={key} value={player.stats[key]} icon={STAT_ICONS[key]} />
               ))}
             </View>
           </>
@@ -131,7 +138,7 @@ export function StatsScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,

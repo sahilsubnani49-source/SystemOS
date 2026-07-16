@@ -90,10 +90,10 @@ export class QuestRepository implements IQuestRepository {
   async completeQuest(questId: string): Promise<Quest> {
     const db = await getDb();
     const completedAt = new Date().toISOString();
-    await db.runAsync(
-      'UPDATE quests SET is_completed = 1, completed_at = ? WHERE id = ?',
-      [completedAt, questId],
-    );
+    await db.runAsync('UPDATE quests SET is_completed = 1, completed_at = ? WHERE id = ?', [
+      completedAt,
+      questId,
+    ]);
     const row = await db.getFirstAsync<Record<string, unknown>>(
       'SELECT * FROM quests WHERE id = ?',
       [questId],

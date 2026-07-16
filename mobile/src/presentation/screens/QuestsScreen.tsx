@@ -2,7 +2,16 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, Typography, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  Typography,
+  withAlpha,
+} from '../../core/theme';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useGoalStore } from '../stores/useGoalStore';
 import { QuestCard } from '../components/QuestCard';
@@ -12,8 +21,16 @@ import { LevelUpText } from '../components/LevelUpText';
 import { Quest } from '../../domain/models/Quest';
 
 export function QuestsScreen() {
-  const { quests, dungeons, loading, error, lastReward, acceptQuest, completeQuest, clearLastReward } =
-    useQuestStore();
+  const {
+    quests,
+    dungeons,
+    loading,
+    error,
+    lastReward,
+    acceptQuest,
+    completeQuest,
+    clearLastReward,
+  } = useQuestStore();
   const advanceTimeline = useGoalStore((s) => s.advanceTimeline);
   const activeGoals = useGoalStore((s) => s.activeGoals);
   const [completing, setCompleting] = useState<string | null>(null);
@@ -147,7 +164,7 @@ export function QuestsScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
   },
   container: {
     padding: Spacing.lg,

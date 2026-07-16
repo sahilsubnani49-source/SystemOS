@@ -71,10 +71,9 @@ export class GoalRepository implements IGoalRepository {
 
   async incrementDaysCompleted(goalId: string): Promise<number> {
     const db = await getDb();
-    await db.runAsync(
-      'UPDATE goals SET days_completed = days_completed + 1 WHERE id = ?',
-      [goalId],
-    );
+    await db.runAsync('UPDATE goals SET days_completed = days_completed + 1 WHERE id = ?', [
+      goalId,
+    ]);
     const row = await db.getFirstAsync<Record<string, unknown>>(
       'SELECT days_completed FROM goals WHERE id = ?',
       [goalId],

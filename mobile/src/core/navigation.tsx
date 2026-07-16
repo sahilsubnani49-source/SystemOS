@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
@@ -43,6 +43,7 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.surfaceBorder,
@@ -55,9 +56,7 @@ function MainTabs() {
         // must stay ≤6 chars at 7pt or they truncate.
         tabBarLabelStyle: { fontFamily: Fonts.pixel, fontSize: 7 },
         tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
-            {TAB_ICONS[route.name]}
-          </Text>
+          <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{TAB_ICONS[route.name]}</Text>
         ),
       })}
     >
@@ -71,10 +70,26 @@ function MainTabs() {
   );
 }
 
+// Transparent scene background so the SpaceBackground mounted in App.tsx
+// stays visible behind every screen.
+const spaceTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: 'transparent',
+    card: Colors.surface,
+    primary: Colors.primary,
+    text: Colors.textPrimary,
+    border: Colors.surfaceBorder,
+  },
+};
+
 export function AppNavigator() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer theme={spaceTheme}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}
+      >
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen
           name="Inventory"

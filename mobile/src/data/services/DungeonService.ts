@@ -28,7 +28,8 @@ function fallbackChallenge(goal: Goal): DungeonChallenge {
     title: 'The Proving Gate',
     description: `A shadowed gate materializes. To pass, you must prove real progress toward: ${tag}.`,
     instructions: `Take a full, honest mock test or timed benchmark that measures your current ability at '${tag}'. Do it in one sitting under realistic conditions.`,
-    successCriteria: 'You complete the benchmark and meet the standard you set when you started this campaign.',
+    successCriteria:
+      'You complete the benchmark and meet the standard you set when you started this campaign.',
     xpReward: 100,
     goldReward: 1000,
     lootRarity: 'Legendary',
@@ -93,18 +94,14 @@ export const DungeonService = {
   async getAvailableDungeons(): Promise<Quest[]> {
     const today = todayDateStr();
     const all = await questRepo.getDungeons();
-    return all.filter(
-      (d) => !d.isCompleted && d.scheduledFor != null && d.scheduledFor <= today,
-    );
+    return all.filter((d) => !d.isCompleted && d.scheduledFor != null && d.scheduledFor <= today);
   },
 
   /** Future dungeons that have been earned but are still locked (unlock date pending). */
   async getLockedDungeons(): Promise<Quest[]> {
     const today = todayDateStr();
     const all = await questRepo.getDungeons();
-    return all.filter(
-      (d) => !d.isCompleted && d.scheduledFor != null && d.scheduledFor > today,
-    );
+    return all.filter((d) => !d.isCompleted && d.scheduledFor != null && d.scheduledFor > today);
   },
 
   async getAllDungeons(): Promise<Quest[]> {

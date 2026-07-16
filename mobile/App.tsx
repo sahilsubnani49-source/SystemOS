@@ -6,6 +6,7 @@ import { AppNavigator } from './src/core/navigation';
 import { useAppBootstrap } from './src/core/useAppBootstrap';
 import { Colors, FontSize, Fonts } from './src/core/theme';
 import { SystemNoticeModal } from './src/presentation/components/SystemNoticeModal';
+import { SpaceBackground } from './src/presentation/components/SpaceBackground';
 import { SystemDialogProvider } from './src/presentation/components/SystemDialog';
 import { useQuestStore } from './src/presentation/stores/useQuestStore';
 import { getMeta, deleteMeta } from './src/data/services/AppMeta';
@@ -60,8 +61,9 @@ export default function App() {
   const [fontsLoaded] = useFonts({ PressStart2P_400Regular });
 
   return (
-    <>
+    <View style={styles.root}>
       <StatusBar style="light" />
+      <SpaceBackground />
       {fontsLoaded ? (
         <AppContent />
       ) : (
@@ -69,14 +71,18 @@ export default function App() {
           <ActivityIndicator color={Colors.primary} />
         </View>
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: {
+  root: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  splash: {
+    flex: 1,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

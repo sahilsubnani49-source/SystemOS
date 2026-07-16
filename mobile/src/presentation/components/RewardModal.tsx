@@ -1,6 +1,15 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
-import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, RarityColors, withAlpha } from '../../core/theme';
+import {
+  Colors,
+  FontSize,
+  Fonts,
+  Radius,
+  Spacing,
+  Shadow,
+  RarityColors,
+  withAlpha,
+} from '../../core/theme';
 import { DynamicItem } from '../../domain/models/DynamicItem';
 import { ItemCard } from './ItemCard';
 import { LevelUpText } from './LevelUpText';
@@ -26,7 +35,11 @@ export function RewardModal({ item, onClose, burst }: Props) {
           </Text>
           <ItemCard item={item} />
           <Pressable
-            style={({ pressed }) => [styles.btn, { backgroundColor: glowColor }, pressed && styles.btnPressed]}
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: glowColor },
+              pressed && styles.btnPressed,
+            ]}
             onPress={onClose}
           >
             <Text style={styles.btnText}>CLAIM</Text>

@@ -7,7 +7,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sahildevhk.systemos"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +26,12 @@
     "plugins": [
       "expo-sqlite",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b2895b4b-da68-4655-98af-57fdcd664575"
+      }
+    },
+    "owner": "sahildevhk"
   }
 }

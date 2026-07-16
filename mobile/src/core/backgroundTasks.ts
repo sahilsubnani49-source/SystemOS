@@ -43,8 +43,8 @@ export async function registerBackgroundTasks(): Promise<void> {
   if (!isRegistered) {
     await BackgroundFetch.registerTaskAsync(DAILY_RESET_TASK, {
       minimumInterval: 60 * 60, // 1 hour (iOS will run it less frequently)
-      stopOnTerminate: false,   // keep running after app is closed on Android
-      startOnBoot: true,        // restart task on device reboot (Android)
+      stopOnTerminate: false, // keep running after app is closed on Android
+      startOnBoot: true, // restart task on device reboot (Android)
     });
   }
 }
