@@ -7,7 +7,11 @@ import { GoalRepository } from '../../data/repositories/GoalRepository';
 import { QuestRepository } from '../../data/repositories/QuestRepository';
 import { ApiDataSource } from '../../data/datasources/ApiDataSource';
 import { ApiQuest, ApiGoalPlanResponse } from '../../data/datasources/ApiTypes';
-import { DailyTimelineService, TimelineTickResult } from '../../data/services/DailyTimelineService';
+import {
+  DailyTimelineService,
+  LAST_DAILY_NOTIFICATION_DATE,
+  TimelineTickResult,
+} from '../../data/services/DailyTimelineService';
 import { deleteMeta } from '../../data/services/AppMeta';
 import { NotificationService } from '../../core/NotificationService';
 import { isOnline } from '../../core/network';
@@ -15,6 +19,7 @@ import { addDays, todayDateStr } from '../../core/dateUtils';
 import { usePlayerStore } from './usePlayerStore';
 import { useQuestStore } from './useQuestStore';
 import { useInventoryStore } from './useInventoryStore';
+import { useTimeLogStore } from './useTimeLogStore';
 
 const goalRepo = new GoalRepository();
 const questRepo = new QuestRepository();
@@ -95,8 +100,9 @@ async function persistCampaign(
     createdAt: new Date().toISOString(),
   };
 
-  await goalRepo.saveGoal(goal);
-  await questRepo.saveQuests(quests);
+  // Goal + quests land in ONE transaction; the timeline cursor moves only after
+  // the commit so a crash can never leave a campaign without its daily work.
+  await goalRepo.saveCampaign(goal, quests);
   if (activeCount === 0) await DailyTimelineService.markStart();
   await DailyTimelineService.refreshRank();
 
@@ -313,13 +319,19 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   wipeAll: async () => {
+    // Focus logs outlive their campaign: the description was denormalized at start,
+    // so history stays readable — only the dangling link is severed.
+    for (const goal of get().activeGoals) {
+      await useTimeLogStore.getState().detachGoal(goal.id);
+    }
     await goalRepo.deleteAllGoals();
     await deleteMeta('last_timeline_date');
-    await deleteMeta('last_quest_reset_date');
+    await deleteMeta(LAST_DAILY_NOTIFICATION_DATE);
     set({ activeGoals: [] });
   },
 
   abandonCampaign: async (goalId: string) => {
+    await useTimeLogStore.getState().detachGoal(goalId);
     await questRepo.deleteQuestsForGoal(goalId);
     await goalRepo.deleteGoal(goalId);
     const remaining = await goalRepo.countActiveGoals();

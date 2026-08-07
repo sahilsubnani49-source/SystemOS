@@ -20,7 +20,7 @@ const FOLDERS: { type: ItemType; label: string; icon: string }[] = [
 const RARITY_ORDER: Rarity[] = ['Legendary', 'Epic', 'Rare', 'Common'];
 
 export function InventoryScreen() {
-  const { items, loading, load, useItem } = useInventoryStore();
+  const { items, loading, load, redeemItem } = useInventoryStore();
   const [selected, setSelected] = useState<DynamicItem | null>(null);
   const [openFolder, setOpenFolder] = useState<ItemType | null>(null);
   const systemAlert = useSystemDialog();
@@ -48,7 +48,7 @@ export function InventoryScreen() {
           text: 'Redeem',
           style: 'destructive',
           onPress: async () => {
-            const used = await useItem(itemId);
+            const used = await redeemItem(itemId);
             if (used) {
               systemAlert(`[Reward Redeemed] ${used.name}`, used.description);
             }

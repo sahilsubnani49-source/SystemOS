@@ -14,6 +14,13 @@ const DAYS_PER_KEY = 21;
 /** app_meta key holding the date a penalty was enforced — consumed by the System notice on next open. */
 export const PENALTY_NOTICE_KEY = 'penalty_notice_date';
 
+/**
+ * app_meta key holding the last date "[Daily Quest has arrived.]" was sent.
+ * Shared with the background fetch task so the player is notified at most
+ * once per day no matter which path (tick or background run) fires first.
+ */
+export const LAST_DAILY_NOTIFICATION_DATE = 'last_daily_notification_date';
+
 const goalRepo = new GoalRepository();
 const questRepo = new QuestRepository();
 const playerRepo = new PlayerRepository();
@@ -143,10 +150,14 @@ export const DailyTimelineService = {
         `Your consistency has torn open a Gate. ${keysAwarded} dungeon${keysAwarded > 1 ? 's' : ''} await.`,
       ).catch(() => {});
     }
-    NotificationService.send(
-      '[Daily Quest has arrived.]',
-      'A new day on your path. Rise and conquer, Hunter.',
-    ).catch(() => {});
+    const lastNotified = await getMeta(LAST_DAILY_NOTIFICATION_DATE);
+    if (lastNotified !== today) {
+      await setMeta(LAST_DAILY_NOTIFICATION_DATE, today);
+      NotificationService.send(
+        '[Daily Quest has arrived.]',
+        'A new day on your path. Rise and conquer, Hunter.',
+      ).catch(() => {});
+    }
 
     return { newDay: true, daysEvaluated, keysAwarded, penaltyApplied: questsLeftIncomplete };
   },

@@ -4,10 +4,12 @@ from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from app import db, auth
+from app.auth import get_current_user
 from app.services.reward_generator import generate_reward, synthesize_fallback_reward
 from app.services.quest_generator import (
     generate_goal_campaign,
@@ -18,7 +20,16 @@ from app.services.nutrition_advisor import (
     generate_nutrition_advice,
     synthesize_fallback_nutrition,
 )
+from app.services.task_describer import (
+    generate_task_description,
+    synthesize_fallback_task_description,
+)
 
+from pathlib import Path
+
+# Load environment variables relative to backend root
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -27,6 +38,8 @@ logger = logging.getLogger("systemos")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db.init_db()
+    auth.set_defaults(DEFAULT_PLAYER_STATE, DEFAULT_QUESTS_STATE, DEFAULT_INVENTORY_STATE)
     logger.info("[SystemOS] Backend online. Architect standing by.")
     yield
     logger.info("[SystemOS] Backend shutting down.")
@@ -47,11 +60,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# In-memory state (mock store — replace with a real DB for production)
-# ---------------------------------------------------------------------------
+app.include_router(auth.router)
 
-player_state = {
+# ---------------------------------------------------------------------------
+# Default state templates
+# ---------------------------------------------------------------------------
+# These are the seed used to populate a new user's per-user state at signup. They are
+# NOT shared mutable global state — every user gets a deep copy in the SQLite store, and
+# all reads/writes go through app.db.get_user_state / save_user_state.
+
+DEFAULT_PLAYER_STATE = {
     "id": "1",
     "name": "Sung Jin-Woo",
     "rank": "E-Rank",
@@ -73,13 +91,13 @@ player_state = {
     },
 }
 
-quests_state = [
+DEFAULT_QUESTS_STATE = [
     {"id": "1", "title": "Daily Warm-up (10k steps)", "category": "Stamina", "difficulty": "E", "xp_reward": 15, "gold_reward": 100, "is_completed": False},
     {"id": "2", "title": "Maintain Relationship Focus (Call Partner)", "category": "Mindfulness", "difficulty": "D", "xp_reward": 20, "gold_reward": 250, "is_completed": False},
     {"id": "3", "title": "Explore Local Cities (Find new cafe)", "category": "Perception", "difficulty": "C", "xp_reward": 30, "gold_reward": 500, "is_completed": False},
 ]
 
-inventory_state: List[dict] = []
+DEFAULT_INVENTORY_STATE: List[dict] = []
 
 # ---------------------------------------------------------------------------
 # Pydantic request/response models
@@ -126,6 +144,25 @@ class NutritionRequest(BaseModel):
     height_cm: float = Field(ge=100, le=250)
     weight_kg: float = Field(ge=25, le=300)
     exercises: List[NutritionExercise] = []
+    model_preference: Optional[str] = "cloud"
+
+
+class TaskQuest(BaseModel):
+    """One of today's quests, as the device sees it."""
+    title: str
+    description: Optional[str] = ""
+    difficulty: str = "E"
+    is_completed: bool = False
+    # True once the Hunter has accepted it — the strongest signal for what they're on.
+    is_accepted: bool = False
+
+
+class TaskDescribeRequest(BaseModel):
+    """Input for narrating a running focus timer from its tagged campaign."""
+    goal_title: str = Field(min_length=1, max_length=200)
+    context: Optional[str] = ""
+    plan_excerpt: Optional[str] = ""
+    quests: List[TaskQuest] = []
     model_preference: Optional[str] = "cloud"
 
 
@@ -176,26 +213,52 @@ async def health_check():
     return {"status": "healthy", "system": "SystemOS Backend", "version": "0.2.0"}
 
 
+@app.get("/health/llm")
+async def llm_health_check(model_preference: str = "cloud"):
+    """
+    Verify the configured LLM provider actually responds, with a minimal
+    one-word ping. Instantiating the model alone is not enough — a missing
+    Ollama server or a revoked API key only surfaces on a real call.
+    """
+    from app.services.reward_generator import _get_llm
+
+    try:
+        llm = _get_llm(model_preference, max_tokens=8)
+        result = await llm.ainvoke("Reply with exactly one word: pong")
+        return {
+            "status": "ok",
+            "provider": type(llm).__name__,
+            "reply": str(result.content)[:40],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"LLM unavailable: {e}")
+
+
 @app.get("/api/profile")
-async def get_profile():
-    return player_state
+async def get_profile(user: dict = Depends(get_current_user)):
+    state = db.get_user_state(user["id"])
+    return state["player"]
 
 
 @app.post("/api/profile")
-async def update_profile(req: ProfileUpdateRequest):
-    player_state["bio"] = req.bio
-    player_state["aspirations"] = req.aspirations or ""
-    player_state["model_preference"] = req.model_preference
-    return {"status": "success", "profile": player_state}
+async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_current_user)):
+    state = db.get_user_state(user["id"])
+    player = state["player"]
+    player["bio"] = req.bio
+    player["aspirations"] = req.aspirations or ""
+    player["model_preference"] = req.model_preference
+    db.save_user_state(user["id"], player, state["quests"], state["inventory"])
+    return {"status": "success", "profile": player}
 
 
 @app.get("/api/quests")
-async def get_quests():
-    return quests_state
+async def get_quests(user: dict = Depends(get_current_user)):
+    state = db.get_user_state(user["id"])
+    return state["quests"]
 
 
 @app.post("/api/goals/strategy")
-async def plan_strategy(req: GoalStrategyRequest):
+async def plan_strategy(req: GoalStrategyRequest, user: dict = Depends(get_current_user)):
     """
     The Architect (Stage 1) — turns a GOAL + TIMELINE into a strategy blueprint the
     player can preview, approve, or refine before the full structuring pass runs.
@@ -226,7 +289,7 @@ async def plan_strategy(req: GoalStrategyRequest):
 
 
 @app.post("/api/goals/plan")
-async def plan_goal(req: GoalPlanRequest):
+async def plan_goal(req: GoalPlanRequest, user: dict = Depends(get_current_user)):
     """
     The Quest Master — turns a GOAL + TIMELINE into a full campaign of dated quests
     via the three-stage pipeline (plan → schedule → structure-in-weekly-batches).
@@ -274,7 +337,7 @@ async def plan_goal(req: GoalPlanRequest):
 
 
 @app.post("/api/dungeons/generate")
-async def generate_dungeon_endpoint(req: DungeonGenerateRequest):
+async def generate_dungeon_endpoint(req: DungeonGenerateRequest, user: dict = Depends(get_current_user)):
     """
     The Gatekeeper — generates a single mock-exam Dungeon for the player's goal.
     Called on-demand when the device awards a dungeon key (21 completed days).
@@ -291,7 +354,7 @@ async def generate_dungeon_endpoint(req: DungeonGenerateRequest):
 
 
 @app.post("/api/nutrition/protein")
-async def nutrition_protein(req: NutritionRequest):
+async def nutrition_protein(req: NutritionRequest, user: dict = Depends(get_current_user)):
     """
     The Nutritionist — computes a personalized daily protein target from the player's
     body metrics + training load. Degrades in place: on AI failure it returns the
@@ -318,19 +381,58 @@ async def nutrition_protein(req: NutritionRequest):
         return result
 
 
+@app.post("/api/tasks/describe")
+async def describe_task(req: TaskDescribeRequest, user: dict = Depends(get_current_user)):
+    """
+    The Architect, narrating the work — turns a campaign plus today's quests into ONE
+    task line for the Army tab's focus timer. Degrades in place: on AI failure it
+    returns the deterministic template the device also uses offline, always HTTP 200.
+
+    Stateless: nothing here is persisted. The device already started the timer before
+    calling this, so a slow or failed response only forgoes an upgrade to the line.
+    """
+    quests = [q.model_dump() for q in req.quests]
+    try:
+        logger.info(
+            "[Architect] Task description goal=%s quests=%d model=%s",
+            req.goal_title, len(quests), req.model_preference,
+        )
+        result = await generate_task_description(
+            req.goal_title,
+            req.context or "",
+            req.plan_excerpt or "",
+            quests,
+            req.model_preference or "cloud",
+        )
+        result["ai_generated"] = True
+        return result
+    except Exception as e:
+        logger.warning("[Architect] Task description failed (%s). Using template.", e)
+        result = synthesize_fallback_task_description(req.goal_title, req.context or "", quests)
+        result["ai_generated"] = False
+        return result
+
+
 @app.post("/api/quests/{quest_id}/complete")
-async def complete_quest(quest_id: str, req: Optional[CompleteQuestRequest] = None):
+async def complete_quest(
+    quest_id: str,
+    req: Optional[CompleteQuestRequest] = None,
+    user: dict = Depends(get_current_user),
+):
     """
     Generates a context-aware reward item via the LangChain Architect agent.
 
     Two modes:
-      • Legacy mock mode — if quest_id exists in the in-memory quests_state, marks it
-        complete and applies server-side XP/level-up (unchanged behavior).
+      • Legacy mock mode — if quest_id exists in the user's quests, marks it complete
+        and applies server-side XP/level-up (unchanged behavior).
       • Stateless goal mode — if quest_id is unknown (quests live on the device), uses
         the optional request body (category, bio, model_preference) to generate loot
-        without mutating server state.
+        without mutating the persisted quest set.
     """
-    global player_state
+    state = db.get_user_state(user["id"])
+    player_state = state["player"]
+    quests_state = state["quests"]
+    inventory_state = state["inventory"]
 
     quest = next((q for q in quests_state if q["id"] == quest_id), None)
     body = req or CompleteQuestRequest()
@@ -383,6 +485,8 @@ async def complete_quest(quest_id: str, req: Optional[CompleteQuestRequest] = No
 
     inventory_state.append(reward_dict)
 
+    db.save_user_state(user["id"], player_state, quests_state, inventory_state)
+
     return {
         "status": "success",
         "quest_completed": quest_title,
@@ -397,21 +501,27 @@ async def complete_quest(quest_id: str, req: Optional[CompleteQuestRequest] = No
 
 
 @app.get("/api/inventory")
-async def get_inventory():
-    return inventory_state
+async def get_inventory(user: dict = Depends(get_current_user)):
+    state = db.get_user_state(user["id"])
+    return state["inventory"]
 
 
 @app.post("/api/quests/reset")
-async def reset_quests():
-    """Dev utility — resets all state."""
-    global quests_state, inventory_state, player_state
-    inventory_state.clear()
+async def reset_quests(user: dict = Depends(get_current_user)):
+    """Dev utility — resets the caller's state to defaults."""
+    state = db.get_user_state(user["id"])
+    player_state = state["player"]
+    quests_state = state["quests"]
+
+    inventory_state: List[dict] = []
     player_state["level"] = 1
     player_state["experience"] = 75
     player_state["experience_to_next_level"] = 100
     player_state["stats"] = {k: 10 for k in player_state["stats"]}
     for q in quests_state:
         q["is_completed"] = False
+
+    db.save_user_state(user["id"], player_state, quests_state, inventory_state)
     return {"status": "reset_success"}
 
 

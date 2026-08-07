@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { Animated, Easing, StyleSheet, Text, useAnimatedValue } from 'react-native';
 import { Colors, Fonts } from '../../core/theme';
 
 interface Props {
@@ -29,24 +29,22 @@ stepOutput.push(-STEP_COUNT * STEP_PX);
  * bump it on each completion to replay the animation. Renders nothing when idle.
  */
 export function LevelUpText({ token, label }: Props) {
-  const anim = useRef(new Animated.Value(0)).current;
-  const [visible, setVisible] = useState(false);
+  const anim = useAnimatedValue(0);
 
   useEffect(() => {
     if (token <= 0) return;
-    setVisible(true);
     anim.setValue(0);
     Animated.timing(anim, {
       toValue: 1,
       duration: 1600,
       easing: Easing.linear,
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) setVisible(false);
-    });
+    }).start();
   }, [token, anim]);
 
-  if (!visible) return null;
+  // The opacity curve ends at 0, so once the run finishes the popup simply stays
+  // mounted invisibly (pointerEvents="none") until the next token replays it.
+  if (token <= 0) return null;
 
   const translateY = anim.interpolate({ inputRange: stepInput, outputRange: stepOutput });
   // Arcade death-flicker in the last stretch, then gone.

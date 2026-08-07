@@ -46,7 +46,7 @@ export function ItemDetailModal({ item, onClose, onUse }: Props) {
             </View>
             <Text style={styles.typeLine}>{typeLine}</Text>
 
-            <Text style={styles.sectionLabel}>WHAT YOU'VE EARNED</Text>
+            <Text style={styles.sectionLabel}>WHAT YOU&apos;VE EARNED</Text>
             <Text style={styles.description}>{item.description}</Text>
 
             <Text style={styles.note}>

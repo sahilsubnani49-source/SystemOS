@@ -15,6 +15,7 @@ export function useElapsedSeconds(startIso: string | null): number {
   }, [startIso]);
 
   if (!startIso) return 0;
+  // eslint-disable-next-line react-hooks/purity -- deliberate live clock: the interval above re-renders every second and this render intentionally reads the current time
   return Math.max(0, Math.floor((Date.now() - new Date(startIso).getTime()) / 1000));
 }
 

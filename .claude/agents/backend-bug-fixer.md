@@ -9,7 +9,7 @@ description: >
   "why does X endpoint fail" for backend code. Do NOT use for the React Native app,
   SQLite layer, or AI-workflow OPTIMIZATION (latency/cost/prompt tuning — that is the
   AI Orchestrator's job). This agent repairs defects; it does not redesign workflows.
-tools: Read, Grep, Glob, Bash, Edit, mcp__context7__resolve-library-id, mcp__context7__query-docs
+tools: Read, Grep, Glob, Bash, Edit, Write, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: opus
 ---
 

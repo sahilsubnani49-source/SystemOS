@@ -32,8 +32,15 @@ result, for both campaign quests and dungeons.
 import json
 import logging
 import math
+import os
 import uuid
+from pathlib import Path
 from typing import TypedDict
+from dotenv import load_dotenv
+
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
+load_dotenv()
 
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate

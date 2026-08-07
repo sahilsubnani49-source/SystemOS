@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  StyleSheet,
+  View,
+  useAnimatedValue,
+  useWindowDimensions,
+} from 'react-native';
 import { Colors, withAlpha } from '../../core/theme';
 
 /**
@@ -27,6 +34,8 @@ export interface StarConfig {
   baseOpacity: number;
   /** Half-cycle of the twinkle (fade-in time = fade-out time), ms. */
   twinkleDuration: number;
+  /** Starting point in the twinkle cycle (0..1) so stars don't blink in unison. */
+  twinklePhase: number;
   color: string;
 }
 
@@ -35,10 +44,23 @@ const STAR_COLORS = [Colors.textPrimary, Colors.accent, '#FFE9C4'];
 function createStarField(count: number): StarConfig[] {
   const stars: StarConfig[] = [];
   for (let i = 0; i < count; i++) {
-    // TODO(human): push one StarConfig per iteration to shape the sky.
+    // Mostly small white stars, a few larger tinted ones for depth.
+    const roll = Math.random();
+    stars.push({
+      x: Math.random(),
+      y: Math.random(),
+      size: 1 + Math.random() * 2.2,
+      baseOpacity: 0.35 + Math.random() * 0.6,
+      twinkleDuration: 900 + Math.random() * 2400,
+      twinklePhase: Math.random(),
+      color: roll < 0.7 ? STAR_COLORS[0] : roll < 0.88 ? STAR_COLORS[1] : STAR_COLORS[2],
+    });
   }
   return stars;
 }
+
+// Generated once at module load — render stays pure (no Math.random during render).
+const STARS = createStarField(STAR_COUNT);
 
 function TwinklingStar({
   star,
@@ -49,7 +71,7 @@ function TwinklingStar({
   width: number;
   height: number;
 }) {
-  const twinkle = useRef(new Animated.Value(Math.random())).current;
+  const twinkle = useAnimatedValue(star.twinklePhase);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -108,7 +130,7 @@ function DriftingStarField({
   width: number;
   height: number;
 }) {
-  const drift = useRef(new Animated.Value(0)).current;
+  const drift = useAnimatedValue(0);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -167,7 +189,7 @@ function ShootingStar({
   height: number;
   initialDelay: number;
 }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const progress = useAnimatedValue(0);
   const [flight, setFlight] = useState(() => randomFlight(width, height));
 
   useEffect(() => {
@@ -225,8 +247,8 @@ function ShootingStar({
 const HOLE_SIZE = 150;
 
 function BlackHole() {
-  const spin = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const spin = useAnimatedValue(0);
+  const pulse = useAnimatedValue(0);
 
   useEffect(() => {
     const spinAnim = Animated.loop(
@@ -281,14 +303,13 @@ function BlackHole() {
 
 export function SpaceBackground() {
   const { width, height } = useWindowDimensions();
-  const stars = useMemo(() => createStarField(STAR_COUNT), []);
 
   return (
     <View pointerEvents="none" style={styles.root}>
       {/* Faint nebulae for depth. */}
       <View style={[styles.nebula, styles.nebulaPurple]} />
       <View style={[styles.nebula, styles.nebulaCyan]} />
-      <DriftingStarField stars={stars} width={width} height={height} />
+      <DriftingStarField stars={STARS} width={width} height={height} />
       <BlackHole />
       <ShootingStar width={width} height={height} initialDelay={2500} />
       <ShootingStar width={width} height={height} initialDelay={9000} />

@@ -1,8 +1,8 @@
 import { getDb } from '../database/db';
 
-// Shared key-value access to the app_meta table (also used by DailyResetService).
-// The table is created in schema.ts via DailyResetService's bootstrap, but we ensure
-// it here too so this module is safe to use independently.
+// Shared key-value access to the app_meta table (timeline cursor, notification
+// dedup, penalty notices). The table is ensured here so this module is safe to
+// use independently of schema bootstrap order.
 
 const CREATE_META_TABLE = `
   CREATE TABLE IF NOT EXISTS app_meta (

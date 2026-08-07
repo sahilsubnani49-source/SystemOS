@@ -6,7 +6,7 @@ import { Rank, Rarity } from '../../core/constants';
  * Per-rank drop odds — the device owns these (single source of truth). The rank of the
  * COMPLETED quest steers the roll: higher rank → fewer empty rolls AND a split shifted
  * toward Epic/Legendary. `E` preserves the historical baseline (55% empty; on a drop
- * Common 70 / Rare 22 / Epic 6 / Legendary 2). Ranks not present fall back to `E`.
+ * Common 70 / Rare 22 / Epic 6 / Legendary 2).
  */
 interface RankOdds {
   /** Chance the completion drops NO reward at all (XP only). */
@@ -17,12 +17,15 @@ interface RankOdds {
   rare: number;
 }
 
-const RANK_DROP_ODDS: Partial<Record<Rank, RankOdds>> = {
+const RANK_DROP_ODDS: Record<Rank, RankOdds> = {
   // E anchors the low end (== the old fixed odds); S anchors the top end.
+  // D–A interpolate the ramp: noReward strictly falls, legendary/epic/rare strictly
+  // rise, and legendary+epic+rare stays ≤ 1 at every rank (Common is the remainder).
   E: { noReward: 0.55, legendary: 0.02, epic: 0.06, rare: 0.22 },
-  // TODO(human): fill in D, C, B, A so the ramp interpolates between the E and S anchors.
-  // Each step up in rank should LOWER `noReward` and RAISE `legendary` + `epic`
-  // (Common shrinks as a result). Keep legendary+epic+rare ≤ 1 for every rank.
+  D: { noReward: 0.45, legendary: 0.07, epic: 0.11, rare: 0.24 },
+  C: { noReward: 0.36, legendary: 0.12, epic: 0.16, rare: 0.27 },
+  B: { noReward: 0.27, legendary: 0.17, epic: 0.23, rare: 0.28 },
+  A: { noReward: 0.18, legendary: 0.23, epic: 0.27, rare: 0.29 },
   S: { noReward: 0.08, legendary: 0.28, epic: 0.32, rare: 0.3 },
 };
 
@@ -31,7 +34,7 @@ const RANK_DROP_ODDS: Partial<Record<Rank, RankOdds>> = {
  * "no reward". Mirrored (baseline only) by _pick_rarity() in backend reward_generator.py.
  */
 export function rollRewardRarity(rank: Rank): Rarity | null {
-  const odds = RANK_DROP_ODDS[rank] ?? RANK_DROP_ODDS.E!;
+  const odds = RANK_DROP_ODDS[rank] ?? RANK_DROP_ODDS.E;
   if (Math.random() < odds.noReward) return null;
   const r = Math.random();
   if (r < odds.legendary) return 'Legendary';

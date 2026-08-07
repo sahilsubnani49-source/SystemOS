@@ -20,9 +20,16 @@ import {
   Fonts,
 } from '../../core/theme';
 import { useTrainingStore, DAILY_GYM_HOURS_CAP } from '../stores/useTrainingStore';
+import { useTimeLogStore, DAILY_FOCUS_HOURS_CAP } from '../stores/useTimeLogStore';
+import { useGoalStore } from '../stores/useGoalStore';
 import { LevelUpText } from '../components/LevelUpText';
 import { GymHoursModal } from '../components/GymHoursModal';
 import { ProteinCalcModal } from '../components/ProteinCalcModal';
+import { ActiveTimerCard } from '../components/ActiveTimerCard';
+import { TimerStartModal } from '../components/TimerStartModal';
+import { TimerStopModal } from '../components/TimerStopModal';
+import { TimeLogList } from '../components/TimeLogList';
+import { useSystemDialog } from '../components/SystemDialog';
 import { EXERCISE_CATALOG, nextMilestone } from '../../data/services/TrainingProgressionService';
 import { todayDateStr } from '../../core/dateUtils';
 
@@ -180,15 +187,32 @@ function DailyTraining({
   const lastNutrition = useTrainingStore((s) => s.lastNutrition);
   const logGymHours = useTrainingStore((s) => s.logGymHours);
 
+  const running = useTimeLogStore((s) => s.running);
+  const todayLogs = useTimeLogStore((s) => s.todayLogs);
+  const todayFocusSeconds = useTimeLogStore((s) => s.todaySeconds);
+  const stopping = useTimeLogStore((s) => s.stopping);
+  const startTimer = useTimeLogStore((s) => s.startTimer);
+  const stopTimer = useTimeLogStore((s) => s.stopTimer);
+  const cancelTimer = useTimeLogStore((s) => s.cancelTimer);
+  const activeGoals = useGoalStore((s) => s.activeGoals);
+  const alert = useSystemDialog();
+
   const [completing, setCompleting] = useState<string | null>(null);
   const [gymModalOpen, setGymModalOpen] = useState(false);
   const [proteinModalOpen, setProteinModalOpen] = useState(false);
   const [gymNote, setGymNote] = useState<string | null>(null);
+  const [startModalOpen, setStartModalOpen] = useState(false);
+  const [stopModalOpen, setStopModalOpen] = useState(false);
+  const [focusNote, setFocusNote] = useState<string | null>(null);
   const today = todayDateStr();
 
   const doneToday = exercises.filter((e) => e.lastCompletedDate === today).length;
   const allDone = exercises.length > 0 && doneToday === exercises.length;
   const remainingGym = Math.max(0, DAILY_GYM_HOURS_CAP - todayGymHours);
+
+  const goalTitles = Object.fromEntries(activeGoals.map((g) => [g.id, g.title]));
+  const runningGoalTitle = running?.goalId ? (goalTitles[running.goalId] ?? null) : null;
+  const focusHoursToday = Math.round((todayFocusSeconds / 3600) * 10) / 10;
 
   const handleComplete = async (id: string) => {
     setCompleting(id);
@@ -201,6 +225,36 @@ function DailyTraining({
     const res = await logGymHours(hours);
     if (res.grantedHours > 0) fireBurst(res.leveledUp, res.xp);
     setGymNote(res.grantedHours < hours ? 'Capped at 4h/day' : null);
+  };
+
+  const applyStopResult = (res: Awaited<ReturnType<typeof stopTimer>>) => {
+    if (res.discarded) {
+      setFocusNote('Under 5 min — nothing logged.');
+      return;
+    }
+    if (res.xp > 0) fireBurst(res.leveledUp, res.xp);
+    setFocusNote(res.capped ? `Capped at ${DAILY_FOCUS_HOURS_CAP}h/day` : null);
+  };
+
+  const handleStopConfirm = async (description: string) => {
+    applyStopResult(await stopTimer({ description }));
+  };
+
+  // Long-press on STOP: most sessions need no edit, so skip straight to logging.
+  const handleStopImmediate = async () => {
+    applyStopResult(await stopTimer());
+  };
+
+  const handleDiscard = () => {
+    alert(
+      '[ DISCARD SESSION ]',
+      'This time will not be logged and earns no XP.',
+      [
+        { text: 'KEEP RUNNING', style: 'cancel' },
+        { text: 'DISCARD', style: 'destructive', onPress: () => void cancelTimer() },
+      ],
+      'warning',
+    );
   };
 
   return (
@@ -232,6 +286,53 @@ function DailyTraining({
         </View>
       </View>
 
+      {/* Focus log — the live timer takes the same slot as the idle card, so
+          starting a session causes no layout shift. */}
+      {running ? (
+        <ActiveTimerCard
+          log={running}
+          goalTitle={runningGoalTitle}
+          stopping={stopping}
+          onStop={() => setStopModalOpen(true)}
+          onStopImmediate={handleStopImmediate}
+          onCancel={handleDiscard}
+        />
+      ) : (
+        <View style={styles.proteinCard}>
+          <Text style={styles.proteinLabel}>FOCUS LOG</Text>
+          <Text style={styles.proteinValue}>
+            {focusHoursToday} / {DAILY_FOCUS_HOURS_CAP}h today
+          </Text>
+          {focusNote && <Text style={styles.cardNote}>{focusNote}</Text>}
+          <TouchableOpacity
+            style={styles.cardBtn}
+            onPress={() => {
+              setFocusNote(null);
+              setStartModalOpen(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cardBtnText}>START TIMER</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <TimerStartModal
+        visible={startModalOpen}
+        goals={activeGoals}
+        onStart={startTimer}
+        onClose={() => setStartModalOpen(false)}
+      />
+      <TimerStopModal
+        visible={stopModalOpen}
+        log={running}
+        goalTitle={runningGoalTitle}
+        bankedSeconds={todayFocusSeconds}
+        onConfirm={handleStopConfirm}
+        onDiscard={cancelTimer}
+        onClose={() => setStopModalOpen(false)}
+      />
+
       {/* Gym hours */}
       <View style={styles.proteinCard}>
         <Text style={styles.proteinLabel}>GYM HOURS</Text>
@@ -258,6 +359,8 @@ function DailyTraining({
         onClose={() => setGymModalOpen(false)}
       />
       <ProteinCalcModal visible={proteinModalOpen} onClose={() => setProteinModalOpen(false)} />
+
+      <TimeLogList logs={todayLogs} goalTitles={goalTitles} />
 
       {allDone && (
         <View style={styles.allDoneBox}>

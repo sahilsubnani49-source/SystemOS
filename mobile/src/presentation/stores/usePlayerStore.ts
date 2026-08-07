@@ -34,7 +34,10 @@ function apiPlayerToDomain(api: ApiPlayer): Player {
  * The raw (untrimmed) input is passed in so trimming rules are decided here.
  */
 export function validateHunterName(name: string): string | null {
-  // TODO(human)
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return 'A Hunter requires a name.';
+  if (trimmed.length < 2) return 'A Hunter name must be at least 2 characters.';
+  if (trimmed.length > 30) return 'A Hunter name must be 30 characters or fewer.';
   return null;
 }
 

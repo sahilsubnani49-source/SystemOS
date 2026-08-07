@@ -13,7 +13,7 @@ import { getMeta, deleteMeta } from './src/data/services/AppMeta';
 import { PENALTY_NOTICE_KEY } from './src/data/services/DailyTimelineService';
 
 function AppContent() {
-  const { ready } = useAppBootstrap();
+  const { ready, error } = useAppBootstrap();
   const [notice, setNotice] = useState<{ show: boolean; penaltyDate: string | null }>({
     show: false,
     penaltyDate: null,
@@ -41,6 +41,18 @@ function AppContent() {
         <Text style={styles.splashTitle}>SYSTEM OS</Text>
         <Text style={styles.splashSub}>[Initializing...]</Text>
         <ActivityIndicator color={Colors.primary} style={styles.spinner} />
+      </View>
+    );
+  }
+
+  // Startup failed — show a recoverable System error instead of a hung loader.
+  if (error) {
+    return (
+      <View style={styles.splash}>
+        <Text style={styles.splashTitle}>SYSTEM OS</Text>
+        <Text style={styles.errorTitle}>[System Error.]</Text>
+        <Text style={styles.errorBody}>{error}</Text>
+        <Text style={styles.splashSub}>Restart the app to re-initialize, Hunter.</Text>
       </View>
     );
   }
@@ -101,5 +113,20 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: 16,
+  },
+  errorTitle: {
+    color: Colors.error,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.md,
+    letterSpacing: 2,
+    marginTop: 12,
+  },
+  errorBody: {
+    color: Colors.textSecondary,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xs,
+    textAlign: 'center',
+    marginHorizontal: 32,
+    lineHeight: 18,
   },
 });

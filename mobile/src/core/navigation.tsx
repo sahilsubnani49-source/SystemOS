@@ -11,8 +11,13 @@ import { InventoryScreen } from '../presentation/screens/InventoryScreen';
 import { StatsScreen } from '../presentation/screens/StatsScreen';
 import { TrainingScreen } from '../presentation/screens/TrainingScreen';
 import { SettingsScreen } from '../presentation/screens/SettingsScreen';
+import { LoginScreen } from '../presentation/screens/LoginScreen';
+import { SignupScreen } from '../presentation/screens/SignupScreen';
+import { useAuthStore } from '../presentation/stores/useAuthStore';
 
 export type RootStackParamList = {
+  Login: undefined;
+  Signup: undefined;
   Main: undefined;
   Inventory: undefined;
 };
@@ -85,24 +90,43 @@ const spaceTheme = {
 };
 
 export function AppNavigator() {
+  // Declarative auth gate: swapping which screens are registered lets React
+  // Navigation switch stacks automatically — no imperative navigate() on
+  // login/logout. While status is 'unknown', bootstrap still shows its splash,
+  // so render nothing here to avoid a flash of the wrong stack.
+  const status = useAuthStore((s) => s.status);
+
   return (
     <NavigationContainer theme={spaceTheme}>
       <Stack.Navigator
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}
       >
-        <Stack.Screen name="Main" component={MainTabs} />
-        <Stack.Screen
-          name="Inventory"
-          component={InventoryScreen}
-          options={{
-            headerShown: true,
-            title: 'INVENTORY',
-            headerStyle: { backgroundColor: Colors.surface },
-            headerTintColor: Colors.primary,
-            headerTitleStyle: { fontFamily: Fonts.pixel, fontSize: 12, color: Colors.textPrimary },
-            headerBackTitle: 'Back',
-          }}
-        />
+        {status === 'unknown' ? null : status === 'loggedIn' ? (
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen
+              name="Inventory"
+              component={InventoryScreen}
+              options={{
+                headerShown: true,
+                title: 'INVENTORY',
+                headerStyle: { backgroundColor: Colors.surface },
+                headerTintColor: Colors.primary,
+                headerTitleStyle: {
+                  fontFamily: Fonts.pixel,
+                  fontSize: 12,
+                  color: Colors.textPrimary,
+                },
+                headerBackTitle: 'Back',
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Signup" component={SignupScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

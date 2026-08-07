@@ -12,7 +12,7 @@ description: >
   contract diffs) and loops back with specific feedback until the whole task is
   correct. Do NOT use for a single-layer task that one specialist already covers —
   call that specialist directly. The Conductor never writes production code itself.
-tools: Task, Read, Grep, Glob, Bash
+tools: Task, Read, Edit, Write, Grep, Glob, Bash
 model: opus
 ---
 

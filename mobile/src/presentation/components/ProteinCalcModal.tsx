@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -30,6 +30,16 @@ function parsePositive(text: string): number | null {
  * Reads/writes the training store directly (screens/components already do this).
  */
 export function ProteinCalcModal({ visible, onClose }: Props) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      {/* Keying on open/closed remounts the panel each time the modal opens, giving
+          fresh phase state + store-prefilled inputs without effect-driven resets. */}
+      <CalibrationPanel key={visible ? 'open' : 'closed'} onClose={onClose} />
+    </Modal>
+  );
+}
+
+function CalibrationPanel({ onClose }: { onClose: () => void }) {
   const weightKg = useTrainingStore((s) => s.weightKg);
   const heightCm = useTrainingStore((s) => s.heightCm);
   const calculating = useTrainingStore((s) => s.calculatingNutrition);
@@ -37,19 +47,9 @@ export function ProteinCalcModal({ visible, onClose }: Props) {
   const calculateProtein = useTrainingStore((s) => s.calculateProtein);
 
   const [phase, setPhase] = useState<Phase>('input');
-  const [weightText, setWeightText] = useState('');
-  const [heightText, setHeightText] = useState('');
+  const [weightText, setWeightText] = useState(() => (weightKg != null ? String(weightKg) : ''));
+  const [heightText, setHeightText] = useState(() => (heightCm != null ? String(heightCm) : ''));
   const [result, setResult] = useState<NutritionResult | null>(null);
-
-  // Reset + prefill each time the modal opens.
-  useEffect(() => {
-    if (visible) {
-      setPhase('input');
-      setResult(null);
-      setWeightText(weightKg != null ? String(weightKg) : '');
-      setHeightText(heightCm != null ? String(heightCm) : '');
-    }
-  }, [visible, weightKg, heightCm]);
 
   const w = parsePositive(weightText);
   const h = parsePositive(heightText);
@@ -73,113 +73,113 @@ export function ProteinCalcModal({ visible, onClose }: Props) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.panel}>
-          {phase === 'input' && (
-            <>
-              <Text style={styles.header}>[ BODY CALIBRATION ]</Text>
+    <View style={styles.backdrop}>
+      <View style={styles.panel}>
+        {phase === 'input' && (
+          <>
+            <Text style={styles.header}>[ BODY CALIBRATION ]</Text>
 
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Body weight (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={weightText}
-                  onChangeText={setWeightText}
-                  keyboardType="numeric"
-                  placeholder="70"
-                  placeholderTextColor={Colors.textSecondary}
-                />
-              </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Body weight (kg)</Text>
+              <TextInput
+                style={styles.input}
+                value={weightText}
+                onChangeText={setWeightText}
+                keyboardType="numeric"
+                placeholder="70"
+                placeholderTextColor={Colors.textSecondary}
+              />
+            </View>
 
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Height (cm)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={heightText}
-                  onChangeText={setHeightText}
-                  keyboardType="numeric"
-                  placeholder="170"
-                  placeholderTextColor={Colors.textSecondary}
-                />
-              </View>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Height (cm)</Text>
+              <TextInput
+                style={styles.input}
+                value={heightText}
+                onChangeText={setHeightText}
+                keyboardType="numeric"
+                placeholder="170"
+                placeholderTextColor={Colors.textSecondary}
+              />
+            </View>
 
-              <Pressable
-                style={({ pressed }) => [
-                  styles.button,
-                  !canSubmit && styles.buttonDisabled,
-                  pressed && canSubmit && styles.pressed,
-                ]}
-                onPress={handleCalculate}
-                disabled={!canSubmit || calculating}
-              >
-                {calculating ? (
-                  <ActivityIndicator color={Colors.accent} />
-                ) : (
-                  <Text style={styles.buttonText}>CALCULATE</Text>
-                )}
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
-                onPress={handleSaveOnly}
-                disabled={!canSubmit || calculating}
-              >
-                <Text style={styles.linkText}>SAVE ONLY</Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-                onPress={onClose}
-                disabled={calculating}
-              >
-                <Text style={styles.cancelText}>CANCEL</Text>
-              </Pressable>
-            </>
-          )}
-
-          {phase === 'result' && result && (
-            <>
-              <Text style={styles.header}>[ NUTRITION DIRECTIVE ]</Text>
-              <Text style={styles.bigValue}>{result.dailyProteinG}g</Text>
-              <Text style={styles.rangeLine}>
-                {result.rangeMinG}–{result.rangeMaxG}g
-              </Text>
-              {result.bmi != null && (
-                <Text style={styles.bmiLine}>
-                  BMI {result.bmi} · {result.bmiCategory}
-                </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                !canSubmit && styles.buttonDisabled,
+                pressed && canSubmit && styles.pressed,
+              ]}
+              onPress={handleCalculate}
+              disabled={!canSubmit || calculating}
+            >
+              {calculating ? (
+                <ActivityIndicator color={Colors.accent} />
+              ) : (
+                <Text style={styles.buttonText}>CALCULATE</Text>
               )}
-              <Text style={styles.body}>{result.rationale}</Text>
-              <Text style={styles.body}>{result.tip}</Text>
-              {!result.aiGenerated && <Text style={styles.localNote}>(local calibration)</Text>}
+            </Pressable>
 
-              <Pressable
-                style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-                onPress={onClose}
-              >
-                <Text style={styles.buttonText}>ACCEPT</Text>
-              </Pressable>
-            </>
-          )}
+            <Pressable
+              style={({ pressed }) => [styles.linkButton, pressed && styles.pressed]}
+              onPress={handleSaveOnly}
+              disabled={!canSubmit || calculating}
+            >
+              <Text style={styles.linkText}>SAVE ONLY</Text>
+            </Pressable>
 
-          {phase === 'pending' && (
-            <>
-              <Text style={styles.header}>[ BODY CALIBRATION ]</Text>
-              <Text style={styles.pendingTitle}>[Calibration pending.]</Text>
-              <Text style={styles.body}>The formula awaits implementation.</Text>
+            <Pressable
+              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+              onPress={onClose}
+              disabled={calculating}
+            >
+              <Text style={styles.cancelText}>CANCEL</Text>
+            </Pressable>
+          </>
+        )}
 
-              <Pressable
-                style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-                onPress={onClose}
-              >
-                <Text style={styles.buttonText}>CLOSE</Text>
-              </Pressable>
-            </>
-          )}
-        </View>
+        {phase === 'result' && result && (
+          <>
+            <Text style={styles.header}>[ NUTRITION DIRECTIVE ]</Text>
+            <Text style={styles.bigValue}>{result.dailyProteinG}g</Text>
+            <Text style={styles.rangeLine}>
+              {result.rangeMinG}–{result.rangeMaxG}g
+            </Text>
+            {result.bmi != null && (
+              <Text style={styles.bmiLine}>
+                BMI {result.bmi} · {result.bmiCategory}
+              </Text>
+            )}
+            <Text style={styles.body}>{result.rationale}</Text>
+            <Text style={styles.body}>{result.tip}</Text>
+            {!result.aiGenerated && <Text style={styles.localNote}>(local calibration)</Text>}
+
+            <Pressable
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>ACCEPT</Text>
+            </Pressable>
+          </>
+        )}
+
+        {phase === 'pending' && (
+          <>
+            <Text style={styles.header}>[ BODY CALIBRATION ]</Text>
+            <Text style={styles.pendingTitle}>[Calibration pending.]</Text>
+            <Text style={styles.body}>
+              The directive could not be computed. Check your metrics and try again.
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>CLOSE</Text>
+            </Pressable>
+          </>
+        )}
       </View>
-    </Modal>
+    </View>
   );
 }
 

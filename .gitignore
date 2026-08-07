@@ -12,6 +12,11 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# --- Backend SQLite (user accounts / per-user state — local only) ---
+backend/systemos.db
+backend/systemos.db-wal
+backend/systemos.db-shm
+
 # --- Node / Expo ---
 node_modules/
 .expo/

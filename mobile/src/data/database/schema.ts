@@ -95,4 +95,24 @@ export const CREATE_TABLES_SQL = [
     xp_awarded INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
   )`,
+
+  // Focus timer sessions. Unlike gym_sessions (one self-reported row per day), this
+  // is one row per measured session. A row with ended_at IS NULL *is* the running
+  // timer — elapsed is always derived from started_at, never stored or ticked.
+  `CREATE TABLE IF NOT EXISTS time_logs (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    description_source TEXT NOT NULL DEFAULT 'manual',
+    goal_id TEXT,
+    quest_id TEXT,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    seconds INTEGER NOT NULL DEFAULT 0,
+    credited_seconds INTEGER NOT NULL DEFAULT 0,
+    xp_awarded INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_time_logs_date ON time_logs (date)`,
 ];

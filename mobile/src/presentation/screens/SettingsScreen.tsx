@@ -23,9 +23,34 @@ import { usePlayerStore, validateHunterName } from '../stores/usePlayerStore';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useInventoryStore } from '../stores/useInventoryStore';
 import { useTrainingStore } from '../stores/useTrainingStore';
+import { useTimeLogStore } from '../stores/useTimeLogStore';
 import { useGoalStore } from '../stores/useGoalStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useSystemDialog } from '../components/SystemDialog';
 import { ENV } from '../../core/env';
+import { DiagnosticsService } from '../../data/services/DiagnosticsService';
+
+type DiagStatus = 'idle' | 'running' | 'ok' | 'fail';
+type DiagKey = 'backend' | 'db' | 'llm';
+
+const DIAG_CHECKS: { key: DiagKey; label: string }[] = [
+  { key: 'backend', label: 'Backend API' },
+  { key: 'db', label: 'Local Database' },
+  { key: 'llm', label: 'LLM Provider' },
+];
+
+const DIAG_ICONS: Record<DiagStatus, string> = {
+  idle: '—',
+  running: '···',
+  ok: '✓',
+  fail: '✕',
+};
+
+function diagStatusStyle(status: DiagStatus) {
+  if (status === 'ok') return { color: Colors.accent };
+  if (status === 'fail') return { color: Colors.error };
+  return { color: Colors.textSecondary };
+}
 
 export function SettingsScreen() {
   const { player, updateBio, updateName } = usePlayerStore();
@@ -37,7 +62,24 @@ export function SettingsScreen() {
   const [name, setName] = useState(player?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [savingName, setSavingName] = useState(false);
+  const [diag, setDiag] = useState<Record<DiagKey, DiagStatus>>({
+    backend: 'idle',
+    db: 'idle',
+    llm: 'idle',
+  });
   const isCloud = player?.modelPreference === 'cloud';
+  const diagRunning = Object.values(diag).some((s) => s === 'running');
+
+  const handleRunDiagnostics = () => {
+    setDiag({ backend: 'running', db: 'running', llm: 'running' });
+    // Each check resolves independently so fast ones (DB) tick immediately
+    // while the LLM round trip is still in flight.
+    const mark = (key: DiagKey) => (ok: boolean) =>
+      setDiag((d) => ({ ...d, [key]: ok ? 'ok' : 'fail' }));
+    DiagnosticsService.checkBackend().then(mark('backend'));
+    DiagnosticsService.checkDatabase().then(mark('db'));
+    DiagnosticsService.checkLlm(player?.modelPreference ?? 'local').then(mark('llm'));
+  };
 
   const handleSaveName = async () => {
     const error = validateHunterName(name);
@@ -85,7 +127,7 @@ export function SettingsScreen() {
   const handleScram = () => {
     systemAlert(
       '[Warning]',
-      'SCRAM wipes everything: level, XP, stats, rank, keys, your campaign, inventory, quests, dungeons, and shadow army. This cannot be undone.',
+      'SCRAM wipes everything: level, XP, stats, rank, keys, your campaign, inventory, quests, dungeons, focus logs, and shadow army. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -96,11 +138,29 @@ export function SettingsScreen() {
             await resetQuests(); // deletes all quests + dungeons
             await clearInventory();
             await useTrainingStore.getState().resetTraining();
+            await useTimeLogStore.getState().resetTimeLogs();
             await useGoalStore.getState().wipeAll(); // deletes goals + clears meta cursors
             systemAlert(
               '[System]',
               'Reset complete. You are an E-Rank Hunter once more. Forge a new campaign to begin again.',
             );
+          },
+        },
+      ],
+    );
+  };
+
+  const handleLogout = () => {
+    systemAlert(
+      '[Log Out.]',
+      'Sign out of this device? Your local data stays for a quick return.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            useAuthStore.getState().logout();
           },
         },
       ],
@@ -210,6 +270,39 @@ export function SettingsScreen() {
           <Text style={styles.debugLine}>API: {ENV.API_BASE_URL}</Text>
           <Text style={styles.debugLine}>Mode: {ENV.IS_DEV ? 'Development' : 'Production'}</Text>
           <Text style={styles.debugLine}>Player level: {player?.level ?? '—'}</Text>
+
+          {/* Connectivity diagnostics */}
+          {DIAG_CHECKS.map(({ key, label }) => (
+            <View key={key} style={styles.diagRow}>
+              <Text style={styles.debugLine}>
+                {key === 'llm' ? `${label} (${player?.modelPreference ?? 'local'})` : label}
+              </Text>
+              <Text style={[styles.diagStatus, diagStatusStyle(diag[key])]}>
+                {DIAG_ICONS[diag[key]]}
+              </Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={[styles.dailyBtn, diagRunning && styles.btnDisabled]}
+            onPress={handleRunDiagnostics}
+            disabled={diagRunning}
+          >
+            <Text style={styles.dailyBtnText}>
+              {diagRunning ? 'Running Checks...' : 'Run Diagnostics'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Account */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionDesc}>
+            Sign out of this device. Your local progress is kept so a quick re-login picks up right
+            where you left off.
+          </Text>
+          <TouchableOpacity style={styles.dailyBtn} onPress={handleLogout}>
+            <Text style={styles.dailyBtnText}>Log Out</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Danger zone */}
@@ -364,6 +457,15 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: FontSize.xs,
     fontFamily: 'monospace',
+  },
+  diagRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  diagStatus: {
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.sm,
   },
   dangerSection: {
     borderWidth: 1,

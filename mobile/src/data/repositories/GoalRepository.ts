@@ -1,5 +1,6 @@
 import { getDb } from '../database/db';
 import { Goal, GoalStatus } from '../../domain/models/Goal';
+import { Quest } from '../../domain/models/Quest';
 import { IGoalRepository } from '../../domain/repositories/IGoalRepository';
 
 function rowToGoal(row: Record<string, unknown>): Goal {
@@ -67,6 +68,62 @@ export class GoalRepository implements IGoalRepository {
         goal.createdAt,
       ],
     );
+  }
+
+  async saveCampaign(goal: Goal, quests: Quest[]): Promise<void> {
+    // One transaction for the goal + its whole quest set: either the full campaign
+    // lands or nothing does, so a goal can never exist without its daily work.
+    const db = await getDb();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `INSERT OR REPLACE INTO goals
+          (id, title, description, context, duration_days, start_date, end_date,
+           plan, schedule, days_completed, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          goal.id,
+          goal.title,
+          goal.description,
+          goal.context,
+          goal.durationDays,
+          goal.startDate,
+          goal.endDate,
+          goal.plan,
+          goal.schedule,
+          goal.daysCompleted,
+          goal.status,
+          goal.createdAt,
+        ],
+      );
+
+      for (const q of quests) {
+        await db.runAsync(
+          `INSERT OR REPLACE INTO quests
+            (id, title, description, category, difficulty, xp_reward, gold_reward,
+             is_completed, created_at, completed_at,
+             goal_id, scheduled_for, quest_type, dungeon_challenge, dungeon_result, accepted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            q.id,
+            q.title,
+            q.description,
+            q.category,
+            q.difficulty,
+            q.xpReward,
+            q.goldReward,
+            q.isCompleted ? 1 : 0,
+            q.createdAt,
+            q.completedAt ?? null,
+            q.goalId ?? null,
+            q.scheduledFor ?? null,
+            q.questType,
+            q.dungeonChallenge ? JSON.stringify(q.dungeonChallenge) : null,
+            q.dungeonResult ? JSON.stringify(q.dungeonResult) : null,
+            q.acceptedAt ?? null,
+          ],
+        );
+      }
+    });
   }
 
   async incrementDaysCompleted(goalId: string): Promise<number> {

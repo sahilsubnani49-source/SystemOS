@@ -88,7 +88,7 @@ export function QuestsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Today's Quests</Text>
+        <Text style={styles.title}>Today&apos;s Quests</Text>
 
         {error && <Text style={styles.error}>{error}</Text>}
 

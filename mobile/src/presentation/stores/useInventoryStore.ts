@@ -9,7 +9,7 @@ interface InventoryState {
   loading: boolean;
   load: () => Promise<void>;
   /** Redeem a reward: permanently delete it (the player goes and enjoys it). Returns the redeemed item. */
-  useItem: (itemId: string) => Promise<DynamicItem | null>;
+  redeemItem: (itemId: string) => Promise<DynamicItem | null>;
   clear: () => Promise<void>;
 }
 
@@ -23,7 +23,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ items, loading: false });
   },
 
-  useItem: async (itemId: string) => {
+  redeemItem: async (itemId: string) => {
     const item = get().items.find((i) => i.id === itemId);
     if (!item) return null;
 

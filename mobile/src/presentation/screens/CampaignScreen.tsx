@@ -294,7 +294,8 @@ export function CampaignScreen() {
           <View style={styles.maxCard}>
             <Text style={styles.maxTitle}>Maximum campaigns reached</Text>
             <Text style={styles.maxDesc}>
-              You're running the maximum of {MAX_CAMPAIGNS} campaigns. Abandon one to forge another.
+              You&apos;re running the maximum of {MAX_CAMPAIGNS} campaigns. Abandon one to forge
+              another.
             </Text>
           </View>
         )}

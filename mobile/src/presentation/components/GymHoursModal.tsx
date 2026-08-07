@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, Fonts, Radius, Shadow, Spacing, withAlpha } from '../../core/theme';
 
@@ -22,17 +22,24 @@ function toHalf(n: number): number {
  * hours in 0.5h increments, clamped to the day's remaining cap.
  */
 export function GymHoursModal({ visible, remainingHours, onLog, onClose }: Props) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      {/* Keying on open/closed remounts the panel each time the modal opens, giving
+          fresh picker state without effect-driven resets. */}
+      <GymHoursPanel
+        key={visible ? 'open' : 'closed'}
+        remainingHours={remainingHours}
+        onLog={onLog}
+        onClose={onClose}
+      />
+    </Modal>
+  );
+}
+
+function GymHoursPanel({ remainingHours, onLog, onClose }: Omit<Props, 'visible'>) {
   const capReached = remainingHours <= 0;
   const [hours, setHours] = useState(STEP);
   const [submitting, setSubmitting] = useState(false);
-
-  // Reset the picker each time the modal opens or the remaining cap changes.
-  useEffect(() => {
-    if (visible) {
-      setHours(Math.min(STEP, Math.max(STEP, toHalf(remainingHours))) || STEP);
-      setSubmitting(false);
-    }
-  }, [visible, remainingHours]);
 
   const dec = () => setHours((h) => Math.max(STEP, toHalf(h - STEP)));
   const inc = () => setHours((h) => Math.min(toHalf(remainingHours), toHalf(h + STEP)));
@@ -50,62 +57,60 @@ export function GymHoursModal({ visible, remainingHours, onLog, onClose }: Props
   const logDisabled = submitting || capReached;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.panel}>
-          <Text style={styles.header}>[ GYM SESSION ]</Text>
+    <View style={styles.backdrop}>
+      <View style={styles.panel}>
+        <Text style={styles.header}>[ GYM SESSION ]</Text>
 
-          {capReached ? (
-            <Text style={styles.limitText}>[Daily limit reached.]</Text>
+        {capReached ? (
+          <Text style={styles.limitText}>[Daily limit reached.]</Text>
+        ) : (
+          <>
+            <View style={styles.stepperRow}>
+              <Pressable
+                style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
+                onPress={dec}
+                disabled={hours <= STEP}
+              >
+                <Text style={styles.stepBtnText}>−</Text>
+              </Pressable>
+              <Text style={styles.hoursValue}>{hours}h</Text>
+              <Pressable
+                style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
+                onPress={inc}
+                disabled={hours >= toHalf(remainingHours)}
+              >
+                <Text style={styles.stepBtnText}>+</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.remaining}>{remainingHours}h remaining today</Text>
+          </>
+        )}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            logDisabled && styles.buttonDisabled,
+            pressed && !logDisabled && styles.pressed,
+          ]}
+          onPress={handleLog}
+          disabled={logDisabled}
+        >
+          {submitting ? (
+            <ActivityIndicator color={Colors.accent} />
           ) : (
-            <>
-              <View style={styles.stepperRow}>
-                <Pressable
-                  style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
-                  onPress={dec}
-                  disabled={hours <= STEP}
-                >
-                  <Text style={styles.stepBtnText}>−</Text>
-                </Pressable>
-                <Text style={styles.hoursValue}>{hours}h</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
-                  onPress={inc}
-                  disabled={hours >= toHalf(remainingHours)}
-                >
-                  <Text style={styles.stepBtnText}>+</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.remaining}>{remainingHours}h remaining today</Text>
-            </>
+            <Text style={styles.buttonText}>LOG</Text>
           )}
+        </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              logDisabled && styles.buttonDisabled,
-              pressed && !logDisabled && styles.pressed,
-            ]}
-            onPress={handleLog}
-            disabled={logDisabled}
-          >
-            {submitting ? (
-              <ActivityIndicator color={Colors.accent} />
-            ) : (
-              <Text style={styles.buttonText}>LOG</Text>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
-            onPress={onClose}
-            disabled={submitting}
-          >
-            <Text style={styles.cancelText}>CANCEL</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
+          onPress={onClose}
+          disabled={submitting}
+        >
+          <Text style={styles.cancelText}>CANCEL</Text>
+        </Pressable>
       </View>
-    </Modal>
+    </View>
   );
 }
 

@@ -12,6 +12,14 @@ sensible range around it, the computed BMI + category, and a one-sentence ration
 tip. Falls back to a rule-based generator if the LLM call fails or is misconfigured.
 """
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
+load_dotenv()
+
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
 from pydantic import BaseModel, Field

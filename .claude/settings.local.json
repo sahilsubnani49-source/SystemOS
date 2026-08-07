@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Edit",
+      "Write",
       "mcp__claude_ai_Recraft__generate_image",
       "Bash(curl -s -o stat-strength.png \"https://img.recraft.ai/HDl8a-hv1dPPhNdCE8mxhWI5TeZEaI0fqVmo27j7SdM/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/cfa1b0cd-6ca4-4725-bf04-27085430a7ac\")",
       "Bash(curl -s -o stat-agility.png \"https://img.recraft.ai/gF8v2u7OP2uNk19NZRvKZsGFGYCCvT1fZH8K2uxG06M/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/9d826b8d-6652-4544-9328-ca8457ee6f02\")",
@@ -32,7 +35,24 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "Bash(rm .eslintrc.js)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(./venv/bin/python -c ' *)",
+      "Bash(npx eslint *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(Date)",
+      "Bash(grep -vE \"^\\\\s*\\(React refs|`Date)",
+      "Bash(awk '/^src|^App/ {file=$0; next} /error|warning/ {print file\" :: \"$0}')",
+      "Bash(sed 's#/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/mobile/##')",
+      "Read(//tmp/**)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).dependencies['react-native']\\)\")",
+      "Bash(node -e \"const rn=require\\('react-native/package.json'\\); console.log\\(rn.version\\)\")",
+      "Bash(npx prettier *)",
+      "Bash(git -C .. status --short)",
+      "Bash(\"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/backend/venv/bin/python\" -m pip install -r \"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/backend/requirements.txt\")",
+      "Bash(./venv/bin/python -c \"from app.main import app; print\\('OK - app imports fine'\\)\")",
+      "Bash(npm ls *)",
+      "Bash(\"/Users/sahilsubnani/Desktop/Code & Projects/SystemOS/backend/venv/bin/pip\" --version)",
+      "Bash(backend/venv/bin/python -m pip install -r backend/requirements.txt)"
     ]
   },
   "outputStyle": "Learning"

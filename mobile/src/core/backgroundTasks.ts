@@ -1,7 +1,9 @@
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
-import { DailyResetService } from '../data/services/DailyResetService';
+import { getMeta, setMeta } from '../data/services/AppMeta';
+import { LAST_DAILY_NOTIFICATION_DATE } from '../data/services/DailyTimelineService';
 import { NotificationService } from './NotificationService';
+import { todayDateStr } from './dateUtils';
 
 export const DAILY_RESET_TASK = 'SYSTEMOS_DAILY_RESET';
 
@@ -11,13 +13,14 @@ export const DAILY_RESET_TASK = 'SYSTEMOS_DAILY_RESET';
  */
 TaskManager.defineTask(DAILY_RESET_TASK, async () => {
   try {
-    // Check if any incomplete quests remain (penalty warning)
-    // The reset itself is handled on foreground — background just fires warnings
-    const lastReset = await DailyResetService.getLastResetDate();
-    const today = new Date().toDateString();
+    // Day advancement itself happens on foreground (DailyTimelineService.tick).
+    // The background run only fires the daily reminder if neither the tick nor a
+    // previous background run has already announced today.
+    const today = todayDateStr();
+    const lastNotified = await getMeta(LAST_DAILY_NOTIFICATION_DATE);
 
-    if (lastReset !== today) {
-      // It's a new day and app hasn't been opened yet — fire a reminder
+    if (lastNotified !== today) {
+      await setMeta(LAST_DAILY_NOTIFICATION_DATE, today);
       await NotificationService.send(
         '[Daily Quest has arrived.]',
         'New challenges await, Hunter. Rise and conquer.',

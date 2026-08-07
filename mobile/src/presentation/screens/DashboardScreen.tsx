@@ -125,6 +125,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.pixel,
     fontSize: FontSize.xs,
     letterSpacing: 1.5,
+    // The pixel font has no built-in line spacing, so give the label its own
+    // breathing room before the large title below it.
+    marginBottom: Spacing.sm,
   },
   playerName: {
     ...Typography.title,

@@ -1,5 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ENV } from '../../core/env';
+import { TokenStorage } from '../services/TokenStorage';
+import { AuthService } from '../services/AuthService';
 import {
   ApiPlayer,
   ApiQuest,
@@ -12,8 +14,15 @@ import {
   ApiDungeonGenerateResponse,
   ApiNutritionRequest,
   ApiNutritionResponse,
+  ApiTaskDescribeRequest,
+  ApiTaskDescribeResponse,
 } from './ApiTypes';
 
+// Marker flag on a request config so a 401-triggered retry is attempted at most
+// once — prevents an infinite refresh→retry→401 loop.
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+// eslint-disable-next-line import/no-named-as-default-member -- axios.create on the default export is the canonical axios API
 const api = axios.create({
   baseURL: ENV.API_BASE_URL,
   timeout: ENV.REQUEST_TIMEOUT_MS,
@@ -24,10 +33,18 @@ const GENERATION_TIMEOUT_MS = 240_000; // up to 4 min for a full multi-day campa
 const STRATEGY_TIMEOUT_MS = 90_000; // a single LLM call to draft the campaign strategy
 const DUNGEON_TIMEOUT_MS = 60_000; // a single mock-exam generation call
 const NUTRITION_TIMEOUT_MS = 30_000; // a single protein-directive generation call
+const TASK_DESCRIBE_TIMEOUT_MS = 30_000; // a single task-line generation call
+const HEALTH_TIMEOUT_MS = 5_000; // plain reachability ping — fail fast
+const LLM_HEALTH_TIMEOUT_MS = 45_000; // one-word LLM ping; local Ollama may cold-load the model
 
 // --- Interceptors ---
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
+  // Attach the current access token so every /api/* call is authenticated.
+  const accessToken = await TokenStorage.getAccessToken();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
   if (ENV.IS_DEV) {
     console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   }
@@ -41,12 +58,34 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error: AxiosError) => {
     const status = error.response?.status;
+    const originalConfig = error.config as RetryableConfig | undefined;
+
+    // 401 → the access token likely expired. Refresh once (single-flight in
+    // AuthService) and replay the original request. The _retry guard ensures we
+    // never loop, and a refresh failure falls through to session-expiry below.
+    if (status === 401 && originalConfig && !originalConfig._retry) {
+      originalConfig._retry = true;
+      try {
+        const newAccessToken = await AuthService.refreshTokens();
+        originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalConfig);
+      } catch {
+        // Refresh gave up — tell the presentation layer to log the Hunter out,
+        // then fall through to the existing error-mapping so the caller still
+        // receives a rejected promise.
+        AuthService.notifySessionExpired();
+      }
+    }
+
     const url = error.config?.url ?? '';
+    // Long-running generation calls override the default timeout — report the
+    // timeout that was actually in effect, not the 10s default.
+    const effectiveTimeoutMs = error.config?.timeout ?? ENV.REQUEST_TIMEOUT_MS;
     const message =
       error.code === 'ECONNABORTED'
-        ? `Request timed out (${ENV.REQUEST_TIMEOUT_MS}ms): ${url}`
+        ? `Request timed out (${effectiveTimeoutMs}ms): ${url}`
         : status
           ? `API error ${status}: ${url}`
           : `Network error: ${url}`;
@@ -60,6 +99,18 @@ api.interceptors.response.use(
 );
 
 export const ApiDataSource = {
+  async checkHealth(): Promise<void> {
+    await api.get('/health', { timeout: HEALTH_TIMEOUT_MS });
+  },
+
+  async checkLlmHealth(modelPreference: string): Promise<{ provider: string }> {
+    const { data } = await api.get<{ status: string; provider: string }>('/health/llm', {
+      params: { model_preference: modelPreference },
+      timeout: LLM_HEALTH_TIMEOUT_MS,
+    });
+    return { provider: data.provider };
+  },
+
   async getProfile(): Promise<ApiPlayer> {
     const { data } = await api.get<ApiPlayer>('/api/profile');
     return data;
@@ -142,6 +193,13 @@ export const ApiDataSource = {
   async getProteinAdvice(req: ApiNutritionRequest): Promise<ApiNutritionResponse> {
     const { data } = await api.post<ApiNutritionResponse>('/api/nutrition/protein', req, {
       timeout: NUTRITION_TIMEOUT_MS,
+    });
+    return data;
+  },
+
+  async describeTask(req: ApiTaskDescribeRequest): Promise<ApiTaskDescribeResponse> {
+    const { data } = await api.post<ApiTaskDescribeResponse>('/api/tasks/describe', req, {
+      timeout: TASK_DESCRIBE_TIMEOUT_MS,
     });
     return data;
   },

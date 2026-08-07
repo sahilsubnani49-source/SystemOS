@@ -17,7 +17,13 @@ import json
 import os
 import random
 import uuid
+from pathlib import Path
 from typing import Optional
+from dotenv import load_dotenv
+
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
+load_dotenv()
 
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate, FewShotChatMessagePromptTemplate
@@ -154,7 +160,10 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
     """
     if model_preference == "local":
         try:
-            from langchain_community.chat_models import ChatOllama
+            try:
+                from langchain_ollama import ChatOllama
+            except ImportError:
+                from langchain_community.chat_models import ChatOllama
             return ChatOllama(
                 model=os.getenv("OLLAMA_MODEL", "llama3"),
                 base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),

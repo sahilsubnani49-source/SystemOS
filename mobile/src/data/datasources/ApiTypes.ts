@@ -1,5 +1,44 @@
 // FastAPI returns snake_case — these types mirror the exact API response shapes
 
+// --- Auth (JWT + multi-user) ---
+
+export interface ApiUser {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
+export interface ApiAuthResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: ApiUser;
+}
+
+export interface ApiRefreshResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+}
+
+// camelCase domain shape consumed by the presentation layer.
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: string;
+}
+
+export function apiUserToDomain(api: ApiUser): User {
+  return {
+    id: api.id,
+    email: api.email,
+    name: api.name,
+    createdAt: api.created_at,
+  };
+}
+
 export interface ApiPlayerStats {
   strength: number;
   agility: number;
@@ -143,5 +182,30 @@ export interface ApiNutritionResponse {
   bmi_category: string;
   rationale: string;
   tip: string;
+  ai_generated: boolean;
+}
+
+// --- Task description (focus-timer narration) ---
+
+export interface ApiTaskQuest {
+  title: string;
+  description?: string;
+  difficulty?: string;
+  is_completed?: boolean;
+  is_accepted?: boolean;
+}
+
+export interface ApiTaskDescribeRequest {
+  goal_title: string;
+  context?: string;
+  plan_excerpt?: string;
+  quests: ApiTaskQuest[];
+  model_preference?: 'local' | 'cloud';
+}
+
+export interface ApiTaskDescribeResponse {
+  description: string;
+  focus: string;
+  rationale: string;
   ai_generated: boolean;
 }
