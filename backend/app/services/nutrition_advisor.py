@@ -248,7 +248,9 @@ async def generate_nutrition_advice(
     """
     bmi, category = compute_bmi(height_cm, weight_kg)
 
-    llm = _get_llm(model_preference)
+    # 512 leaves no margin once a reasoning model spends 300-400 tokens before
+    # emitting JSON — the seven-field payload then truncates into the fallback.
+    llm = _get_llm(model_preference, max_tokens=1024)
     chain = _NUTRITION_PROMPT | llm | _NUTRITION_PARSER
 
     result: dict = await chain.ainvoke({

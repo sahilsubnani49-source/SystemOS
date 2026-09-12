@@ -6,6 +6,7 @@ import { useGoalStore } from '../presentation/stores/useGoalStore';
 import { useInventoryStore } from '../presentation/stores/useInventoryStore';
 import { useTrainingStore } from '../presentation/stores/useTrainingStore';
 import { useTimeLogStore } from '../presentation/stores/useTimeLogStore';
+import { useTaskLogStore } from '../presentation/stores/useTaskLogStore';
 import { useAuthStore } from '../presentation/stores/useAuthStore';
 import { onConnectivityChange } from './network';
 import { NotificationService } from './NotificationService';
@@ -58,6 +59,8 @@ export function useAppBootstrap() {
         useTrainingStore.getState().load(),
         // Also rehydrates any focus timer that was running when the app was killed.
         useTimeLogStore.getState().load(),
+        // Seeds the default Hunter Log categories on first launch.
+        useTaskLogStore.getState().load(),
       ]);
       await advanceTimeline();
     }

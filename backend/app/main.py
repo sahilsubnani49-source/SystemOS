@@ -223,7 +223,9 @@ async def llm_health_check(model_preference: str = "cloud"):
     from app.services.reward_generator import _get_llm
 
     try:
-        llm = _get_llm(model_preference, max_tokens=8)
+        # Not 8: reasoning models burn their whole budget before emitting content,
+        # which returns an empty reply and makes a working provider look broken.
+        llm = _get_llm(model_preference, max_tokens=512)
         result = await llm.ainvoke("Reply with exactly one word: pong")
         return {
             "status": "ok",

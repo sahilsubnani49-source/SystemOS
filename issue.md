@@ -21,19 +21,24 @@ the backend to any other user or public network.
 
 ### SYS-001 — Backend state is shared process memory
 
+- **Status:** RESOLVED (2026-09-12) — per-user persistence added. `backend/app/db.py` stores `users` and `user_state` in SQLite; every read/write goes through `get_user_state()` / `save_user_state()` keyed by the authenticated user. The `DEFAULT_*_STATE` dicts in `main.py` are now seed templates, deep-copied at signup, not shared mutable state.
 - **Priority:** P0 — deploy blocker
-- **Area:** `backend/app/main.py`
-- **Current behavior:** `player_state`, `quests_state`, and `inventory_state` are module-level Python variables. Profile updates, legacy quest completions, and inventory reads mutate or expose that one shared state.
-- **Why it matters:** This is acceptable only while one person runs the backend locally. If deployed, every caller would share a profile and inventory; a restart also loses all state. It contradicts the intended stateless-backend/local-source-of-truth model.
-- **Suggested resolution:** For the intended architecture, remove the legacy shared-state profile/quest/inventory routes and make AI endpoints pure request-to-response functions. If a future multi-user product needs remote persistence, introduce authenticated per-user storage explicitly.
+- **Area:** `backend/app/main.py`, `backend/app/db.py`
+- **Original behavior:** `player_state`, `quests_state`, and `inventory_state` were module-level Python variables, so every caller shared one profile and a restart lost all state.
+- **Follow-up:** This resolves the correctness problem but changes the product's stated architecture — the backend is no longer stateless and now holds accounts. Reconcile with SYS-017.
 
 ### SYS-002 — AI endpoints have no access control, rate limiting, or cost guardrail
 
+- **Status:** PARTIALLY RESOLVED (2026-09-12) — authentication landed; quotas and CORS did not.
 - **Priority:** P0 — deploy blocker
-- **Area:** `backend/app/main.py`
-- **Current behavior:** Any caller that can reach the server can request campaign, dungeon, nutrition, reward, and LLM-health generation. Cloud provider keys are paid/limited resources held by the backend.
-- **Why it matters:** CORS is not authentication. A public backend could be abused to consume provider quota or generate unexpected cost.
-- **Suggested resolution:** Keep the server local/private during development. Before deployment, add authentication, request/user quotas, rate limits, request-size limits, provider-budget monitoring, and a restrictive CORS allow-list.
+- **Area:** `backend/app/main.py`, `backend/app/auth.py`
+- **Resolved:** Every `/api/*` route now requires a Bearer access token via `Depends(get_current_user)`. JWT HS256 with 30-minute access and 30-day refresh tokens; passwords bcrypt-hashed with the 72-byte limit enforced.
+- **Still open:**
+  - `CORSMiddleware` is configured with `allow_origins=["*"]`.
+  - No per-user or per-IP rate limiting, request-size limit, or provider-budget monitoring. An authenticated account can still consume unbounded provider quota.
+  - `JWT_SECRET_KEY` falls back to a hardcoded dev default (`dev-insecure-secret-change-me`) with only a log warning. A deployment that forgets the env var mints forgeable tokens.
+  - `GET /health/llm` is unauthenticated and makes a real provider call, so it is a free cost oracle for anyone who can reach the server.
+- **Suggested resolution:** Before deployment: restrictive CORS allow-list, per-user quotas and rate limits, request-size caps, provider-budget monitoring, fail-fast (not warn) on a missing `JWT_SECRET_KEY`, and auth on `/health/llm`.
 
 ### SYS-003 — Background task can repeat the daily notification
 
@@ -147,21 +152,28 @@ the backend to any other user or public network.
 - **Why it matters:** Timeline penalties, level thresholds, dungeon keys, rank thresholds, date boundaries, and fallback behavior are all stateful and easy to regress.
 - **Suggested resolution:** Add a lightweight TypeScript test runner and begin with pure services (`RankService`, nutrition, reward odds, date utilities), then repository tests using a test SQLite database and API-service tests for fallback behavior.
 
-### SYS-015 — Production API URL is a placeholder
+### SYS-015 — Production API URL is not configured
 
+- **Status:** PARTIALLY RESOLVED (2026-09-12) — the mechanism exists; the value does not.
 - **Priority:** P2 — deploy blocker
-- **Area:** `mobile/src/core/env.ts`
-- **Current behavior:** Non-development builds use `https://your-production-api.com`.
-- **Why it matters:** A release build cannot contact a real backend without a configuration change, and app configuration is coupled to a source edit.
-- **Suggested resolution:** Use build-time environment configuration (for example EAS environment variables), validate it at startup, and keep local-device setup separate from release settings.
+- **Area:** `mobile/src/core/env.ts`, `mobile/eas.json`
+- **Resolved:** The hardcoded placeholder is gone. Release builds read `EXPO_PUBLIC_API_URL` (inlined at bundle time) and `env.ts` throws at startup if it is missing, rather than silently treating every request as offline. Local-device setup is separated from release settings.
+- **Still open:** No `eas.json` build profile defines an `env` block, so `EXPO_PUBLIC_API_URL` is unset and any release build throws on launch. No backend is deployed for it to point at.
+- **Suggested resolution:** Deploy the backend, then add `env.EXPO_PUBLIC_API_URL` to the `preview` and `production` profiles in `eas.json`.
 
 ### SYS-016 — Documentation describes retired Flutter and legacy reward models
 
+- **Status:** RESOLVED (2026-09-12) — all documentation rewritten against the current code.
 - **Priority:** P1
-- **Area:** `docs/PROJECT_STRUCTURE.md`, `docs/DATABASE_ARCHITECTURE.md`, `docs/DOMAIN_MODELS.md`, portions of `README.md` and `AGENTS.md`
-- **Current behavior:** Several documents refer to Flutter, Drift, Riverpod, stat-modifier equipment, and aspiration-generated daily quests. The live code is React Native/Expo, `expo-sqlite`, Zustand, real-world token/potion rewards, and goal-driven dated campaigns.
-- **Why it matters:** Stale architecture instructions lead humans and LLMs to make incorrect changes.
-- **Suggested resolution:** `docs/PROJECT_STRUCTURE.md` has been rewritten as the current orientation document. Update the remaining documents next, starting with database and domain-model descriptions, and treat source code as canonical until that work is complete.
+- **Area:** `README.md`, `CLAUDE.md`, `docs/*`
+- **Original behavior:** Documents referred to Flutter, Drift, Dart, stat-modifier equipment, aspiration-generated daily quests, a `POST /api/quests/generate` route that does not exist, and a stateless account-free backend.
+- **What changed:**
+  - `docs/DOMAIN_MODELS.md` rewritten from Dart/Drift to the actual TypeScript models.
+  - `docs/DATABASE_ARCHITECTURE.md` now covers all 12 device tables plus the backend's `users` / `user_state`, with current columns and migrations.
+  - `docs/REWARD_SYSTEM.md` and `docs/AI_PROMPTS.md` rewritten for the coupon model and all five live agents.
+  - `README.md` rewritten: correct feature set, auth-bearing backend, real API surface, iOS + Android dev-client setup, and an explicit "Not yet implemented" section.
+  - `CLAUDE.md` corrected (wrong route list, wrong store count, wrong provider priority, wrong React Navigation version, stale stateless-backend claim).
+- **Follow-up:** Documentation now asserts that code is canonical. Keep docs updated in the same change as the behavior they describe.
 
 ### SYS-017 — Offline-first scope needs a precise product definition
 
@@ -187,4 +199,4 @@ the backend to any other user or public network.
 3. Establish a clean lint baseline and introduce tests for pure engine logic.
 4. Make campaign writes atomic and bootstrap failures recoverable.
 5. Decide the offline sync contract; remove dead legacy code or implement it fully.
-6. Before any deployment beyond personal local use, address SYS-001, SYS-002, and SYS-015.
+6. Before any deployment beyond personal local use, close the remaining halves of SYS-002 (CORS, rate limits, provider budget, `JWT_SECRET_KEY` fail-fast) and SYS-015 (`EXPO_PUBLIC_API_URL` in `eas.json`).

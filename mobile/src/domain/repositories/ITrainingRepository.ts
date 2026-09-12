@@ -12,5 +12,7 @@ export interface ITrainingRepository {
   getGymSession(date: string): Promise<GymSession | null>;
   /** Insert or accumulate a gym session for its day. */
   upsertGymSession(session: GymSession): Promise<void>;
+  /** All-time gym hours expressed in minutes, for the Hunter Log's Gym total. */
+  getTotalGymMinutes(): Promise<number>;
   clearAll(): Promise<void>;
 }

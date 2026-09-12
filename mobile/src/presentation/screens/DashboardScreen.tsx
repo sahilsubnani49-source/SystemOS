@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Colors,
@@ -16,65 +16,77 @@ import {
 import { usePlayerStore } from '../stores/usePlayerStore';
 import { useQuestStore } from '../stores/useQuestStore';
 import { useInventoryStore } from '../stores/useInventoryStore';
+import { useTaskLogStore } from '../stores/useTaskLogStore';
 import { XPBar } from '../components/XPBar';
 import { RankBadge } from '../components/RankBadge';
-import { QuestCard } from '../components/QuestCard';
+import { CornerCard } from '../components/CornerCard';
+import { NewTaskModal } from '../components/NewTaskModal';
+import { formatMinutesLabel } from '../hooks/useElapsed';
 import { Rank } from '../../core/constants';
 import { RootStackParamList } from '../../core/navigation';
 
+/** The Hunter Log: level card, inventory shortcut, and the grid of logged tasks. */
 export function DashboardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { player, loading: playerLoading } = usePlayerStore();
-  const { quests, loading: questsLoading } = useQuestStore();
+  const quests = useQuestStore((s) => s.quests);
   const itemCount = useInventoryStore((s) => s.items.length);
 
-  const activeQuests = quests.filter((q) => !q.isCompleted).slice(0, 3);
-  const loading = playerLoading || questsLoading;
+  const categories = useTaskLogStore((s) => s.categories);
+  const streakDays = useTaskLogStore((s) => s.streakDays);
+  const tasksLoading = useTaskLogStore((s) => s.loading);
+  const loadTasks = useTaskLogStore((s) => s.load);
+  const addCategory = useTaskLogStore((s) => s.addCategory);
+
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+
+  // Totals change on the detail screen, so re-read them whenever the tab regains focus.
+  useFocusEffect(
+    useCallback(() => {
+      loadTasks();
+    }, [loadTasks]),
+  );
+
+  const questsDone = quests.filter((q) => q.isCompleted).length;
+  const dailyQuestLabel =
+    quests.length > 0 ? `Daily Quest: ${questsDone}/${quests.length} done` : 'No quests today';
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header — welcome + name stack on the left, RANK drops to its own line
-            below so the top-right corner stays clear of the on-device overlay. */}
+        {/* Header — eyebrow + title stack, name and RANK on a row below so the
+            top-right corner stays clear of the on-device overlay. */}
         <View style={styles.header}>
-          <Text style={styles.welcome}>WELCOME BACK,</Text>
-          <Text
-            style={styles.playerName}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.55}
-          >
-            {player?.name ?? '—'}
-          </Text>
-          <View style={styles.rankWrap}>
+          <Text style={styles.eyebrow}>SYSTEM</Text>
+          <Text style={styles.title}>HUNTER LOG</Text>
+          <View style={styles.identityRow}>
+            <Text
+              style={styles.playerName}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {player?.name ?? '—'}
+            </Text>
             <RankBadge rank={(player?.rank?.charAt(0) ?? 'E') as Rank} />
           </View>
         </View>
 
-        {/* XP Bar */}
+        {/* Level card */}
         {player && (
           <XPBar
             level={player.level}
             experience={player.experience}
             experienceToNextLevel={player.experienceToNextLevel}
+            streakDays={streakDays}
+            footerRight={dailyQuestLabel}
           />
         )}
-
-        {/* Stats snapshot */}
-        {player && (
-          <View style={styles.statsRow}>
-            {(['strength', 'agility', 'intelligence', 'mindfulness'] as const).map((key) => (
-              <View key={key} style={styles.statBox}>
-                <Text style={styles.statVal}>{player.stats[key]}</Text>
-                <Text style={styles.statKey}>{key.slice(0, 3).toUpperCase()}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {playerLoading && !player && <ActivityIndicator color={Colors.primary} />}
 
         {/* Inventory shortcut */}
         <Pressable
-          style={({ pressed }) => [styles.inventoryBtn, pressed && styles.inventoryBtnPressed]}
+          style={({ pressed }) => [styles.inventoryBtn, pressed && styles.pressed]}
           onPress={() => navigation.navigate('Inventory')}
         >
           <Text style={styles.inventoryIcon}>🎒</Text>
@@ -87,16 +99,62 @@ export function DashboardScreen() {
           <Text style={styles.inventoryChevron}>›</Text>
         </Pressable>
 
-        {/* Active quests */}
-        <Text style={styles.sectionTitle}>Active Quests</Text>
-        {loading && <ActivityIndicator color={Colors.primary} />}
-        {!loading && activeQuests.length === 0 && (
-          <Text style={styles.empty}>[All quests completed for today.]</Text>
-        )}
-        {activeQuests.map((q) => (
-          <QuestCard key={q.id} quest={q} />
-        ))}
+        {/* Tasks logged */}
+        <Text style={styles.sectionTitle}>TASKS LOGGED</Text>
+        {tasksLoading && categories.length === 0 && <ActivityIndicator color={Colors.primary} />}
+        <View style={styles.grid}>
+          {categories.map((c) => {
+            const card = (
+              <CornerCard style={styles.taskCard} size={11} bracketOpacity={0.75}>
+                <View style={styles.taskIconWrap}>
+                  <Text style={styles.taskIcon}>{c.icon}</Text>
+                </View>
+                <Text style={styles.taskName} numberOfLines={1}>
+                  {c.name}
+                </Text>
+                <Text style={styles.taskTime}>{formatMinutesLabel(c.totalMinutes)}</Text>
+                {c.synthetic && <Text style={styles.taskSource}>FROM TIMER</Text>}
+              </CornerCard>
+            );
+
+            // The Focus row is a view over time_logs with no category behind it —
+            // TaskDetail would offer to log hand-entered time against nothing.
+            if (c.synthetic) {
+              return (
+                <View key={c.id} style={styles.cell}>
+                  {card}
+                </View>
+              );
+            }
+
+            return (
+              <Pressable
+                key={c.id}
+                style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
+                onPress={() => navigation.navigate('TaskDetail', { categoryId: c.id })}
+              >
+                {card}
+              </Pressable>
+            );
+          })}
+
+          <Pressable
+            style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
+            onPress={() => setNewTaskOpen(true)}
+          >
+            <View style={[styles.taskCard, styles.newCard]}>
+              <Text style={styles.newPlus}>+</Text>
+              <Text style={styles.newLabel}>NEW TASK</Text>
+            </View>
+          </Pressable>
+        </View>
       </ScrollView>
+
+      <NewTaskModal
+        visible={newTaskOpen}
+        onCreate={addCategory}
+        onClose={() => setNewTaskOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -109,52 +167,34 @@ const styles = StyleSheet.create({
   container: {
     padding: Spacing.lg,
     gap: Spacing.lg,
+    paddingBottom: Spacing.xl * 2,
   },
   header: {
     alignItems: 'flex-start',
-    // Keep-out gutter: the name shrinks to fit this reduced width so it never
-    // grows into the top-right corner where the on-device overlay hovers.
+    gap: Spacing.sm,
+    // Keep-out gutter for the on-device overlay in the top-right corner.
     paddingRight: 52,
   },
-  rankWrap: {
-    alignSelf: 'flex-start',
-    marginTop: Spacing.sm,
+  eyebrow: {
+    ...Typography.label,
+    color: Colors.accent,
+    letterSpacing: 2,
   },
-  welcome: {
-    color: Colors.textSecondary,
-    fontFamily: Fonts.pixel,
-    fontSize: FontSize.xs,
-    letterSpacing: 1.5,
-    // The pixel font has no built-in line spacing, so give the label its own
-    // breathing room before the large title below it.
-    marginBottom: Spacing.sm,
-  },
-  playerName: {
+  title: {
     ...Typography.title,
   },
-  statsRow: {
+  identityRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
     alignItems: 'center',
-    ...Shadow.card,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+    alignSelf: 'stretch',
   },
-  statVal: {
-    color: Colors.accent,
+  playerName: {
+    flexShrink: 1,
     fontFamily: Fonts.pixel,
-    fontSize: FontSize.lg,
-  },
-  statKey: {
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    fontFamily: Fonts.pixel,
-    fontSize: FontSize.xs,
-    letterSpacing: 1,
   },
   inventoryBtn: {
     flexDirection: 'row',
@@ -166,9 +206,6 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(Colors.primary, 0.33),
     padding: Spacing.md,
     ...Shadow.card,
-  },
-  inventoryBtnPressed: {
-    opacity: 0.7,
   },
   inventoryIcon: {
     fontSize: 20,
@@ -194,16 +231,72 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
   },
   sectionTitle: {
-    ...Typography.heading,
+    ...Typography.label,
+    marginBottom: -Spacing.sm,
   },
-  empty: {
-    // No fontStyle: 'italic' — the pixel font has no italic face, so the
-    // renderer shears it synthetically and the glyphs smear.
-    color: Colors.textSecondary,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm + 4,
+  },
+  cell: {
+    // Two columns: half the row minus half the gap.
+    width: '48%',
+  },
+  taskCard: {
+    minHeight: 132,
+    gap: Spacing.sm,
+    padding: Spacing.md,
+  },
+  taskIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: withAlpha(Colors.primary, 0.2),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taskIcon: {
+    fontSize: 20,
+  },
+  taskName: {
     fontFamily: Fonts.pixel,
     fontSize: FontSize.sm,
-    textAlign: 'center',
-    lineHeight: 16,
-    paddingVertical: Spacing.lg,
+    color: Colors.textPrimary,
+    marginTop: Spacing.xs,
+  },
+  taskTime: {
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.lg,
+    color: Colors.accent,
+  },
+  taskSource: {
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xs,
+    letterSpacing: 1,
+    color: Colors.textSecondary,
+  },
+  newCard: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: withAlpha(Colors.textSecondary, 0.4),
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  newPlus: {
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xxl,
+    color: Colors.textSecondary,
+  },
+  newLabel: {
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xs,
+    letterSpacing: 1,
+    color: Colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

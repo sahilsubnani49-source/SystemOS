@@ -49,3 +49,11 @@ export function formatDuration(totalSeconds: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
+
+/** Format whole minutes as "2h 15m", "3h", or "45m" — the Hunter Log's card style. */
+export function formatMinutesLabel(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h <= 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}

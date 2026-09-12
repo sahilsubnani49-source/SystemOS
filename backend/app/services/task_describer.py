@@ -49,7 +49,10 @@ class TaskDescriptionOutput(BaseModel):
 MAX_DESCRIPTION_CHARS = 80
 # ASCII on purpose: the pixel font has a narrow glyph set and an em-dash risks tofu.
 SEPARATOR = " - "
-_MAX_TOKENS = 256
+# The visible output is tiny (an 80-char line plus two short fields), but reasoning
+# models spend 250-400 tokens before emitting any content. Sized for that headroom —
+# MAX_DESCRIPTION_CHARS above, not this cap, is what bounds the text.
+_MAX_TOKENS = 1024
 
 
 def _truncate_words(text: str, max_chars: int) -> str:

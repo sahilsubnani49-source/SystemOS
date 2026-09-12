@@ -1,116 +1,187 @@
-# AI-Driven Contextual Reward System
+# Reward System
 
-This document describes the design, mechanics, and integration of the context-aware Reward System in SystemOS.
+Completing a quest can drop a reward. A reward is a **real-world indulgence coupon** —
+permission to enjoy something you'd otherwise feel guilty about — not stat gear.
 
----
-
-## Overview
-
-Traditional productivity applications offer generic rewards (such as XP or standard coins). SystemOS gamifies life by generating **highly personalized items and stats** tailored to the user's real-life circumstances and goals. 
-
-For example:
-* **User Context**: *"I travel frequently for work and have a partner."*
-* **Dynamic Reward**: 
-  * **Item**: *Amulet of the Wandering Partner*
-  * **Stats**: +5 Perception (from travel), +5 Mindfulness (for maintaining relationship balance).
-  * **Lore/Flavor**: *"A small locket that hums with warmth, no matter how many miles you are from home."*
+> **Model change.** This document previously described AI-generated fantasy equipment
+> with stat modifiers and special effects. That model was retired. The columns still
+> exist in `dynamic_items` for backward compatibility but nothing reads them. See
+> [`DOMAIN_MODELS.md`](DOMAIN_MODELS.md).
 
 ---
 
-## Core Flow Architecture
+## The two reward classes
 
-```mermaid
-graph TD
-    A[User Action / Quest Complete] --> B{Determine Engine Mode}
-    B -- Cloud Mode --> C[Gemini / OpenAI API]
-    B -- Offline Mode --> D{Local Model Available?}
-    D -- Yes --> E[Ollama / Local LLM]
-    D -- No --> F[Offline Static Fallback Table]
-    C --> G[Process JSON Output]
-    E --> G
-    F --> H[Apply Rewards to Inventory]
-    G --> H
-```
+| Type | Meaning | Examples |
+|---|---|---|
+| `token` | An **active** leisure or social permission | gaming, calling a friend, a snack, an episode, a hobby session |
+| `potion` | **Rest** and self-care | a nap, a long sleep, a relaxing bath, a quiet unplug |
+
+A third type, `weapon`, exists only to cover legacy rows written before the coupon
+system. Nothing generates it now.
+
+### Rarity scales generosity
+
+Rarity does not make an item "more powerful" — it decides how generous the indulgence is.
+Rewards are meant to feel *earned*, so the amounts stay deliberately lean.
+
+| Rarity | Size | Typical amount |
+|---|---|---|
+| Common | tiny | ~10 minutes, or one small treat |
+| Rare | small | ~20 minutes |
+| Epic | moderate | ~30–40 minutes |
+| Legendary | generous | ~60 minutes, or one full night's unbroken rest |
+
+Every generated description must name **both** the real activity and its concrete
+amount or duration.
 
 ---
 
-## User Context Profile
+## Drop odds
 
-The context is stored in a clean, open-ended format inside the user's local database. It is composed of:
-1. **Open-Ended Biography**: A raw description of the user's current situation (e.g., job, relationship status, hobbies, fears, ambitions).
-2. **Dynamic Tags**: Derived automatically from the user's active Quest Dungeons (e.g., `dungeon:fitness`, `dungeon:coding`).
-3. **Model Preference Toggle**:
-   * `cloud`: Prioritizes high-quality narrative lore and complex item effects using cloud models.
-   * `local`: Uses offline local models to prioritize absolute privacy and data ownership.
+Source of truth: `RANK_DROP_ODDS` in `mobile/src/data/services/RewardService.ts`. The
+**device** owns the roll — it decides whether anything drops and at what rarity, then
+tells the backend which rarity to write for.
 
----
+The rank of the *completed quest* steers the roll. Higher rank means fewer empty rolls
+and a split shifted toward Epic and Legendary.
 
-## Structured Output Schema
+| Quest rank | No reward | Legendary | Epic | Rare | Common (remainder) |
+|---|---|---|---|---|---|
+| E | 55% | 2% | 6% | 22% | 70% |
+| D | 45% | 7% | 11% | 24% | 58% |
+| C | 36% | 12% | 16% | 27% | 45% |
+| B | 27% | 17% | 23% | 28% | 32% |
+| A | 18% | 23% | 27% | 29% | 21% |
+| S | 8% | 28% | 32% | 30% | 10% |
 
-To integrate with the Core Engine, the AI model must strictly return a structured JSON response matching this schema:
+The rarity columns are conditional on a drop occurring. Common is always the remainder,
+so the four rarity values sum to 1 at every rank.
 
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "name": {
-      "type": "string",
-      "description": "Unique, contextually-relevant name for the item."
-    },
-    "description": {
-      "type": "string",
-      "description": "Lore or flavor text describing the item."
-    },
-    "rarity": {
-      "type": "string",
-      "enum": ["Common", "Rare", "Epic", "Legendary"]
-    },
-    "stat_modifiers": {
-      "type": "object",
-      "properties": {
-        "strength": { "type": "integer" },
-        "agility": { "type": "integer" },
-        "stamina": { "type": "integer" },
-        "intelligence": { "type": "integer" },
-        "perception": { "type": "integer" },
-        "discipline": { "type": "integer" },
-        "creativity": { "type": "integer" },
-        "mindfulness": { "type": "integer" }
-      },
-      "additionalProperties": false
-    },
-    "special_effect": {
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "trigger": { "type": "string", "description": "When does this effect activate?" },
-        "description": { "type": "string", "description": "What is the gameplay benefit?" }
-      },
-      "required": ["name", "trigger", "description"],
-      "additionalProperties": false
-    }
-  },
-  "required": ["name", "description", "rarity", "stat_modifiers", "special_effect"],
-  "additionalProperties": false
+**Invariants** — hold these when tuning:
+
+- `noReward` falls strictly from E to S.
+- `legendary`, `epic`, and `rare` each rise strictly from E to S.
+- `legendary + epic + rare ≤ 1` at every rank, so Common never goes negative.
+- E anchors the low end (the original fixed odds); S anchors the top end. D–A interpolate.
+
+```ts
+export function rollRewardRarity(rank: Rank): Rarity | null {
+  const odds = RANK_DROP_ODDS[rank] ?? RANK_DROP_ODDS.E;
+  if (Math.random() < odds.noReward) return null;
+  const r = Math.random();
+  if (r < odds.legendary) return 'Legendary';
+  if (r < odds.legendary + odds.epic) return 'Epic';
+  if (r < odds.legendary + odds.epic + odds.rare) return 'Rare';
+  return 'Common';
 }
 ```
 
 ---
 
-## Caching & Fallback Policies
+## Generation flow
 
-Generating dynamic items on every single quest completion is computationally expensive and can feel overwhelming. SystemOS mitigates this with the following rules:
+```mermaid
+graph TD
+    A[Quest completed] --> B[Device rolls rarity from quest rank]
+    B -- null --> C[No reward. XP only.]
+    B -- rarity --> D{Backend reachable?}
+    D -- yes --> E[POST /api/quests/id/complete]
+    E --> F{LLM available?}
+    F -- yes --> G[Architect generates personalized coupon]
+    F -- no --> H[Backend rule-based fallback]
+    D -- no --> I[Device static fallback table]
+    G --> J[Write to dynamic_items]
+    H --> J
+    I --> J
+    J --> K[Refresh player + rank]
+```
 
-### 1. Daily/Weekly Batch Generation
-Instead of on-demand generation per quest, the **Architect** pre-generates a set of context-aligned items (the "Weekly Loot Pool") during the weekly reset. Completing quests rewards the user with loot boxes or keys that draw items from this pre-generated pool.
+The device rolls first and passes the chosen rarity in the request body, so the reward
+the player is shown always matches the roll the device made — a slow or failed backend
+changes the *flavor* of the coupon, never its rarity.
 
-### 2. Static Fallback Table
-If the LLM call fails (due to network timeout, API limits, or local model latency), the engine pulls from a local static catalog matching the general theme of the dungeon:
+---
 
-| Dungeon Type | Fallback Item | Effect |
-| :--- | :--- | :--- |
-| **Fitness** | *Elixir of Recovery* | Boosts Stamina and Agility temporarily. |
-| **Coding** | *Energy Drink* | Boosts Focus and Discipline for 1 hour. |
-| **Knowledge**| *Tattered Journal* | Adds +1 Intelligence permanently. |
-| **Relationship**| *Token of Gratitude*| Adds +1 Mindfulness permanently. |
+## Fallback chain
+
+Three tiers, each degrading in place rather than failing:
+
+1. **AI-generated** — the Architect personalizes the coupon to the player's bio and the
+   quest category.
+2. **Backend rule-based** — `synthesize_fallback_reward()` when the LLM call fails or no
+   provider is configured. The endpoint still returns HTTP 200.
+3. **Device static table** — `RewardService.getFallbackReward()` when the backend is
+   unreachable entirely.
+
+### Device fallback table
+
+Source: `FALLBACK_TABLE` in `RewardService.ts`, keyed by quest category.
+
+| Category | Type | Name | Indulgence |
+|---|---|---|---|
+| `stamina`, `agility` | token | Token of Leisure | 10 minutes on a hobby, purely for joy |
+| `strength` | token | Token of Indulgence | A favorite snack or treat |
+| `intelligence` | potion | Potion of Stillness | 10 minutes away from the screen |
+| `discipline` | token | Token of Gaming | 10 guilt-free minutes of your favorite game |
+| `creativity` | token | Token of Leisure | 10 minutes creating something for fun |
+| `perception` | token | Token of Friendship | Call or message a friend for 10 minutes |
+| `mindfulness` | potion | Potion of Sleep | A 10-minute nap or quiet unplug |
+
+Lookup is case-insensitive with an exact match first, then a substring match, then
+`DEFAULT_FALLBACK` (*Potion of Respite* — "a guilt-free 10-minute break to do whatever
+restores you").
+
+The static entries are written at Common size (~10 minutes) but are stamped with whatever
+rarity the device rolled, so an offline Legendary still reads as Legendary.
+
+---
+
+## Output schema
+
+The Architect returns exactly this shape (`RewardOutput` in `reward_generator.py`),
+validated by a `JsonOutputParser`:
+
+```json
+{
+  "type": "token|potion",
+  "name": "string",
+  "description": "string",
+  "rarity": "Common|Rare|Epic|Legendary"
+}
+```
+
+Invariants are re-enforced in Python after parsing, because models drift from
+instructions: `type` is coerced to `token`/`potion`, and `rarity` to the rolled value.
+
+Example:
+
+```json
+{
+  "type": "token",
+  "name": "Token of Gaming",
+  "description": "You have earned forty uninterrupted minutes in the game you have been putting off — no guilt, no clock-watching.",
+  "rarity": "Epic"
+}
+```
+
+---
+
+## Design rationale
+
+**Why coupons instead of stat gear.** Stat items create a second, fake economy: numbers
+that only matter inside the app. A coupon cashes out into the player's real life, which
+is the thing the app is actually trying to change. It also sidesteps balance work — there
+is no power curve to tune.
+
+**Why the device owns the roll.** Rarity must be decided before the network call so the
+reward is identical online and offline. It also means a flaky backend can never inflate
+or deflate drop rates.
+
+**Why rewards stay lean.** A reward that is too generous stops reading as earned. Ten
+minutes that you genuinely gave yourself permission for is worth more than an hour you'd
+have taken anyway.
+
+**Why three fallback tiers.** Each layer owns the failure it can actually see: the device
+knows about connectivity, the backend knows about provider health. Both degrade to
+something real rather than an error state, so the player is never left empty-handed.

@@ -24,6 +24,7 @@ import { useQuestStore } from '../stores/useQuestStore';
 import { useInventoryStore } from '../stores/useInventoryStore';
 import { useTrainingStore } from '../stores/useTrainingStore';
 import { useTimeLogStore } from '../stores/useTimeLogStore';
+import { useTaskLogStore } from '../stores/useTaskLogStore';
 import { useGoalStore } from '../stores/useGoalStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSystemDialog } from '../components/SystemDialog';
@@ -127,7 +128,7 @@ export function SettingsScreen() {
   const handleScram = () => {
     systemAlert(
       '[Warning]',
-      'SCRAM wipes everything: level, XP, stats, rank, keys, your campaign, inventory, quests, dungeons, focus logs, and shadow army. This cannot be undone.',
+      'SCRAM wipes everything: level, XP, stats, rank, keys, your campaign, inventory, quests, dungeons, focus logs, the Hunter Log, and shadow army. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -139,6 +140,7 @@ export function SettingsScreen() {
             await clearInventory();
             await useTrainingStore.getState().resetTraining();
             await useTimeLogStore.getState().resetTimeLogs();
+            await useTaskLogStore.getState().resetTaskLogs();
             await useGoalStore.getState().wipeAll(); // deletes goals + clears meta cursors
             systemAlert(
               '[System]',

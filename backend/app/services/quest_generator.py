@@ -72,7 +72,17 @@ DEFAULT_QUESTS_PER_DAY = 2
 # Cap quests per structuring call — bounds output tokens AND keeps the number of
 # calls (hence rate-limit pressure) low. Batches run sequentially, never concurrently.
 _MAX_QUESTS_PER_CALL = 35
-_STRUCTURE_MAX_TOKENS = 4096  # ~35 quests of JSON; well under the 512 default
+_STRUCTURE_MAX_TOKENS = 8192  # ~35 quests of JSON, plus reasoning-model overhead
+# Strategy is prose covering phases, themes, difficulty ramp, AND a day-by-day
+# blueprint for up to 120 days — far more than the 512 default allows. Reasoning
+# models (e.g. Groq's gpt-oss) also spend 300-600 of the budget before emitting a
+# token of prose, and they write expansively: a 30-day blueprint measured over 4096.
+# Undersizing this truncates the blueprint mid-sentence, and this path has no
+# fallback — a truncated plan reaches the user as a failed campaign.
+_STRATEGY_MAX_TOKENS = 16384
+# Dungeon JSON is small but carries two prose fields; reasoning overhead alone can
+# exceed the 512 default.
+_DUNGEON_MAX_TOKENS = 2048
 _RETRY_ATTEMPTS = 3  # retry transient errors (e.g. 429 rate limits) with exponential backoff
 
 
@@ -431,7 +441,7 @@ async def _run_strategy_chain(
     `_strategize_node` and the public `generate_campaign_strategy`, so the chain
     is never duplicated. Values are stringified for the prompt template.
     """
-    llm = _get_llm(model_preference)
+    llm = _get_llm(model_preference, max_tokens=_STRATEGY_MAX_TOKENS)
     chain = _with_retry(_STRATEGY_PROMPT | llm | StrOutputParser())
     strategy: str = await chain.ainvoke({
         "goal": goal,
@@ -654,7 +664,7 @@ async def generate_campaign_strategy(
             model_preference=model_preference,
         )
 
-    llm = _get_llm(model_preference)
+    llm = _get_llm(model_preference, max_tokens=_STRATEGY_MAX_TOKENS)
     chain = _with_retry(_STRATEGY_REVISION_PROMPT | llm | StrOutputParser())
     return await chain.ainvoke({
         "goal": goal,
@@ -773,7 +783,7 @@ async def generate_dungeon(
     context = context or "A motivated individual seeking personal growth."
 
     try:
-        llm = _get_llm(model_preference)
+        llm = _get_llm(model_preference, max_tokens=_DUNGEON_MAX_TOKENS)
         chain = _with_retry(_DUNGEON_PROMPT | llm | _DUNGEON_PARSER)
         result: dict = await chain.ainvoke({
             "goal": goal,

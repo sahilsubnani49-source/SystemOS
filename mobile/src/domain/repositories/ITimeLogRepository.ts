@@ -23,6 +23,8 @@ export interface ITimeLogRepository {
   getRecentLogs(limit: number): Promise<TimeLog[]>;
   /** Credited seconds already banked on a day — drives the daily cap. */
   getCreditedSecondsForDate(dateStr: string): Promise<number>;
+  /** All-time measured minutes across finished logs, for the Hunter Log's Focus total. */
+  getTotalMinutes(): Promise<number>;
   /** Sever the campaign link on every log referencing a goal (abandon/delete). */
   detachGoal(goalId: string): Promise<void>;
   clearAll(): Promise<void>;

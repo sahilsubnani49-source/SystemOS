@@ -49,6 +49,12 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     `ALTER TABLE quests ADD COLUMN accepted_at TEXT`,
     // Rewards are now real-world token/potion coupons — classify each one.
     `ALTER TABLE dynamic_items ADD COLUMN type TEXT NOT NULL DEFAULT 'token'`,
+    // Hunter Log categories can mirror time recorded elsewhere (Army-tab gym hours).
+    `ALTER TABLE task_categories ADD COLUMN source TEXT`,
+    // Backfill for installs seeded before `source` existed: the default Gym bucket is
+    // the one that absorbs gym_sessions. Guarded by source IS NULL so a later rename
+    // or a deliberate unlink is never re-applied on the next open.
+    `UPDATE task_categories SET source = 'gym' WHERE source IS NULL AND name = 'Gym'`,
   ];
 
   for (const sql of MIGRATIONS) {

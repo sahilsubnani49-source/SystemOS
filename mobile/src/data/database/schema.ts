@@ -115,4 +115,32 @@ export const CREATE_TABLES_SQL = [
   )`,
 
   `CREATE INDEX IF NOT EXISTS idx_time_logs_date ON time_logs (date)`,
+
+  // Hunter Log (Dashboard). A category is a user-named bucket ("Coding", "Gym");
+  // a session is one self-reported chunk of time logged against it. Totals are
+  // never stored on the category — they are summed from sessions on read.
+  // `source` links a category to time recorded by another subsystem. NULL is a plain
+  // hand-entry bucket; 'gym' also absorbs gym_sessions hours logged in the Army tab.
+  // It is a link, not a total — the merge happens on read, so XP is never re-awarded.
+  `CREATE TABLE IF NOT EXISTS task_categories (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT '⏱️',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source TEXT,
+    created_at TEXT NOT NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS task_sessions (
+    id TEXT PRIMARY KEY NOT NULL,
+    category_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    minutes INTEGER NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    xp_awarded INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_task_sessions_category ON task_sessions (category_id, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_task_sessions_date ON task_sessions (date)`,
 ];

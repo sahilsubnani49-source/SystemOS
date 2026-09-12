@@ -8,6 +8,7 @@ import { DashboardScreen } from '../presentation/screens/DashboardScreen';
 import { CampaignScreen } from '../presentation/screens/CampaignScreen';
 import { QuestsScreen } from '../presentation/screens/QuestsScreen';
 import { InventoryScreen } from '../presentation/screens/InventoryScreen';
+import { TaskDetailScreen } from '../presentation/screens/TaskDetailScreen';
 import { StatsScreen } from '../presentation/screens/StatsScreen';
 import { TrainingScreen } from '../presentation/screens/TrainingScreen';
 import { SettingsScreen } from '../presentation/screens/SettingsScreen';
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Signup: undefined;
   Main: undefined;
   Inventory: undefined;
+  TaskDetail: { categoryId: string };
 };
 
 export type BottomTabParamList = {
@@ -75,6 +77,19 @@ function MainTabs() {
   );
 }
 
+// Shared header for stack screens pushed over the tabs (Inventory, TaskDetail).
+const detailHeader = {
+  headerShown: true,
+  headerStyle: { backgroundColor: Colors.surface },
+  headerTintColor: Colors.primary,
+  headerTitleStyle: {
+    fontFamily: Fonts.pixel,
+    fontSize: 12,
+    color: Colors.textPrimary,
+  },
+  headerBackTitle: 'Back',
+} as const;
+
 // Transparent scene background so the SpaceBackground mounted in App.tsx
 // stays visible behind every screen.
 const spaceTheme = {
@@ -107,18 +122,12 @@ export function AppNavigator() {
             <Stack.Screen
               name="Inventory"
               component={InventoryScreen}
-              options={{
-                headerShown: true,
-                title: 'INVENTORY',
-                headerStyle: { backgroundColor: Colors.surface },
-                headerTintColor: Colors.primary,
-                headerTitleStyle: {
-                  fontFamily: Fonts.pixel,
-                  fontSize: 12,
-                  color: Colors.textPrimary,
-                },
-                headerBackTitle: 'Back',
-              }}
+              options={{ ...detailHeader, title: 'INVENTORY' }}
+            />
+            <Stack.Screen
+              name="TaskDetail"
+              component={TaskDetailScreen}
+              options={{ ...detailHeader, title: 'TASK' }}
             />
           </>
         ) : (

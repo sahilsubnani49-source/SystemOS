@@ -1,0 +1,19 @@
+# Keep secrets and local state out of the image — Cloud Run supplies both via
+# --set-secrets / --set-env-vars, and a baked-in .env would ship real API keys
+# into Artifact Registry.
+.env
+.env.*
+!.env.example
+
+# Local SQLite store. Never ship a user database inside an image.
+systemos.db
+systemos.db-wal
+systemos.db-shm
+
+# The local virtualenv is hundreds of MB and would poison site-packages.
+venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store

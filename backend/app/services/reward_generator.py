@@ -183,7 +183,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
     if groq_key:
         from langchain_groq import ChatGroq
         return ChatGroq(
-            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             api_key=groq_key,
             temperature=0.9,
             max_tokens=max_tokens,

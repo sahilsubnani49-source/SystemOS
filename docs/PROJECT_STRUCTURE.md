@@ -2,9 +2,9 @@
 
 SystemOS is a personal-growth RPG built as an **Expo / React Native** application
 with a **FastAPI** AI-generation backend. The device-side SQLite database is the
-durable source of truth for player progress. The backend is currently a local
-development service that generates AI content; it is not a multi-user persistence
-service.
+durable source of truth for player progress. The backend authenticates users and
+generates AI content; it holds a per-user profile/seed copy but not the gameplay
+record.
 
 This document describes the code that exists today. For known gaps and deprecated
 subsystems, see [`issue.md`](../issue.md).
@@ -23,8 +23,10 @@ SystemOS/
 │       ├── domain/                 # Framework-independent models and contracts
 │       ├── data/                   # SQLite, HTTP, repository, and engine services
 │       └── presentation/           # Screens, components, hooks, and Zustand stores
-├── backend/                        # FastAPI AI-generation service
+├── backend/                        # FastAPI auth + AI-generation service
 │   ├── app/main.py                 # App setup, request models, and HTTP endpoints
+│   ├── app/auth.py                 # JWT auth, password hashing, /auth router
+│   ├── app/db.py                   # SQLite users + per-user state
 │   ├── app/services/               # LLM provider factory and generation workflows
 │   ├── requirements.txt            # Python/LangChain dependencies
 │   └── .env.example                # Local provider configuration template
@@ -66,10 +68,12 @@ Cross-cutting application infrastructure:
 
 Pure TypeScript definitions with no React Native, SQLite, Axios, or Expo imports.
 
-- `models/` contains `Player`, `Goal`, `Quest`, `DynamicItem`,
-  `TrainingExercise`, and `GymSession`.
+- `models/` contains `Player`, `Goal`, `Quest`, `DynamicItem`, `TrainingExercise`,
+  `GymSession`, `TimeLog`, and `TaskLog` (`TaskCategory` / `TaskSession`).
 - `repositories/` declares repository contracts for player, goal, quest, inventory,
-  and training data.
+  training, time-log, and task-log data.
+
+See [`DOMAIN_MODELS.md`](DOMAIN_MODELS.md) for the full model definitions.
 
 ### `mobile/src/data/`
 
@@ -89,7 +93,9 @@ Concrete data access and business services.
 
 React Native UI and state coordination.
 
-- `screens/` contains the tab screens and inventory stack screen.
+- `screens/` contains the six tab screens (Dashboard, Campaign, Quests, Stats,
+  Training/Army, Settings), the Inventory and TaskDetail stack screens, and the
+  Login/Signup screens behind the auth gate.
 - `components/` contains reusable modals, quest/reward cards, visual effects, and
   system-dialog UI.
 - `stores/` are Zustand state containers. They call repositories/services and expose
@@ -107,13 +113,18 @@ The SQLite database is a single-user, device-local store. Core tables are create
 | `goals` | Active goal campaigns, their time range, strategy, schedule, and completed-day counter |
 | `quests` | Dated daily campaign quests and dungeon quests, including completion and acceptance state |
 | `dynamic_items` | Earned real-world reward coupons (`token`, `potion`, or legacy `weapon`) |
-| `shadow_soldiers` | Legacy habit/Shadow Army data |
+| `shadow_soldiers` | Dead schema — no repository, store, model, or UI reads it |
 | `training_exercises` | Training baselines, progression targets, and completion history |
-| `gym_sessions` | Gym-hours records and awarded XP |
+| `gym_sessions` | Gym-hours records and awarded XP, keyed by date |
+| `time_logs` | Focus-timer sessions; a row with `ended_at IS NULL` is the running timer |
+| `task_categories` | Hunter Log buckets on the Dashboard (name + emoji) |
+| `task_sessions` | Hand-entered time logged against a category |
 
 `app_meta` and `mutation_queue` are lazily created by their owning services rather
 than by the core schema. There are currently no SQLite foreign-key constraints;
 relationships such as `goals → quests` are maintained by repository/service code.
+
+Full column-level detail is in [`DATABASE_ARCHITECTURE.md`](DATABASE_ARCHITECTURE.md).
 
 ## Main application flows
 
@@ -159,29 +170,38 @@ reward items are cleared as the configured penalty.
 ## Backend architecture
 
 `backend/app/main.py` owns the FastAPI application, request validation models, CORS
-setup, and route handlers. AI workflows live in `backend/app/services/`:
+setup, and route handlers. Authentication lives in `app/auth.py` and persistence in
+`app/db.py`. AI workflows live in `backend/app/services/`:
 
 - `reward_generator.py` contains the shared `_get_llm()` provider factory and the
   Architect reward generator.
 - `quest_generator.py` imports that provider factory and implements the Quest Master
   strategy, campaign, and dungeon workflows, with deterministic fallbacks.
 - `nutrition_advisor.py` provides AI nutrition guidance and a deterministic fallback.
+- `task_describer.py` names the work on a running focus timer, with a template fallback.
 
 The backend supports these route groups:
 
 | Route group | Purpose |
 |---|---|
+| `POST /auth/signup`, `/auth/login`, `/auth/refresh`, `GET /auth/me` | JWT authentication |
 | `GET /health`, `GET /health/llm` | Backend and configured-provider diagnostics |
-| `GET/POST /api/profile` | Legacy/local-development seed and profile context |
-| `GET /api/quests`, `POST /api/quests/{id}/complete`, `POST /api/quests/reset` | Legacy endpoints plus reward generation |
+| `GET/POST /api/profile` | Per-user seed and profile context |
+| `GET /api/quests`, `POST /api/quests/{id}/complete`, `POST /api/quests/reset` | Seed quests plus reward generation |
 | `POST /api/goals/strategy`, `POST /api/goals/plan` | Campaign strategy and campaign generation |
 | `POST /api/dungeons/generate` | On-demand dungeon content |
 | `POST /api/nutrition/protein` | Nutrition recommendation |
+| `POST /api/tasks/describe` | Focus-timer task line |
+
+Every `/api/*` route requires a Bearer access token via the `get_current_user`
+dependency. Per-user state is persisted in `backend/systemos.db` (`users` and
+`user_state` tables) and read/written through `db.get_user_state()` /
+`db.save_user_state()` — there is no shared mutable module state.
 
 The backend uses LangChain/LangGraph and selects a provider from local Ollama or the
-configured cloud keys. It has module-level mock state for local development and must
-not be treated as a multi-user production backend without the work tracked in
-`issue.md`.
+configured cloud keys (Groq → xAI → Gemini → Anthropic → OpenAI). It is still not
+hardened for public deployment: CORS allows all origins and there is no rate limiting
+or provider-cost guardrail. See `issue.md` before exposing it to a network.
 
 ## Development commands
 
@@ -202,9 +222,11 @@ backend/venv/bin/python -m pip install -r backend/requirements.txt
 cd backend && ./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-For a physical device, set `PHYSICAL_DEVICE_IP` in `mobile/src/core/env.ts` to the
-development machine's LAN address. A release build needs separate API configuration;
-the current production URL is intentionally only a placeholder.
+`mobile/src/core/env.ts` resolves the API base URL: `localhost` for the iOS Simulator,
+`10.0.2.2` for the Android emulator, and the machine's LAN address for a physical
+device. Release builds instead read `EXPO_PUBLIC_API_URL`, inlined at bundle time from
+the active `eas.json` profile — that variable is not configured yet, so a release build
+throws at startup by design (SYS-015).
 
 ## Working conventions
 
@@ -220,6 +242,9 @@ the current production URL is intentionally only a placeholder.
 
 ## Documentation status
 
-This document is current as of the goal-driven campaign implementation. The database
-and domain-model documents still contain legacy Flutter and equipment-model material;
-do not use them as implementation instructions until they are updated.
+Current as of the auth + per-user-state backend. `DOMAIN_MODELS.md`,
+`DATABASE_ARCHITECTURE.md`, `REWARD_SYSTEM.md`, and `AI_PROMPTS.md` were rewritten
+against the same revision — the retired Flutter/Drift and stat-gear material is gone.
+
+Where a document and the code disagree, the code wins. Known gaps are tracked in
+[`issue.md`](../issue.md).

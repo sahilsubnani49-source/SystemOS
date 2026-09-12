@@ -1,201 +1,283 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) when working in this repository.
 
 ## Project Overview
 
-SystemOS is a privacy-first, offline-first personal growth app with RPG mechanics (inspired by Solo Leveling). Users complete real-world quests to gain XP, level up, collect AI-generated items, and build habits ("Shadow Army"). All data is owned locally by the user.
+SystemOS is a local-first personal growth app with RPG mechanics (inspired by Solo
+Leveling). The player states a goal and a timeline; AI agents plan it and lay out dated
+daily quests. Completing quests earns XP, levels, Hunter Rank, and real-world reward
+coupons. Device-side SQLite is the source of truth for gameplay state.
 
-**Core principle**: The engine is permanent. The UI, backend, and AI provider are all replaceable.
+**Core principle**: the engine is permanent. The UI, backend, and AI provider are all
+replaceable.
+
+**Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
+gaps, dead subsystems, and deploy blockers, and prevents "fixing" something that is
+deliberately unfinished.
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: React Native (TypeScript) via Expo — `mobile/`
-- **Backend**: FastAPI (Python) — `backend/`
-- **Database**: SQLite via `expo-sqlite` (local, device-side)
-- **State management**: Zustand
-- **Routing**: React Navigation v6 (native stack + bottom tabs)
-- **HTTP client**: axios with request/response interceptors
-- **Notifications**: expo-notifications
-- **Background tasks**: expo-background-fetch + expo-task-manager
-- **AI providers**: Gemini, OpenAI, Claude, DeepSeek, Ollama (local) — called via backend
+- **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
+- **Backend**: FastAPI (Python 3.12+) — `backend/`
+- **Device DB**: SQLite via `expo-sqlite` (WAL, singleton connection)
+- **Backend DB**: SQLite via stdlib `sqlite3` (no ORM) at `backend/systemos.db`
+- **State**: Zustand 5
+- **Routing**: React Navigation 7 (native stack + bottom tabs)
+- **HTTP**: axios with request/response interceptors
+- **Auth**: PyJWT (HS256) + bcrypt
+- **AI orchestration**: LangChain Core + LangGraph
+- **Notifications / background**: expo-notifications, expo-background-fetch, expo-task-manager
+
+> **Expo SDK 56 changed things.** Read the versioned docs at
+> <https://docs.expo.dev/versions/v56.0.0/> before writing Expo code. Expo Go cannot load
+> SDK 56 — development requires a dev client build.
 
 ---
 
 ## Commands
 
-### React Native Frontend (`mobile/`)
+### Mobile (`mobile/`)
 
 ```bash
 cd mobile
-
-# Install dependencies
 npm install
 
-# Start Expo dev server (then press i for iOS, a for Android, or scan QR with Expo Go)
-npm start
+# Dev client build (required once; Expo Go will not work)
+cd ios && pod install && cd .. && npx expo run:ios   # iOS
+npx expo run:android                                 # Android (needs JAVA_HOME=openjdk@17)
 
-# Run on iOS simulator
-npm run ios
+# Fast path after that — no rebuild
+npx expo start --dev-client    # then press i or a
 
-# Run on Android emulator
-npm run android
-
-# Lint
 npm run lint
-
-# Fix lint issues
 npm run lint:fix
-
-# Format code
 npm run format
+npx tsc --noEmit
 ```
 
-> **Physical device**: Edit `mobile/src/core/env.ts` and set `PHYSICAL_DEVICE_IP` to your machine's local network IP. The device and machine must be on the same Wi-Fi network.
+Re-run `expo run:*` only when native code, native deps, or `app.json` change.
 
-### FastAPI Backend (`backend/`)
+### Backend (`backend/`)
 
 ```bash
-# Virtualenv lives at backend/venv (create once with: python3 -m venv backend/venv)
-# Use `python -m pip` — the repo path contains spaces/&, which breaks the pip script's shebang.
+# Virtualenv lives at backend/venv (create once: python3 -m venv backend/venv)
+# Use `python -m pip` — the repo path contains spaces, which breaks pip's shebang.
 backend/venv/bin/python -m pip install -r backend/requirements.txt
 
-# Run (from repo root)
 cd backend && ./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Backend API routes:
-- `GET /health`
-- `GET /api/profile` — player stats + bio + aspirations
-- `POST /api/profile` — update bio, aspirations, and model preference
-- `GET /api/quests` — active quests
-- `POST /api/quests/generate` — generate AI quests from player aspirations (Quest Master)
-- `POST /api/quests/{quest_id}/complete` — complete quest, generate AI reward item
-- `GET /api/inventory` — collected items
-- `POST /api/quests/reset` — dev utility: reset all state
+### Connecting the app to the backend
+
+`mobile/src/core/env.ts` → `PHYSICAL_DEVICE_IP`: `localhost` (iOS Simulator),
+`10.0.2.2` (Android emulator), or the machine's LAN IP (physical device). Release builds
+read `EXPO_PUBLIC_API_URL` from the `eas.json` profile — currently unset by design
+(SYS-015).
 
 ---
 
 ## Architecture
 
-### Layered Frontend Architecture (strict unidirectional dependency)
+### Layered frontend (strict unidirectional dependency)
 
 ```
 Presentation  (screens + components + Zustand stores)
       ↓
-Domain        (TypeScript interfaces + abstract repository contracts)
+Domain        (TypeScript interfaces + repository contracts)
       ↓
 Data          (expo-sqlite repositories + axios datasource + services)
 ```
 
-- **Domain** (`src/domain/`) has zero external dependencies — pure TypeScript interfaces.
-- **Data** (`src/data/`) implements domain contracts. Repositories talk to SQLite; `ApiDataSource` talks to the backend.
-- **Presentation** (`src/presentation/`) reads from Zustand stores only; never touches repositories directly.
+- **Domain** (`src/domain/`) has zero external dependencies — no React Native, SQLite,
+  Axios, or Expo imports.
+- **Data** (`src/data/`) implements domain contracts. Repositories talk to SQLite;
+  `ApiDataSource` talks to the backend.
+- **Presentation** (`src/presentation/`) reads Zustand stores only — **never** call a
+  repository from a screen.
 
-### Offline-First Flow
+### Navigation
 
-1. On every store `load()`, local SQLite is read first and shown immediately.
-2. If online, the API is called and SQLite is updated with fresh data.
-3. If offline, cached SQLite data is used silently.
-4. Quest completions that fail due to no connectivity are queued in `MutationQueue` (SQLite-backed) and replayed automatically when the device comes back online. A static fallback reward is given immediately so the user never goes empty-handed.
+Six bottom tabs: Dashboard, Campaign, Quests, Stats, Army (training), Settings.
+Inventory and TaskDetail push over them as stack screens. `AppNavigator` is a
+**declarative auth gate** — it swaps which screens are registered based on
+`useAuthStore.status`, so login/logout never calls `navigate()` imperatively.
 
-### App Bootstrap Sequence (`src/core/useAppBootstrap.ts`)
+### Bootstrap sequence (`src/core/useAppBootstrap.ts`)
 
 ```
 App launch
+  → useAuthStore.initialize()          ← resolve session FIRST
   → request notification permissions
   → schedule 8am daily quest reminder
   → register background fetch task
-  → load all 4 Zustand stores in parallel (player, quests, inventory, shadow)
-  → daily reset check (new day → reset quests + fire notification)
+  → if loggedIn: load 7 stores in parallel
+      (player, quest, goal, inventory, training, timeLog, taskLog)
+  → DailyTimelineService.tick() → refresh player/quest/goal/inventory
 
-App foreground resume  →  daily reset check
-Device back online     →  replay MutationQueue → refresh stores
+Auth flips to loggedIn  →  loadData() once per session
+App foreground resume   →  advanceTimeline() + reconcile running timer
+Device back online      →  refresh inventory
 ```
 
-### FastAPI / AI Role
+**No `/api/*` call may fire while logged out** — they would 401 without a token. Every
+network path in bootstrap is guarded on `status === 'loggedIn'`.
 
-The backend is **stateless** — it holds no persistent data. Its two AI agents:
+### Backend
 
-1. **The Architect** (`reward_generator.py`): `POST /api/quests/{id}/complete` generates a personalized `DynamicItem` using the player's bio + quest category.
-2. **The Quest Master** (`quest_generator.py`): `POST /api/quests/generate` generates a full quest set from the player's bio + aspirations. Replaces `quests_state` in memory.
-3. **Initial data seed**: On first launch (empty SQLite), the app fetches profile and quests from the API to seed local DB.
+Not stateless. `app/auth.py` provides JWT auth (30-min access, 30-day refresh, bcrypt
+passwords); `app/db.py` persists `users` and `user_state` in SQLite. Per-user state is
+read and written via `db.get_user_state()` / `db.save_user_state()` — the `DEFAULT_*_STATE`
+dicts in `main.py` are **seed templates only**, deep-copied at signup, never shared
+mutable state.
 
-The app works fully offline without the backend. The backend is only required for AI-generated rewards and quest generation.
+Every `/api/*` route requires `Depends(get_current_user)`.
 
-### AI Service Architecture (`backend/app/services/`)
+Gameplay state still lives on the device. The backend copy is a profile/seed store.
 
-Both AI services share the same LangChain LCEL pattern:
+### AI services (`backend/app/services/`)
+
+All follow the same LCEL shape:
+
 ```
-ChatPromptTemplate (system + few-shot examples)
+ChatPromptTemplate (system + few-shot)
   | _get_llm(model_preference)     ← shared provider factory
   | JsonOutputParser(pydantic_object=OutputSchema)
 ```
 
-Provider priority (cloud mode): Anthropic → OpenAI → Gemini. Local mode uses Ollama.
+| Agent | Service | Route |
+|---|---|---|
+| Quest Master (strategy) | `quest_generator.py` | `POST /api/goals/strategy` |
+| Quest Master (campaign) | `quest_generator.py` | `POST /api/goals/plan` |
+| Gatekeeper (dungeon) | `quest_generator.py` | `POST /api/dungeons/generate` |
+| Architect (reward) | `reward_generator.py` | `POST /api/quests/{id}/complete` |
+| Nutritionist | `nutrition_advisor.py` | `POST /api/nutrition/protein` |
+| Architect (task line) | `task_describer.py` | `POST /api/tasks/describe` |
 
-`_get_llm()` lives in `reward_generator.py` and is imported by `quest_generator.py` — do not duplicate it.
+**Provider priority** (cloud): Groq → xAI Grok → Gemini → Anthropic → OpenAI — first key
+present wins. Local mode uses Ollama. `_get_llm()` lives **exclusively** in
+`reward_generator.py`; import it, never redefine it.
 
-### AI Quest Generation Flow
+Every route except `/api/goals/strategy` has a deterministic fallback and returns HTTP
+200 with `ai_generated: false` on LLM failure. Strategy deliberately has none — a
+fabricated plan is worse than an honest failure.
+
+### Campaign flow
 
 ```
-User writes aspirations in Settings
-  → "Save Aspirations" → usePlayerStore.updateAspirations() → SQLite + POST /api/profile
-  → "Generate My Quests" → useQuestStore.generateFromAspirations()
-      → POST /api/quests/generate
-          → quest_generator.generate_quests(bio, aspirations, level)
-              → LangChain: Quest Master prompt | LLM | JsonOutputParser
-          → fallback: synthesize_fallback_quests() on LLM failure
-      → apiQuestToDomain() → questRepo.saveQuests() → SQLite
-      → [New Quests Generated.] notification
+Campaign screen: goal + context + duration + quests/day
+  → POST /api/goals/strategy      → prose plan, previewed/revised in memory
+  → POST /api/goals/plan          → LangGraph: strategize → structure in weekly batches
+  → useGoalStore persists goal + dated quests to SQLite
+  → quests surface only when scheduled_for === today
 ```
 
-### AI Reward Fallback Chain
+### Reward flow
 
 ```
 Quest completed
-  → online + backend available  →  AI-generated item (Epic/Legendary possible)
-  → online + backend fails      →  static fallback item (Common) + queue API call
-  → offline                     →  static fallback item (Common) + queue API call
-  → device back online          →  MutationQueue replays → AI reward delivered
+  → device rolls rarity from quest rank (RewardService.rollRewardRarity)
+  → no drop → XP only
+  → drop → POST /api/quests/{id}/complete with the rolled rarity
+      → AI coupon, or backend rule-based fallback
+  → backend unreachable → device static fallback table
+  → write to dynamic_items, refresh player + rank
 ```
 
-Static fallback table lives in `src/data/services/RewardService.ts`. AI prompt schema is in `docs/AI_PROMPTS.md`.
+The **device owns the roll** so the rarity is identical online and offline. Rewards are
+real-world indulgence coupons (`token` / `potion`), never stat gear.
+
+### Timeline, keys, penalties
+
+`DailyTimelineService` evaluates fully elapsed campaign days on boot and foreground. A
+day where every scheduled quest is complete increments `Goal.daysCompleted`. Every 21
+completed days awards a key and schedules a mock-exam dungeon. If an evaluated day has
+unfinished quests, current reward items are cleared as the penalty.
+
+`DailyTimelineService` is the **single owner** of day advancement and notification
+dedup, via the `last_daily_notification_date` key in `app_meta`. (The old
+`DailyResetService` was deleted — don't reintroduce a second day-transition concept.)
 
 ---
 
 ## Database
 
-SQLite tables are defined in `mobile/src/data/database/schema.ts` and opened via `mobile/src/data/database/db.ts` (singleton with WAL mode enabled):
+Device tables are in `mobile/src/data/database/schema.ts`, opened via `db.ts`.
 
 | Table | Purpose |
 |---|---|
-| `players` | Stats (8 attributes), level, XP, bio, **aspirations**, model preference |
-| `quests` | Title, category, difficulty (E–S rank), XP/gold rewards, completion state |
-| `dynamic_items` | AI-generated items; `stat_modifiers` and `special_effect` stored as JSON strings |
-| `shadow_soldiers` | Habit tracking — streak, level, XP, last check-in date |
-| `mutation_queue` | Offline-queued API calls pending replay |
-| `app_meta` | Key-value store for app state (e.g. `last_quest_reset_date`) |
+| `players` | Singleton Hunter: 8 stats, level/XP, bio, aspirations, rank, keys |
+| `goals` | Campaigns: timeline bounds, plan, schedule, completed-day counter |
+| `quests` | Dated campaign quests + dungeon quests, acceptance and completion state |
+| `dynamic_items` | Reward coupons (`token` / `potion` / legacy `weapon`) |
+| `training_exercises` | Baselines, progression targets, completion history |
+| `gym_sessions` | Self-reported gym hours, keyed by date |
+| `time_logs` | Focus-timer sessions — `ended_at IS NULL` **is** the running timer |
+| `task_categories` | Hunter Log buckets (name + emoji); 3 seeded on first launch. `source` links a bucket to another subsystem's time |
+| `task_sessions` | Hand-entered time against a category |
+| `app_meta` | Key-value app state — created lazily by `AppMeta.ts` |
+| `mutation_queue` | Offline replay queue — created lazily, **currently unused** (SYS-008) |
+| `shadow_soldiers` | **Dead schema** — no repository, store, model, or UI |
 
-No code generation step required — schema is plain SQL executed on first open.
+Backend tables (`backend/app/db.py`): `users`, `user_state` (JSON TEXT blobs).
 
-**Schema migrations** are applied in `db.ts` after table creation using `ALTER TABLE … ADD COLUMN` wrapped in try/catch (SQLite has no `IF NOT EXISTS` for columns). The `aspirations TEXT DEFAULT ''` column on `players` was added this way.
+See [`docs/DATABASE_ARCHITECTURE.md`](docs/DATABASE_ARCHITECTURE.md) for columns.
 
 ---
 
-## Key Design Conventions
+## Key conventions
 
-- **Quest difficulty**: E (easiest) → S (hardest)
-- **Item rarity**: Common → Rare → Epic → Legendary; only Epic+ items have `specialEffect`
-- **Stats**: 8 attributes (`strength`, `agility`, `stamina`, `intelligence`, `perception`, `discipline`, `creativity`, `mindfulness`), all start at 10, increment on level-up
-- **Level-up formula**: `experience_to_next_level *= 1.5` each level
-- **JSON columns**: `stat_modifiers` and `special_effect` in SQLite are stored as `JSON.stringify` strings and parsed in repository `rowTo*` mapper functions
-- **API types**: FastAPI returns snake_case; `src/data/datasources/ApiTypes.ts` defines the exact response shapes; mapper functions (`apiPlayerToDomain`, `apiQuestToDomain`, etc.) convert to camelCase domain models
-- **Notifications**: All messages follow Solo Leveling system style — `[Quest Complete.]`, `[Level Increased.]`, `[Daily Quest has arrived.]`
-- **Environment**: API base URL is set in `src/core/env.ts` (not `constants.ts`). Change `PHYSICAL_DEVICE_IP` when running on a real device.
-- **Background task**: `TaskManager.defineTask` must run at module level before any component mounts — this is why `index.ts` imports `src/core/backgroundTasks.ts` directly.
-- **Aspirations**: stored on the `Player` domain model as `aspirations: string | null`. Persisted in both SQLite (`players.aspirations`) and backend `player_state`. Sent on every `POST /api/profile` call so the Quest Master always has up-to-date context.
-- **Quest generation extra fields**: `quest_type`, `aspiration_tag`, `rationale` are returned by the Quest Master in the API response for display context but are **not** stored in SQLite — the existing `quests` table schema is unchanged.
-- **LangChain provider factory**: `_get_llm(model_preference)` lives exclusively in `reward_generator.py`. Import it from there — do not define a second copy in `quest_generator.py`.
+- **Quest difficulty**: E → S, mapped to time commitment (E ≈ 1 hr … S ≈ 12 hrs). There
+  is **no level cap on rank** — a level-1 player may receive an S-rank quest.
+- **Item rarity**: Common → Rare → Epic → Legendary; scales how generous the indulgence is.
+- **Stats**: 8 attributes, all start at 10, +1 each on level-up.
+- **Level-up**: `experienceToNextLevel *= 1.5`.
+- **Hunter Rank**: `RankService.computeRank()` scores level, completion rate, and
+  dungeons cleared 0–3 each; the sum maps E → S.
+- **JSON columns**: `dungeon_challenge`, `dungeon_result`, `stat_modifiers`,
+  `special_effect`, `mutation_queue.payload` are `JSON.stringify`'d TEXT, parsed in
+  repository `rowTo*` mappers.
+- **API casing**: FastAPI returns snake_case; `ApiTypes.ts` types the wire shapes and
+  `api*ToDomain` mappers convert to camelCase. No snake_case key escapes the data layer.
+- **Notifications**: Solo Leveling system style — `[Quest Complete.]`, `[Level Increased.]`.
+- **Background task**: `TaskManager.defineTask` must run at module level before any
+  component mounts — this is why `index.ts` imports `src/core/backgroundTasks.ts` directly.
+- **Migrations**: additive `ALTER TABLE … ADD COLUMN` in `db.ts`, wrapped in try/catch
+  (SQLite has no `IF NOT EXISTS` for columns). **Never write a destructive migration** —
+  the device holds the only copy of a user's progress.
+- **Focus timer**: elapsed is always derived from `startedAt`, never stored or ticked.
+  Keep it that way — it's what makes a session survive app kill and backgrounding.
+- **The Hunter Log is a read-time view over three tables** (`task_sessions`,
+  `gym_sessions`, `time_logs`), merged in `useTaskLogStore.refreshSummary()`. Each
+  subsystem awards its own XP where the time is recorded, so **never copy rows between
+  them** — a write-through pays XP twice. Add new time sources by giving a category a
+  `source`, or by appending a synthetic summary row.
+- **`MAX_DESCRIPTION_CHARS = 80`** in `task_describer.py` must stay in sync with
+  `CampaignTaskService.ts`. Press Start 2P is a very wide pixel face; keep generated
+  text ASCII (an em-dash risks tofu).
+- **Tab labels** must stay ≤6 chars at 7pt — Press Start 2P glyphs are ~1em wide and
+  longer labels truncate.
+
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) | Code layout, layering, main flows |
+| [`docs/DATABASE_ARCHITECTURE.md`](docs/DATABASE_ARCHITECTURE.md) | Every table and column |
+| [`docs/DOMAIN_MODELS.md`](docs/DOMAIN_MODELS.md) | TypeScript models + Pydantic schemas |
+| [`docs/REWARD_SYSTEM.md`](docs/REWARD_SYSTEM.md) | Coupon model, drop odds, fallbacks |
+| [`docs/AI_PROMPTS.md`](docs/AI_PROMPTS.md) | Each agent's prompt and output schema |
+| [`issue.md`](issue.md) | Active issues and deploy blockers |
+
+When code and docs disagree, the code wins — and update the doc.
+
+## Not implemented
+
+No skill trees, achievements, titles, boss raids, memory/vector DB, analytics
+(streaks/heatmaps), voice, wearables, multiplayer, or Shadow Army. **There is no test
+suite** (SYS-014). Don't document these as existing, and don't assume a test command
+exists.

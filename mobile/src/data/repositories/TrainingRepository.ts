@@ -117,6 +117,14 @@ export class TrainingRepository implements ITrainingRepository {
     );
   }
 
+  async getTotalGymMinutes(): Promise<number> {
+    const db = await getDb();
+    const row = await db.getFirstAsync<{ m: number }>(
+      'SELECT COALESCE(SUM(hours), 0) * 60 AS m FROM gym_sessions',
+    );
+    return Math.round(row?.m ?? 0);
+  }
+
   async clearAll(): Promise<void> {
     const db = await getDb();
     await db.runAsync('DELETE FROM training_exercises');

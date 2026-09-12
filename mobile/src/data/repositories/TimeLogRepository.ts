@@ -132,6 +132,18 @@ export class TimeLogRepository implements ITimeLogRepository {
     return (row?.s as number) ?? 0;
   }
 
+  async getTotalMinutes(): Promise<number> {
+    // Raw `seconds`, not `credited_seconds`: the Hunter Log shows time actually spent,
+    // the same way a hand-entered session shows the honest number the Hunter typed.
+    // A running session (ended_at IS NULL) has seconds = 0 and is excluded anyway.
+    const db = await getDb();
+    const row = await db.getFirstAsync<{ m: number }>(
+      `SELECT COALESCE(SUM(seconds), 0) / 60.0 AS m
+         FROM time_logs WHERE ended_at IS NOT NULL`,
+    );
+    return Math.round(row?.m ?? 0);
+  }
+
   async detachGoal(goalId: string): Promise<void> {
     // The description was denormalized at start, so history stays readable — only
     // the campaign link and its chip disappear. Awarded XP is untouched; it was earned.
