@@ -362,6 +362,7 @@ the Login/Signup stack and the main stack based on auth status.
 | [`docs/DOMAIN_MODELS.md`](docs/DOMAIN_MODELS.md) | TypeScript domain models and Pydantic API schemas |
 | [`docs/REWARD_SYSTEM.md`](docs/REWARD_SYSTEM.md) | Coupon model, drop odds, fallback chain |
 | [`docs/AI_PROMPTS.md`](docs/AI_PROMPTS.md) | System prompts and output schemas for each agent |
+| [`docs/DEPLOYMENT_PLAN.md`](docs/DEPLOYMENT_PLAN.md) | Plan for running the backend locally, on Cloud Run, or on Vercel |
 | [`issue.md`](issue.md) | Active issues, priorities, and deploy blockers |
 | [`CLAUDE.md`](CLAUDE.md) | Conventions and commands for coding agents |
 

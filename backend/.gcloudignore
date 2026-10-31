@@ -1,0 +1,14 @@
+# Files `gcloud run deploy --source backend` must never upload. Secrets come from
+# Secret Manager; the real .env holds live provider keys.
+.gcloudignore
+.env
+.env.*
+!.env.example
+venv/
+__pycache__/
+*.py[cod]
+systemos.db
+systemos.db-wal
+systemos.db-shm
+.vercel/
+.DS_Store

@@ -11,11 +11,23 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://systemos-kappa.vercel.app"
+      }
+    },
+    "preview-vercel": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://systemos-kappa.vercel.app"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://systemos-kappa.vercel.app"
       }
     }
   },

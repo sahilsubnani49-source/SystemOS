@@ -17,3 +17,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .DS_Store
+
+# Vercel's local project link + config — irrelevant inside the Cloud Run image.
+.vercel/
+vercel.json
+.vercelignore

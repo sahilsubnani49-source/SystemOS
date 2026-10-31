@@ -22,17 +22,20 @@ const PHYSICAL_DEVICE_IP = 'localhost';
 // babel preset inlines as a literal string at bundle time. It comes from the `env`
 // block of the active eas.json build profile (or a local .env for `expo start`), so
 // staging and production binaries ship different URLs without a code change.
+// Setting it for `expo start` too points a dev client at a deployed backend:
+//   EXPO_PUBLIC_API_URL=https://… npx expo start --dev-client
 const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-if (!__DEV__ && !PROD_API_URL) {
+if (!__DEV__ && (!PROD_API_URL || PROD_API_URL.includes('REPLACE-WITH'))) {
   // Fail loudly at startup rather than shipping a binary that silently treats every
-  // request as "offline" and never leaves rule-based fallback mode.
+  // request as "offline" and never leaves rule-based fallback mode. The REPLACE-WITH
+  // check catches the eas.json placeholders before the backend URL is filled in.
   throw new Error(
-    'EXPO_PUBLIC_API_URL is not set. Add it to the eas.json build profile before building for release.',
+    'EXPO_PUBLIC_API_URL is not set. Add the deployed backend URL to the eas.json build profile before building for release.',
   );
 }
 
-const API_BASE_URL = __DEV__ ? `http://${PHYSICAL_DEVICE_IP}:8000` : PROD_API_URL!;
+const API_BASE_URL = PROD_API_URL ?? `http://${PHYSICAL_DEVICE_IP}:8000`;
 
 export const ENV = {
   API_BASE_URL,

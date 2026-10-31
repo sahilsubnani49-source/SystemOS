@@ -3,10 +3,10 @@ dependency, and the /auth router (signup / login / refresh / me).
 
 - Access tokens: 30 min. Refresh tokens: 30 days. HS256 via PyJWT.
 - Passwords hashed with bcrypt directly (72-byte limit enforced).
-- Secret from JWT_SECRET_KEY env; falls back to a dev default with a warning.
+- Secret from settings.jwt_secret_key. Locally it may fall back to a dev default (with
+  a warning); in production config.py refuses to start without a real one.
 """
 
-import os
 import re
 import logging
 from datetime import datetime, timedelta, timezone
@@ -14,32 +14,25 @@ from typing import Optional
 
 import jwt
 import bcrypt
-from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app import db
+from app.config import DEV_JWT_SECRET, settings
 
 logger = logging.getLogger("systemos")
-
-# Load .env here too — this module reads JWT_SECRET_KEY at import time, which may run
-# before main.py's own load_dotenv() depending on import order. load_dotenv is a no-op
-# if the vars are already present.
-load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
-_DEV_SECRET = "dev-insecure-secret-change-me"
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
+JWT_SECRET_KEY = settings.jwt_secret_key
+if JWT_SECRET_KEY == DEV_JWT_SECRET:
     logger.warning(
         "[SystemOS] JWT_SECRET_KEY not set — using an insecure DEV default. "
         "Set JWT_SECRET_KEY in backend/.env for anything real."
     )
-    JWT_SECRET_KEY = _DEV_SECRET
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE = timedelta(minutes=30)
@@ -133,11 +126,26 @@ async def get_current_user(
     if not user_id:
         raise _unauthorized("Invalid token")
 
-    user = db.get_user_by_id(user_id)
+    user = await db.get_user_by_id(user_id)
     if user is None:
         raise _unauthorized("Invalid token")
 
     return user
+
+
+async def get_optional_user(
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> Optional[dict]:
+    """Like get_current_user, but returns None instead of raising when unauthenticated.
+
+    For routes whose auth requirement depends on the environment (e.g. /health/llm).
+    """
+    if creds is None or not creds.credentials:
+        return None
+    try:
+        return await get_current_user(creds)
+    except HTTPException:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -203,12 +211,12 @@ def _validate_credentials(email: str, password: str) -> None:
 async def signup(req: SignupRequest):
     _validate_credentials(req.email, req.password)
 
-    if db.get_user_by_email(req.email) is not None:
+    if await db.get_user_by_email(req.email) is not None:
         raise HTTPException(status_code=409, detail="Email already registered")
 
     password_hash = hash_password(req.password)
     try:
-        user = db.create_user(
+        user = await db.create_user(
             email=req.email,
             password_hash=password_hash,
             name=req.name,
@@ -226,7 +234,7 @@ async def signup(req: SignupRequest):
 
 @router.post("/login")
 async def login(req: LoginRequest):
-    user = db.get_user_by_email(req.email)
+    user = await db.get_user_by_email(req.email)
     # Same generic message for unknown email vs wrong password.
     if user is None or not verify_password(req.password, user["password_hash"]):
         raise _unauthorized("Invalid credentials")
@@ -248,7 +256,7 @@ async def refresh(req: RefreshRequest):
         raise _unauthorized("Invalid token type")
 
     user_id = payload.get("sub")
-    if not user_id or db.get_user_by_id(user_id) is None:
+    if not user_id or await db.get_user_by_id(user_id) is None:
         raise _unauthorized("Invalid token")
 
     return _make_token_pair(user_id)
