@@ -9,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app import db, auth
-from app.auth import get_current_user
+from app.auth import get_current_user, get_optional_user
+from app.config import settings
 from app.services.reward_generator import generate_reward, synthesize_fallback_reward
 from app.services.quest_generator import (
     generate_goal_campaign,
@@ -38,7 +39,7 @@ logger = logging.getLogger("systemos")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    db.init_db()
+    await db.init_db()
     auth.set_defaults(DEFAULT_PLAYER_STATE, DEFAULT_QUESTS_STATE, DEFAULT_INVENTORY_STATE)
     logger.info("[SystemOS] Backend online. Architect standing by.")
     yield
@@ -52,9 +53,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# The native app sends no Origin header, so CORS never applies to it. Open locally for
+# web tooling; in production only an explicit allow-list (empty unless a web client exists).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allow_origins or ([] if settings.is_production else ["*"]),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -214,12 +217,23 @@ async def health_check():
 
 
 @app.get("/health/llm")
-async def llm_health_check(model_preference: str = "cloud"):
+async def llm_health_check(
+    model_preference: str = "cloud",
+    user: Optional[dict] = Depends(get_optional_user),
+):
     """
     Verify the configured LLM provider actually responds, with a minimal
     one-word ping. Instantiating the model alone is not enough — a missing
     Ollama server or a revoked API key only surfaces on a real call.
+
+    This is a paid provider call, so it is hidden (404) unless EXPOSE_LLM_HEALTH is
+    on, and in production it additionally requires a logged-in user.
     """
+    if not settings.expose_llm_health:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if settings.is_production and user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
+
     from app.services.reward_generator import _get_llm
 
     try:
@@ -238,24 +252,24 @@ async def llm_health_check(model_preference: str = "cloud"):
 
 @app.get("/api/profile")
 async def get_profile(user: dict = Depends(get_current_user)):
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     return state["player"]
 
 
 @app.post("/api/profile")
 async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_current_user)):
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     player = state["player"]
     player["bio"] = req.bio
     player["aspirations"] = req.aspirations or ""
     player["model_preference"] = req.model_preference
-    db.save_user_state(user["id"], player, state["quests"], state["inventory"])
+    await db.save_user_state(user["id"], player, state["quests"], state["inventory"])
     return {"status": "success", "profile": player}
 
 
 @app.get("/api/quests")
 async def get_quests(user: dict = Depends(get_current_user)):
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     return state["quests"]
 
 
@@ -431,7 +445,7 @@ async def complete_quest(
         the optional request body (category, bio, model_preference) to generate loot
         without mutating the persisted quest set.
     """
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     player_state = state["player"]
     quests_state = state["quests"]
     inventory_state = state["inventory"]
@@ -487,7 +501,7 @@ async def complete_quest(
 
     inventory_state.append(reward_dict)
 
-    db.save_user_state(user["id"], player_state, quests_state, inventory_state)
+    await db.save_user_state(user["id"], player_state, quests_state, inventory_state)
 
     return {
         "status": "success",
@@ -504,14 +518,14 @@ async def complete_quest(
 
 @app.get("/api/inventory")
 async def get_inventory(user: dict = Depends(get_current_user)):
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     return state["inventory"]
 
 
 @app.post("/api/quests/reset")
 async def reset_quests(user: dict = Depends(get_current_user)):
     """Dev utility — resets the caller's state to defaults."""
-    state = db.get_user_state(user["id"])
+    state = await db.get_user_state(user["id"])
     player_state = state["player"]
     quests_state = state["quests"]
 
@@ -523,7 +537,7 @@ async def reset_quests(user: dict = Depends(get_current_user)):
     for q in quests_state:
         q["is_completed"] = False
 
-    db.save_user_state(user["id"], player_state, quests_state, inventory_state)
+    await db.save_user_state(user["id"], player_state, quests_state, inventory_state)
     return {"status": "reset_success"}
 
 

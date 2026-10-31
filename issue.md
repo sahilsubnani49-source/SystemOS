@@ -26,10 +26,12 @@ the backend to any other user or public network.
 - **Area:** `backend/app/main.py`, `backend/app/db.py`
 - **Original behavior:** `player_state`, `quests_state`, and `inventory_state` were module-level Python variables, so every caller shared one profile and a restart lost all state.
 - **Follow-up:** This resolves the correctness problem but changes the product's stated architecture — the backend is no longer stateless and now holds accounts. Reconcile with SYS-017.
+- **2026-10-31:** `db.py` moved to SQLAlchemy Core behind the same function names (now `async`, run in a worker thread). `DATABASE_URL` selects SQLite locally or Neon Postgres in the cloud; the engine is created lazily so the app imports on Vercel's read-only filesystem. Schema changes still need Alembic (not yet adopted) — `create_all` never alters existing tables.
 
 ### SYS-002 — AI endpoints have no access control, rate limiting, or cost guardrail
 
-- **Status:** PARTIALLY RESOLVED (2026-09-12) — authentication landed; quotas and CORS did not.
+- **Status:** PARTIALLY RESOLVED (2026-10-31) — authentication (2026-09-12), then CORS, JWT fail-fast and `/health/llm` gating via `app/config.py`. Quotas and provider-budget monitoring remain open.
+- **2026-10-31 update:** CORS now reads `CORS_ALLOW_ORIGINS` (empty in production, `*` locally). `APP_ENV=production` refuses to start without a ≥32-char `JWT_SECRET_KEY` or on a SQLite `DATABASE_URL`. `/health/llm` needs a logged-in user in production (on by default so the app's Settings diagnostics work; `EXPOSE_LLM_HEALTH=false` hides it with a 404). Until real rate limiting exists, Cloud Run's `--max-instances 3` and provider spend limits are the guardrail.
 - **Priority:** P0 — deploy blocker
 - **Area:** `backend/app/main.py`, `backend/app/auth.py`
 - **Resolved:** Every `/api/*` route now requires a Bearer access token via `Depends(get_current_user)`. JWT HS256 with 30-minute access and 30-day refresh tokens; passwords bcrypt-hashed with the 72-byte limit enforced.
@@ -158,7 +160,8 @@ the backend to any other user or public network.
 - **Priority:** P2 — deploy blocker
 - **Area:** `mobile/src/core/env.ts`, `mobile/eas.json`
 - **Resolved:** The hardcoded placeholder is gone. Release builds read `EXPO_PUBLIC_API_URL` (inlined at bundle time) and `env.ts` throws at startup if it is missing, rather than silently treating every request as offline. Local-device setup is separated from release settings.
-- **Still open:** No `eas.json` build profile defines an `env` block, so `EXPO_PUBLIC_API_URL` is unset and any release build throws on launch. No backend is deployed for it to point at.
+- **2026-10-31 update:** `eas.json` now has `env.EXPO_PUBLIC_API_URL` on `preview` (Cloud Run APK), a new `preview-vercel` profile (Vercel APK), and `production`. Values are `REPLACE-WITH-…` placeholders, which `env.ts` rejects at startup, so a build made before deploy fails loudly instead of running offline. Android package renamed to `com.sahildevhk.systemos`.
+- **Still open:** Replace the placeholders with the real Cloud Run and Vercel URLs once the backend is deployed.
 - **Suggested resolution:** Deploy the backend, then add `env.EXPO_PUBLIC_API_URL` to the `preview` and `production` profiles in `eas.json`.
 
 ### SYS-016 — Documentation describes retired Flutter and legacy reward models

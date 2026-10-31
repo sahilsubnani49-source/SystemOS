@@ -23,7 +23,11 @@ deliberately unfinished.
 - **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
 - **Backend**: FastAPI (Python 3.12+) — `backend/`
 - **Device DB**: SQLite via `expo-sqlite` (WAL, singleton connection)
-- **Backend DB**: SQLite via stdlib `sqlite3` (no ORM) at `backend/systemos.db`
+- **Backend DB**: SQLAlchemy Core (no ORM) — SQLite at `backend/systemos.db` locally,
+  Neon Postgres in the cloud, chosen by `DATABASE_URL`
+- **Backend config**: env vars only, validated in `backend/app/config.py`
+- **Hosting**: Google Cloud Run (`backend/Dockerfile`) and Vercel (`backend/vercel.json`),
+  both against the same Neon database — see [`docs/DEPLOYMENT_PLAN.md`](docs/DEPLOYMENT_PLAN.md)
 - **State**: Zustand 5
 - **Routing**: React Navigation 7 (native stack + bottom tabs)
 - **HTTP**: axios with request/response interceptors
@@ -73,9 +77,20 @@ cd backend && ./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 
 ### Connecting the app to the backend
 
 `mobile/src/core/env.ts` → `PHYSICAL_DEVICE_IP`: `localhost` (iOS Simulator),
-`10.0.2.2` (Android emulator), or the machine's LAN IP (physical device). Release builds
-read `EXPO_PUBLIC_API_URL` from the `eas.json` profile — currently unset by design
-(SYS-015).
+`10.0.2.2` (Android emulator), or the machine's LAN IP (physical device). Setting
+`EXPO_PUBLIC_API_URL` overrides that in any build. Release builds read it from the
+`eas.json` profile: `preview` (Cloud Run APK), `preview-vercel` (Vercel APK),
+`production` (Play Store bundle). Until the backend is deployed these hold
+`REPLACE-WITH-…` placeholders, which `env.ts` rejects at startup (SYS-015).
+
+```bash
+cd mobile && eas build -p android --profile preview          # Cloud Run APK
+cd mobile && eas build -p android --profile preview-vercel   # Vercel APK
+```
+
+Backend database calls are `async` (`await db.get_user_state(...)`) — the blocking query
+runs in a worker thread. Never import a DB driver or open a connection at module
+import time: Vercel's filesystem is read-only.
 
 ---
 

@@ -13,9 +13,14 @@ langchain-xai>=0.2.0
 langchain-google-genai>=2.0.0
 langchain-openai>=0.2.0
 langchain-anthropic>=0.2.0
-langchain-community>=0.3.0
+# langchain-community is intentionally absent: it was only an ImportError fallback for
+# ChatOllama, which langchain-ollama provides, and it bloats the Vercel bundle.
 langchain-ollama>=0.2.0
 
 # Auth (JWT access/refresh tokens + password hashing)
 PyJWT>=2.8.0
 bcrypt>=4.1.0
+
+# Persistence: SQLAlchemy Core over SQLite (local) or Postgres/Neon (cloud), chosen by DATABASE_URL
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1

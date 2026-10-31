@@ -5,7 +5,7 @@ SystemOS has **two** SQLite databases:
 | Database | Location | Role |
 |---|---|---|
 | **Device DB** (`systemos.db`) | On-device, via `expo-sqlite` | Source of truth for all gameplay state |
-| **Backend DB** (`backend/systemos.db`) | Server, via stdlib `sqlite3` | User accounts + per-user seed/profile state |
+| **Backend DB** (SQLite locally, Neon Postgres in the cloud) | Server, via SQLAlchemy Core | User accounts + per-user seed/profile state |
 
 The device database is the store of record. The backend database exists to support
 sign-in and to seed a new install; it does not hold campaign progress, training history,
@@ -363,16 +363,25 @@ progress; there is no server-side backup of gameplay state.
 
 ## Backend database
 
-Source: `backend/app/db.py` — raw stdlib `sqlite3`, no ORM, single file at
-`backend/systemos.db` (gitignored). One shared connection with
-`check_same_thread=False` and WAL enabled.
+Source: `backend/app/db.py` — SQLAlchemy Core, no ORM. `DATABASE_URL` (read in
+`app/config.py`) picks the engine:
+
+- **Local (default):** SQLite file at `backend/systemos.db` (gitignored), WAL enabled.
+- **Cloud (Cloud Run and Vercel share one):** Neon Postgres via `psycopg` 3, pooled
+  connection string, `pool_pre_ping`, and prepared statements disabled for Neon's
+  PgBouncer pooler.
+
+The engine is created lazily on first use, never at import. Every public function is
+`async` and runs its blocking query in a worker thread. Tables are created with
+`metadata.create_all` (idempotent, never alters an existing table — adopt Alembic before
+the first schema change).
 
 ### `users`
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | TEXT | PRIMARY KEY — UUID4 |
-| `email` | TEXT | `UNIQUE COLLATE NOCASE` |
+| `email` | TEXT | Stored lower-cased; unique index `ux_users_email` (case-insensitive by normalization, on both engines). Pre-2026-10-31 local SQLite files keep the older `UNIQUE COLLATE NOCASE` column, which behaves the same |
 | `password_hash` | TEXT | bcrypt |
 | `name` | TEXT | Nullable |
 | `created_at` | TEXT | ISO-8601 UTC |

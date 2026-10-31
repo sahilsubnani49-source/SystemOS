@@ -1,0 +1,15 @@
+# Files `vercel deploy` must never upload. Secrets come from Vercel project env vars;
+# the real .env holds live provider keys, and the venv would blow the bundle limit.
+.env
+.env.*
+!.env.example
+venv/
+__pycache__/
+*.py[cod]
+systemos.db
+systemos.db-wal
+systemos.db-shm
+Dockerfile
+.dockerignore
+.gcloudignore
+.DS_Store
