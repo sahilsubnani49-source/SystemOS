@@ -1,7 +1,8 @@
 import { parseMap, type MapDef, type ParsedMap } from '../types';
 import { ARC1_MAPS } from './arc1';
+import { ARC2_MAPS } from './arc2';
 
-export const ALL_MAPS: readonly MapDef[] = [...ARC1_MAPS];
+export const ALL_MAPS: readonly MapDef[] = [...ARC1_MAPS, ...ARC2_MAPS];
 
 const parsed = new Map<string, ParsedMap>();
 

@@ -165,6 +165,66 @@ const P: Record<TileKind, TilePainter> = {
     c.rect(ox, oy, TILE, TILE, '#E8F0F8');
     c.set(ox + Math.floor(hash2(tx, ty) * 16), oy + Math.floor(hash2(ty, tx) * 16), '#C8D8E8');
   },
+  // ── Arc 2: Frost Harbor ─────────────────────────────────────────────
+  ice(c, ox, oy, tx, ty, frame) {
+    c.rect(ox, oy, TILE, TILE, '#BFE3F2');
+    c.line(ox + 2, oy + 12, ox + 7, oy + 7, '#E8F8FF');
+    c.line(ox + 9, oy + 14, ox + 14, oy + 9, '#9CCDE2');
+    if ((frame + tx + ty) % 2 === 0) c.set(ox + 4 + Math.floor(hash2(tx, ty) * 8), oy + 3, '#FFFFFF');
+  },
+  drift(c, ox, oy, tx, ty, frame) {
+    P.snow(c, ox, oy, tx, ty, frame, () => 'snow');
+    for (let i = 0; i < 3; i++) {
+      const x = ox + 1 + i * 5;
+      const lift = (frame + i) % 2;
+      c.ellipse(x, oy + 7 - lift, 6, 6, '#FFFFFF');
+      c.rect(x + 1, oy + 12 - lift, 4, 1, '#C8D8E8');
+    }
+  },
+  dock(c, ox, oy, tx) {
+    c.rect(ox, oy, TILE, TILE, '#8A6A4A');
+    for (let x = 0; x < TILE; x += 4) c.rect(ox + x, oy, 1, TILE, '#5A4232');
+    c.set(ox + 2 + (tx % 3) * 4, oy + 5, '#3A2A20');
+    c.set(ox + 2 + (tx % 3) * 4, oy + 11, '#3A2A20');
+  },
+  pine(c, ox, oy, tx, ty) {
+    P.snow(c, ox, oy, tx, ty, 0, () => 'snow');
+    c.rect(ox + 7, oy + 12, 2, 4, '#5A3A2A');
+    for (let i = 0; i < 4; i++) c.rect(ox + 7 - i * 2, oy + 1 + i * 3, 2 + i * 4, 3, i % 2 ? '#1E4A3A' : '#2A5A44');
+  },
+  snowPine(c, ox, oy, tx, ty) {
+    P.pine(c, ox, oy, tx, ty, 0, () => 'snow');
+    for (let i = 0; i < 4; i++) c.rect(ox + 7 - i * 2, oy + 1 + i * 3, 2 + i * 4, 1, '#F4F8FF');
+  },
+  longhouseWall(c, ox, oy) {
+    c.rect(ox, oy, TILE, TILE, '#6E4A2E');
+    for (let y = 0; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#4A3020');
+    c.rect(ox, oy, 2, TILE, '#3A2618');
+  },
+  longhouseRoof(c, ox, oy, tx, ty) {
+    c.rect(ox, oy, TILE, TILE, '#7A6A4A'); // turf/thatch
+    for (let y = 2; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#5A4A32');
+    c.rect(ox, oy, TILE, 3, '#F4F8FF'); // snow on the ridge
+    c.set(ox + Math.floor(hash2(tx, ty) * 14), oy + 3, '#FFFFFF');
+  },
+  runestone(c, ox, oy, tx, ty) {
+    P.snow(c, ox, oy, tx, ty, 0, () => 'snow');
+    c.ellipse(ox + 3, oy + 1, 10, 15, '#8A8A94');
+    c.ellipse(ox + 4, oy + 2, 6, 6, '#A0A0AA');
+    // A carved rune: a vertical stave with two branches, painted red.
+    c.line(ox + 8, oy + 4, ox + 8, oy + 12, '#B3262E');
+    c.line(ox + 8, oy + 6, ox + 11, oy + 4, '#B3262E');
+    c.line(ox + 8, oy + 9, ox + 11, oy + 7, '#B3262E');
+  },
+  hull(c, ox, oy, tx) {
+    c.rect(ox, oy, TILE, TILE, '#5A3A22');
+    for (let y = 3; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#3A2414');
+    // Painted round shields along the gunwale.
+    if (tx % 2 === 0) {
+      c.ellipse(ox + 3, oy + 3, 10, 10, tx % 4 === 0 ? '#B3262E' : '#E8B04B');
+      c.ellipse(ox + 7, oy + 7, 3, 3, '#C9D2DC');
+    }
+  },
   void(c, ox, oy) {
     c.rect(ox, oy, TILE, TILE, '#0B0B12');
   },

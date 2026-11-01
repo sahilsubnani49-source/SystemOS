@@ -145,6 +145,126 @@ const PAINTERS: Record<string, Painter> = {
     if (stage >= 1) { c.rect(2, 7, 1, 4, body); c.rect(13, 7, 1, 4, body); }
     if (stage === 2) c.rect(6, 0, 4, 1, '#E8B04B');
   },
+  // ── Arc 2: Norse / Germanic folklore ───────────────────────────────
+  alv(c, stage) {
+    // Light elf: slim glowing figure, long ears, wings of light at stage 1+.
+    const glow = stage === 2 ? '#FFE9A0' : '#F4F1EA';
+    if (stage >= 1) { c.rect(1, 5, 3, 6, '#FFF4D8'); c.rect(12, 5, 3, 6, '#FFF4D8'); }
+    c.ellipse(5, 2, 6, 6, '#F4D2B4');
+    c.rect(4, 3, 1, 2, '#F4D2B4'); c.rect(11, 3, 1, 2, '#F4D2B4'); c.set(3, 2, '#F4D2B4'); c.set(12, 2, '#F4D2B4');
+    c.rect(5, 1, 6, 2, stage === 2 ? '#FFE14B' : '#E8D08A');
+    c.set(6, 4, '#5AB8FF'); c.set(9, 4, '#5AB8FF');
+    c.rect(5, 8, 6, 6, glow);
+    c.rect(6, 14, 1, 2, glow); c.rect(9, 14, 1, 2, glow);
+    if (stage === 2) c.rect(7, 0, 2, 1, '#FFE14B');
+  },
+  kobold(c, stage) {
+    // Mine spirit: stocky, pointed hood, pickaxe; lantern-crown when evolved.
+    c.rect(5, 1, 6, 1, '#B3262E'); c.rect(4, 2, 8, 3, '#B3262E'); c.set(7, 0, '#B3262E');
+    c.ellipse(4, 4, 8, 6, '#8A9A6A');
+    c.set(6, 6, '#FFE14B'); c.set(9, 6, '#FFE14B');
+    c.rect(6, 8, 4, 2, '#D9C29A'); // beard
+    c.rect(4, 10, 8, 4, '#6E5A4A');
+    c.rect(5, 14, 2, 2, '#3A2A20'); c.rect(9, 14, 2, 2, '#3A2A20');
+    c.line(12, 7, 14, 13, '#8A6A3A'); c.rect(12, 6, 4, 2, '#B8C0C8');
+    if (stage >= 1) c.rect(3, 11, 1, 3, '#C9D2DC');
+    if (stage === 2) { c.rect(5, 0, 6, 1, '#E8B04B'); c.set(7, 0, '#FFE14B'); }
+  },
+  sleip(c, stage) {
+    // Storm colt: grey foal; legs multiply toward the eight-legged steed.
+    const coat = stage === 2 ? '#E8E8F0' : '#A8A8B8';
+    c.rect(3, 6, 10, 5, coat);
+    c.rect(10, 2, 3, 6, coat); c.rect(11, 1, 4, 3, coat);
+    c.set(13, 2, '#120C18');
+    c.rect(9, 1, 2, 5, '#5A6AFF');
+    c.rect(1, 6, 2, 4, '#5A6AFF');
+    const legs = stage === 0 ? [4, 11] : stage === 1 ? [4, 6, 9, 11] : [3, 4, 6, 7, 9, 10, 11, 12];
+    for (const x of legs) c.rect(x, 11, 1, 4, shade(coat, -0.2));
+    if (stage >= 1) c.line(14, 8, 15, 5, '#FFE14B');
+  },
+  troll(c, stage) {
+    // Tomte → troll: big nose, mossy back, grows a boulder-like hide.
+    const skin = stage === 0 ? '#9A8A6A' : '#7A8A5A';
+    if (stage === 0) { c.rect(5, 1, 6, 3, '#B3262E'); c.set(8, 0, '#B3262E'); } // tomte cap
+    c.ellipse(2, 3, 12, 11, skin);
+    c.set(5, 6, '#120C18'); c.set(10, 6, '#120C18');
+    c.ellipse(6, 7, 4, 4, shade(skin, -0.1)); // the nose
+    c.rect(6, 11, 4, 1, '#F4E9D0');
+    c.rect(3, 14, 3, 2, shade(skin, -0.2)); c.rect(10, 14, 3, 2, shade(skin, -0.2));
+    if (stage >= 1) { c.rect(2, 3, 3, 2, '#4A7A3A'); c.rect(11, 2, 3, 2, '#4A7A3A'); }
+    if (stage === 2) { c.rect(1, 9, 2, 3, '#8A8A94'); c.rect(13, 9, 2, 3, '#8A8A94'); c.rect(6, 2, 4, 1, '#E8F0F8'); }
+  },
+  nokk(c, stage) {
+    // Water-horse: kelp-maned horse head rising from a pool.
+    const coat = stage === 2 ? '#2A6A8A' : '#4A8AAA';
+    c.rect(4, 3, 6, 9, coat);
+    c.rect(8, 1, 6, 4, coat);
+    c.set(12, 2, '#E8F8FF');
+    c.rect(3, 1, 2, 9, '#3A8A4A'); // kelp mane
+    c.rect(0, 12, 16, 2, '#3A86C8');
+    for (let x = 1; x < 15; x += 3) c.set(x, 11, '#BEE6F2');
+    if (stage >= 1) c.rect(13, 4, 2, 1, '#7FC4F2');
+    if (stage === 2) { c.rect(1, 14, 14, 1, '#24589A'); c.set(10, 0, '#E8F8FF'); }
+  },
+  hrafn(c, stage) {
+    // Rune raven: black bird, glowing rune on the chest when evolved.
+    const f = '#1E1E2A';
+    c.ellipse(4, 3, 9, 10, f);
+    c.rect(1, 6, 3, 6, '#2A2A3A'); c.rect(12, 6, 3, 6, '#2A2A3A');
+    c.rect(11, 4, 4, 2, '#3A3A4A'); // beak base
+    c.rect(13, 5, 3, 1, '#C9D2DC');
+    c.set(9, 5, '#E8574B');
+    c.rect(6, 13, 1, 3, '#C9D2DC'); c.rect(9, 13, 1, 3, '#C9D2DC');
+    if (stage >= 1) { c.line(7, 7, 7, 11, '#7FC4F2'); c.line(7, 8, 9, 7, '#7FC4F2'); }
+    if (stage === 2) { c.rect(0, 5, 1, 7, '#7FC4F2'); c.rect(15, 7, 1, 5, '#7FC4F2'); }
+  },
+  muspel(c, stage) {
+    // Fire imp: ember body, flame hair that grows taller.
+    const body = stage === 2 ? '#C83A1A' : '#E8572A';
+    c.ellipse(3, 5, 10, 9, body);
+    const flame = stage === 0 ? 2 : stage === 1 ? 4 : 5;
+    for (let i = 0; i < 4; i++) c.rect(4 + i * 2, 5 - flame + (i % 2), 2, flame, i % 2 ? '#FFB347' : '#FFE14B');
+    c.rect(5, 8, 2, 2, '#FFE14B'); c.rect(9, 8, 2, 2, '#FFE14B');
+    c.set(5, 8, '#120C18'); c.set(9, 8, '#120C18');
+    c.rect(6, 11, 4, 1, '#5A1A0A');
+    c.rect(4, 14, 2, 2, '#5A1A0A'); c.rect(10, 14, 2, 2, '#5A1A0A');
+    if (stage === 2) { c.rect(1, 7, 2, 2, '#FFB347'); c.rect(13, 7, 2, 2, '#FFB347'); }
+  },
+  yulecat(c, stage) {
+    // The Yule Cat: huge black cat with glowing eyes; gets a red yule ribbon.
+    c.ellipse(2, 5, 12, 9, '#1A1A24');
+    c.rect(2, 2, 3, 4, '#1A1A24'); c.rect(11, 2, 3, 4, '#1A1A24');
+    c.rect(4, 7, 3, 2, '#FFE14B'); c.rect(9, 7, 3, 2, '#FFE14B');
+    c.set(5, 7, '#120C18'); c.set(10, 7, '#120C18');
+    c.rect(7, 10, 2, 1, '#F2A0A8');
+    c.line(13, 11, 15, 6, '#1A1A24');
+    if (stage >= 1) c.rect(4, 12, 8, 1, '#B3262E');
+    if (stage === 2) { c.set(3, 1, '#F4F8FF'); c.set(12, 1, '#F4F8FF'); c.rect(7, 12, 2, 2, '#E8B04B'); }
+  },
+  ratatosk(c, stage) {
+    // World-tree squirrel: big bushy tail crackling with sparks.
+    const fur = '#C87A3A';
+    c.ellipse(1, 2, 7, 12, stage === 2 ? '#E8A04A' : fur); // tail
+    c.ellipse(6, 6, 7, 8, fur);
+    c.rect(7, 4, 2, 2, fur); c.rect(11, 4, 2, 2, fur);
+    c.set(8, 8, '#120C18'); c.set(11, 8, '#120C18');
+    c.rect(8, 11, 4, 2, '#F4E9D0');
+    c.rect(7, 14, 2, 2, '#5A3A22'); c.rect(11, 14, 2, 2, '#5A3A22');
+    if (stage >= 1) { c.line(2, 3, 4, 6, '#FFE14B'); c.line(4, 6, 2, 9, '#FFE14B'); }
+    if (stage === 2) c.rect(13, 1, 2, 3, '#4CB04C'); // carries a world-tree leaf
+  },
+  wyrm(c, stage) {
+    // Sea serpent: coils above the waves; more coils as it evolves.
+    const scale = stage === 2 ? '#1A5A4A' : '#2A7A5A';
+    const coils = stage + 1;
+    for (let i = 0; i < coils; i++) c.ellipse(1 + i * 4, 8, 5, 5, shade(scale, i * 0.05));
+    c.ellipse(9, 2, 7, 6, scale);
+    c.set(13, 4, '#FFE14B');
+    c.rect(14, 6, 2, 1, '#E8574B');
+    c.rect(9, 1, 1, 3, '#4CB0A0'); // fin
+    c.rect(0, 12, 16, 2, '#3A86C8');
+    for (let x = 0; x < 16; x += 4) c.set(x + 1, 11, '#BEE6F2');
+  },
 };
 
 export function drawSpirit(familyId: string, stage: number): PixelCanvas {

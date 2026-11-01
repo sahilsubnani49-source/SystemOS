@@ -3,7 +3,9 @@ import type { Rng } from '../util/rng';
 export type TileKind =
   | 'grass' | 'tallGrass' | 'path' | 'water' | 'deepWater' | 'sand' | 'tree' | 'bamboo'
   | 'rock' | 'wall' | 'roof' | 'floor' | 'door' | 'bridge' | 'flower' | 'torii' | 'fence'
-  | 'lantern' | 'sakura' | 'tatami' | 'snow' | 'void';
+  | 'lantern' | 'sakura' | 'tatami' | 'snow' | 'void'
+  // Arc 2 (Frost Harbor)
+  | 'ice' | 'drift' | 'dock' | 'pine' | 'snowPine' | 'longhouseWall' | 'longhouseRoof' | 'runestone' | 'hull';
 
 export interface TileProps {
   solid: boolean;
@@ -36,6 +38,16 @@ export const TILE_PROPS: Record<TileKind, TileProps> = {
   tatami: { solid: false, encounter: false, animated: false },
   snow: { solid: false, encounter: false, animated: false },
   void: { solid: true, encounter: false, animated: false },
+  ice: { solid: false, encounter: false, animated: true },
+  /** Deep snow: Arc 2's tall grass. Wild spirits lurk here. */
+  drift: { solid: false, encounter: true, animated: true },
+  dock: { solid: false, encounter: false, animated: false },
+  pine: { solid: true, encounter: false, animated: false },
+  snowPine: { solid: true, encounter: false, animated: false },
+  longhouseWall: { solid: true, encounter: false, animated: false },
+  longhouseRoof: { solid: true, encounter: false, animated: false },
+  runestone: { solid: true, encounter: false, animated: false },
+  hull: { solid: true, encounter: false, animated: false },
 };
 
 /** One character per tile in a map's ASCII rows. */
@@ -44,6 +56,9 @@ export const DEFAULT_LEGEND: Record<string, TileKind> = {
   'T': 'tree', 'B': 'bamboo', 'o': 'rock', '#': 'wall', '^': 'roof', '_': 'floor', 'D': 'door',
   'H': 'bridge', '*': 'flower', 'I': 'torii', '|': 'fence', 'L': 'lantern', 'S': 'sakura',
   't': 'tatami', 'n': 'snow', ' ': 'void',
+  // Arc 2
+  'i': 'ice', 'f': 'drift', 'd': 'dock', 'p': 'pine', 'P': 'snowPine', 'w': 'longhouseWall',
+  'R': 'longhouseRoof', 'r': 'runestone', 'k': 'hull',
 };
 
 export type Facing = 'up' | 'down' | 'left' | 'right';
@@ -102,6 +117,8 @@ export interface NpcDef {
   givesHorse?: boolean;
   /** Display name over the dialogue box. */
   name?: string;
+  /** Talking carries the player to another map (ferries between arcs). */
+  travelsTo?: { map: string; x: number; y: number };
 }
 
 export interface EncounterEntry {

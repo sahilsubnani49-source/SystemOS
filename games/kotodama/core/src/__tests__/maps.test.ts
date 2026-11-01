@@ -26,7 +26,12 @@ function explore(flags: Record<string, boolean>) {
     seen.add(key);
     const warp = warpAt(m, x, y);
     if (warp && (!warp.requires || flags[warp.requires])) queue.push([warp.to, warp.toX, warp.toY]);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) queue.push([id, x + dx, y + dy]);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      queue.push([id, x + dx, y + dy]);
+      // Talking to a ferryman next to you carries you to another map.
+      const ferry = visibleNpcs(m, flags).find((n) => n.travelsTo && n.x === x + dx && n.y === y + dy);
+      if (ferry?.travelsTo) queue.push([ferry.travelsTo.map, ferry.travelsTo.x, ferry.travelsTo.y]);
+    }
   }
   return seen;
 }
@@ -47,6 +52,11 @@ describe('Arc 1 maps', () => {
     for (const n of m.def.npcs) {
       expect(walkableTile(m, n.x, n.y), `${n.id} stands on a solid tile`).toBe(true);
       n.battle?.foes.forEach((f) => expect(() => getFamily(f.familyId)).not.toThrow());
+      if (n.travelsTo) {
+        const dest = getMap(n.travelsTo.map);
+        expect(walkableTile(dest, n.travelsTo.x, n.travelsTo.y), `${n.id} ferries onto a solid tile`).toBe(true);
+        expect(warpAt(dest, n.travelsTo.x, n.travelsTo.y), `${n.id} ferries onto a warp`).toBeUndefined();
+      }
       if (n.battle?.pool) expect(CURRICULUM[n.battle.pool]).toBeDefined();
     }
     m.def.encounters.forEach((e) => expect(() => getFamily(e.familyId)).not.toThrow());
@@ -81,6 +91,25 @@ describe('Arc 1 maps', () => {
         expect(canTalkTo(explore(flags), d.id, n.x, n.y), `${d.id}/${n.id} unreachable`).toBe(true);
       }
     }
+  });
+
+  it('opens the Arc 2 story gates in order, starting from the ferry', () => {
+    const arc1 = Object.fromEntries(['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial'].map((f) => [f, true]));
+    const story = ['beat_oni', 'learned_mirror', 'beat_sigrun', 'beat_ulf', 'beat_warden', 'skald_trial', 'beat_champion'];
+    const reached = (n: number, map: string) =>
+      [...explore({ ...arc1, ...Object.fromEntries(story.slice(0, n).map((f) => [f, true])) })].some((k) => k.startsWith(`${map}:`));
+    expect(reached(0, 'frost_harbor')).toBe(false);
+    expect(reached(1, 'frost_harbor')).toBe(true);
+    expect(reached(1, 'longship_docks')).toBe(false);
+    expect(reached(2, 'longship_docks')).toBe(true);
+    expect(reached(2, 'pine_shore')).toBe(false);
+    expect(reached(3, 'pine_shore')).toBe(true);
+    expect(reached(3, 'fjord_caves')).toBe(false);
+    expect(reached(4, 'fjord_caves')).toBe(true);
+    expect(reached(4, 'rune_watchtower')).toBe(false);
+    expect(reached(5, 'rune_watchtower')).toBe(true);
+    expect(reached(5, 'jarl_longship')).toBe(false);
+    expect(reached(6, 'jarl_longship')).toBe(true);
   });
 
   it('opens the story gates in order', () => {

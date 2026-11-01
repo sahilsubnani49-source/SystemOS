@@ -123,6 +123,18 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         void get().persist();
       }
       if (npc.heals) set({ toast: 'Your party is fully rested.' });
+      if (npc.travelsTo) {
+        const t = npc.travelsTo;
+        update((s) => ({
+          ...s,
+          mapId: t.map,
+          x: t.x,
+          y: t.y,
+          horse: { ...s.horse, riding: s.horse.riding && getMap(t.map).def.rideable },
+        }));
+        set({ banner: bannerFor(t.map), toast: null });
+        void get().persist();
+      }
     };
 
     return {

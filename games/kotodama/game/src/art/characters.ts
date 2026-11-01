@@ -2,7 +2,7 @@ import { PixelCanvas, shade } from './pixel';
 
 export type Facing = 'up' | 'down' | 'left' | 'right';
 export type HairStyle = 'topknot' | 'hood' | 'long' | 'bald' | 'kasa' | 'helmet' | 'oniHorns' | 'bun';
-export type Gear = 'katana' | 'scarf' | 'beard' | 'club' | 'staff' | 'axe' | 'fan' | 'none';
+export type Gear = 'katana' | 'scarf' | 'beard' | 'club' | 'staff' | 'axe' | 'fan' | 'shield' | 'none';
 
 export interface CharacterSpec {
   skin: string;
@@ -173,6 +173,12 @@ function drawGear(c: PixelCanvas, g: Gear, s: CharacterSpec, by: number, hy: num
     case 'fan':
       if (!back) c.rect(side ? 10 : 2, by + 1, 2, 2, '#E8B04B');
       break;
+    case 'shield': // painted Viking round shield on the off-hand
+      if (back) break;
+      c.ellipse(side ? 3 : 0, by - 1, 6, 6, '#B3262E');
+      c.rect(side ? 5 : 2, by, 2, 4, '#E8B04B');
+      c.set(side ? 5 : 2, by + 2, '#C9D2DC');
+      break;
     case 'none':
       break;
   }
@@ -189,6 +195,14 @@ export const CHARACTERS: Record<string, CharacterSpec> = {
   kunoichi: { skin: '#F2C9A0', hair: '#4A1A3A', hairStyle: 'hood', top: '#5A1E46', trim: '#E8B04B', bottom: '#3A1230', gear: ['scarf'], mask: '#3A1230' },
   viking: { skin: '#F0C2A0', hair: '#9AA4AE', hairStyle: 'helmet', top: '#6B4A2E', trim: '#2E5A8A', bottom: '#4A3A2A', gear: ['beard', 'axe'] },
   oni: { skin: '#C8443A', hair: '#2A1A1A', hairStyle: 'oniHorns', top: '#E8B04B', trim: '#2A1A1A', bottom: '#3A2A20', gear: ['club'], eye: '#FFE14B' },
+  // ── Arc 2: Frost Harbor ───────────────────────────────────────────
+  runa: { skin: '#F4D2B4', hair: '#E8D08A', hairStyle: 'long', top: '#2E5A8A', trim: '#F4F1EA', bottom: '#3A4A5A', gear: [] },
+  ferryman: { skin: '#D9A87E', hair: '#C9A15A', hairStyle: 'kasa', top: '#4A6A8A', trim: '#2A3A4A', bottom: '#3A3A44', gear: [] },
+  shieldmaiden: { skin: '#F4D2B4', hair: '#E8C86A', hairStyle: 'long', top: '#3A5A8A', trim: '#C9D2DC', bottom: '#4A3A2A', gear: ['shield', 'axe'] },
+  berserker: { skin: '#E8B48E', hair: '#B8542A', hairStyle: 'long', top: '#5A3A22', trim: '#2A1A14', bottom: '#3A2A20', gear: ['beard', 'axe'], eye: '#E8574B' },
+  skald: { skin: '#F0C8A2', hair: '#C8B89A', hairStyle: 'long', top: '#5A2A6A', trim: '#E8B04B', bottom: '#3A2A4A', gear: ['beard', 'staff'] },
+  draugr: { skin: '#7A9A8A', hair: '#5A6A64', hairStyle: 'helmet', top: '#3A4A44', trim: '#5A6A64', bottom: '#2A3430', gear: ['axe'], eye: '#7FFFD4' },
+  champion: { skin: '#F0C2A0', hair: '#C9D2DC', hairStyle: 'helmet', top: '#8A1E2E', trim: '#E8B04B', bottom: '#2A2A3A', gear: ['beard', 'shield', 'axe'] },
   merchant: { skin: '#EBC29C', hair: '#2A1E14', hairStyle: 'topknot', top: '#3A6A8A', trim: '#E8E0C8', bottom: '#2A3A4A', gear: [] },
 };
 

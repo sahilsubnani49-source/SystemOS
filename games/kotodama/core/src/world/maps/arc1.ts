@@ -170,6 +170,11 @@ const river_crossing: MapDef = {
       battle: { winFlag: 'beat_bjorn', isBoss: true, foes: [
         { familyId: 'riki', level: 10, name: 'Bjorn the Scout', nameJa: 'ビョルン', sprite: 'viking', recruitable: false, hpScale: 1.7 },
       ] } },
+    { id: 'river_ferry', name: 'Ferryman Gen', x: 16, y: 6, sprite: 'ferryman', facing: 'left', showIf: 'beat_oni',
+      travelsTo: { map: 'frost_harbor', x: 9, y: 12 },
+      dialogue: [
+        { speaker: 'Ferryman Gen', text: 'The northmen\'s harbor? Brave. Their rune-scribes write in katakana, the square script. Climb in.' },
+      ] },
     { id: 'fisher', name: 'Fisher Mei', x: 4, y: 12, sprite: 'villagerB', facing: 'right',
       dialogue: [{ speaker: 'Fisher Mei', text: 'Kappa spirits in the reeds splash with さしすせそ. The shy tanuki read たちつてと. Listen closely to し and ち!' }] },
   ],
@@ -338,7 +343,7 @@ const broken_gate: MapDef = {
       dialogue: [
         { speaker: 'Master Kaito', text: 'You read every hiragana the Oni threw at you. Sakura Valley is free.' },
         { speaker: 'Master Kaito', text: 'But look to the sea: the Jarl\'s longships sail for Frost Harbor, and they write in katakana now.' },
-        { speaker: 'System', text: 'ARC 1 COMPLETE. Arc 2: Frost Harbor (katakana) is coming.' },
+        { speaker: 'System', text: 'ARC 1 COMPLETE. A ferryman now waits on the River Crossing shore to take you to Frost Harbor (Arc 2: katakana).' },
       ] },
   ],
   encounterRate: 0.12,
