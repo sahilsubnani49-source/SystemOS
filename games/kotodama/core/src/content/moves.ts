@@ -52,8 +52,17 @@ export const MOVES = {
   blossom: m({ id: 'blossom', name: 'Blossom Light', nameJa: '桜光', prompt: 'recognize', power: 1.0, element: 'light', fx: 'light', timeLimitMs: null, description: 'Petals of searing light.' }),
   guardian: m({ id: 'guardian', name: 'Lion Guard', nameJa: '狛守', prompt: 'recognize', power: 0, element: 'earth', fx: 'guard', timeLimitMs: null, self: 'guard', description: 'Stone guardian stance.' }),
   tide: m({ id: 'tide', name: 'Black Tide', nameJa: '黒潮', prompt: 'type', power: 1.6, element: 'water', fx: 'water', timeLimitMs: null, description: 'Type the reading to summon the sea.' }),
+  // ── Arc 2: Mirror moves (unlocked by Runa in Frost Harbor) ─────────
+  twinDraw: m({ id: 'twinDraw', name: 'Twin-Script Draw', nameJa: '双字斬り', prompt: 'mirror', power: 1.35, element: 'steel', fx: 'heavySlash', timeLimitMs: null, description: 'See か, cut its twin カ. Both scripts, one blade.' }),
+  mirrorKunai: m({ id: 'mirrorKunai', name: 'Mirror Kunai', nameJa: '鏡苦無', prompt: 'mirror', power: 1.1, element: 'shadow', fx: 'kunai', timeLimitMs: 4500, description: 'Throw at the reflection: find the other script, fast.' }),
+  // ── Arc 2: Norse spirit moves ─────────────────────────────────────
+  frostbite: m({ id: 'frostbite', name: 'Frostbite', nameJa: '凍て噛み', prompt: 'recognize', power: 1.1, element: 'water', fx: 'water', timeLimitMs: null, description: 'Fjord-cold fangs.' }),
+  runebolt: m({ id: 'runebolt', name: 'Rune Bolt', nameJa: 'ルーン雷', prompt: 'mirror', power: 1.3, element: 'thunder', fx: 'lightning', timeLimitMs: null, description: 'A rune flips into its mirror and strikes.' }),
+  axeCleave: m({ id: 'axeCleave', name: 'Axe Cleave', nameJa: '斧割り', prompt: 'recall', power: 1.25, element: 'steel', fx: 'heavySlash', timeLimitMs: null, description: 'A bearded axe, swung low.' }),
+  berserk: m({ id: 'berserk', name: 'Berserk Flame', nameJa: '狂炎', prompt: 'spell', power: 1.5, element: 'fire', fx: 'fire', timeLimitMs: null, description: 'Spell the word right and burn bright.' }),
   // ── Enemy-only ────────────────────────────────────────────────────
   rend: m({ id: 'rend', name: 'Garbled Rend', nameJa: '文字化け', prompt: 'recognize', power: 1.0, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Corrupted glyphs tear at you.' }),
+  shieldBash: m({ id: 'shieldBash', name: 'Shield Bash', nameJa: '盾打ち', prompt: 'recognize', power: 1.2, element: 'steel', fx: 'rock', timeLimitMs: null, description: 'A painted round shield, to the face.' }),
   oniClub: m({ id: 'oniClub', name: 'Iron Club', nameJa: '金棒', prompt: 'recognize', power: 1.4, element: 'steel', fx: 'heavySlash', timeLimitMs: null, description: "The oni's iron club." }),
 } satisfies Record<string, Move>;
 

@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, kanaPoolForArea,
+  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, poolForArea,
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
@@ -87,7 +87,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
     const startStoryOrWildBattle = (foes: FoeSpec[], opts: { isBoss: boolean; area: string; winFlag?: string; title: string }) => {
       const save = get().save as Save;
       const rng = createRng(save.seed);
-      const pool = kanaPoolForArea(opts.area);
+      const pool = poolForArea(opts.area);
       const enemies = foes.map((f, i) => foeCombatant(f, `foe${i}`, pool, rng));
       const party = [heroCombatant(save), ...save.party.slice(0, PARTY_SIZE).map((p) => spiritCombatant(p, save.srs))];
       const state = startBattle({ party, enemies, kanaPool: pool, srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32 });

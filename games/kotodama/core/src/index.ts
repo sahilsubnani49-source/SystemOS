@@ -14,7 +14,7 @@ export * from './save/schema';
 export * from './util/rng';
 export * from './util/dates';
 export {
-  MAX_LEVEL, xpToNext, applyXp, familyStage, heroCombatant, spiritCombatant,
+  MAX_LEVEL, MIRROR_FLAG, xpToNext, applyXp, familyStage, heroCombatant, spiritCombatant,
   foeCombatant, nextStreak, horseSpeed,
 } from './progression';
 export * from './world/maps';

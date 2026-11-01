@@ -2,6 +2,7 @@ import { addDaysStr } from './util/dates';
 import { HEROES, type HeroClass } from './content/heroes';
 import { familyForRow, getFamily, movesAt, stageForMastery, statsAt } from './content/spirits';
 import { getKana, kanaWhere } from './content/kana';
+import { isWordId } from './content/items';
 import { averageStage, type SrsTable } from './srs/schedule';
 import type { Combatant } from './battle/engine';
 import type { FoeSpec } from './world/types';
@@ -27,11 +28,14 @@ export function applyXp(level: number, xp: number, gain: number): { level: numbe
   return { level: l, xp: x, levelsGained: gained };
 }
 
-/** Evolution stage of a family, from the player's mastery of its hiragana row. */
+/** Mastery-flag that teaches both heroes their Mirror move. */
+export const MIRROR_FLAG = 'learned_mirror';
+
+/** Evolution stage of a family, from mastery of its row IN ITS OWN SCRIPT. */
 export function familyStage(familyId: string, srs: SrsTable): 0 | 1 | 2 {
   const family = getFamily(familyId);
   const rows = family.row === 'w' ? (['w', 'nn'] as const) : [family.row];
-  const ids = rows.flatMap((row) => kanaWhere({ script: 'hiragana', row, kind: 'basic' }).map((k) => k.id));
+  const ids = rows.flatMap((row) => kanaWhere({ script: family.script, row, kind: 'basic' }).map((k) => k.id));
   return stageForMastery(averageStage(srs, ids));
 }
 
@@ -51,7 +55,7 @@ export function heroCombatant(save: Save): Combatant {
     atk: stats.atk,
     def: stats.def,
     spd: stats.spd,
-    moves: [...def.moves],
+    moves: save.flags[MIRROR_FLAG] ? [...def.moves, def.mirrorMove] : [...def.moves],
     comboStep: def.comboStep,
     guard: false,
     evade: false,
@@ -90,11 +94,16 @@ export function spiritCombatant(owned: OwnedSpirit, srs: SrsTable): Combatant {
 export function foeCombatant(spec: FoeSpec, uid: string, pool: readonly string[], rng: Rng): Combatant {
   const family = getFamily(spec.familyId);
   const stats = statsAt(family.base, spec.level, 0);
-  const rowKana = pool.filter((id) => {
-    const row = getKana(id).row;
-    return row === family.row || (family.row === 'w' && row === 'nn');
-  });
-  const trueKana = rng.pick(rowKana.length > 0 ? rowKana : pool);
+  // The true kana is always a single kana (purifying means TYPING it), from the
+  // family's own row and script. Words in the pool are never candidates.
+  const kanaInPool = pool.filter((id) => !isWordId(id));
+  const ownRow = (id: string) => {
+    const k = getKana(id);
+    return k.script === family.script && (k.row === family.row || (family.row === 'w' && k.row === 'nn'));
+  };
+  const rowKana = kanaInPool.filter(ownRow);
+  const fallback = kanaWhere({ script: family.script, row: family.row, kind: 'basic' }).map((k) => k.id);
+  const trueKana = rng.pick(rowKana.length > 0 ? rowKana : fallback);
   const hp = Math.round(stats.hp * (spec.hpScale ?? 1));
   const form = family.stages[0];
   return {
