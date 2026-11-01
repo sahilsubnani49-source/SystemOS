@@ -3,8 +3,11 @@ import type { Element } from './elements';
 /**
  * recognize: see か, choose "ka"      recall: see "ka", choose か
  * listen:    hear か, choose か        type:   see か, type "ka"
+ * mirror:    see か, choose カ (or カ → か)
+ * meaning:   see テレビ, choose "television"
+ * spell:     see "terebi", choose テレビ among near-miss spellings
  */
-export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type';
+export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell';
 
 /** Visual effect the renderer plays when the move lands. */
 export type FxKind =

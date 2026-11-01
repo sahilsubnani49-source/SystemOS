@@ -11,11 +11,11 @@ export class SessionTracker {
   private correct = 0;
   private mastered = new Set<string>();
 
-  recordAnswer(kanaId: string, correct: boolean, elapsedMs: number, before: SrsTable, after: SrsTable) {
+  recordAnswer(itemId: string, correct: boolean, elapsedMs: number, before: SrsTable, after: SrsTable) {
     this.answered += 1;
     if (correct) this.correct += 1;
     this.activeMs += Math.min(Math.max(0, elapsedMs), MAX_COUNTED_ANSWER_MS);
-    if (!isMastered(before[kanaId]) && isMastered(after[kanaId])) this.mastered.add(kanaId);
+    if (!isMastered(before[itemId]) && isMastered(after[itemId])) this.mastered.add(itemId);
   }
 
   get hasActivity(): boolean {

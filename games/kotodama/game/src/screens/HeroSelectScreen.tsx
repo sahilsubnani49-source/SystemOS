@@ -7,8 +7,8 @@ import { SpriteView } from '../ui/Sprite';
 import { PButton, PText, Panel } from '../ui/Pixel';
 import { useGameApi } from '../state/context';
 import { C, F } from '../theme';
+import { PROMPT_TAG } from '../ui/promptLabels';
 
-const PROMPT_LABEL = { recognize: 'READ', recall: 'RECALL', listen: 'LISTEN', type: 'TYPE' } as const;
 
 function StatBar({ label, value, max = 16 }: { label: string; value: number; max?: number }) {
   return (
@@ -58,7 +58,7 @@ export function HeroSelectScreen() {
               <View key={m} style={styles.moveRow}>
                 <PText ja style={styles.moveJa}>{move.nameJa}</PText>
                 <PText style={styles.moveName}>{move.name}</PText>
-                <PText style={styles.moveKind}>{PROMPT_LABEL[move.prompt]}</PText>
+                <PText style={styles.moveKind}>{PROMPT_TAG[move.prompt]}</PText>
               </View>
             );
           })}

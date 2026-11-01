@@ -18,3 +18,5 @@ export {
   foeCombatant, nextStreak, horseSpeed,
 } from './progression';
 export * from './world/maps';
+export * from './content/words';
+export * from './content/items';

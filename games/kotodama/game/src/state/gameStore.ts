@@ -256,7 +256,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
 
         if (action.type === 'answer') {
           const last = after.answers[after.answers.length - 1];
-          if (last) tracker.recordAnswer(last.kanaId, last.correct, action.elapsedMs, before.srs, after.srs);
+          if (last) tracker.recordAnswer(last.itemId, last.correct, action.elapsedMs, before.srs, after.srs);
         }
 
         const done = ['won', 'lost', 'fled', 'recruited'].includes(after.phase);

@@ -17,6 +17,7 @@ import type { BattleContext } from '../state/gameStore';
 import { speakJa } from '../audio/speak';
 import { bump } from '../audio/haptics';
 import { C, hpColor } from '../theme';
+import { PROMPT_TAG } from '../ui/promptLabels';
 
 const SKY: Record<string, [string, string]> = {
   dojo: ['#2A3A6A', '#C8848A'],
@@ -105,7 +106,7 @@ export function BattleScreen() {
             setVerdict(null);
             break;
           case 'graded': {
-            const kana = getKana(ev.kanaId);
+            const kana = getKana(ev.itemId);
             const ok = ev.grade === 'correct';
             speakJa(kana.char);
             bump(ok ? 'success' : 'error');
@@ -331,7 +332,6 @@ function HpBar({ value, max, small }: { value: number; max: number; small?: bool
   );
 }
 
-const PROMPT_TAG = { recognize: 'READ', recall: 'RECALL', listen: 'LISTEN', type: 'TYPE' } as const;
 
 function MoveMenu({ state, actor }: { state: BattleState; actor: Combatant }) {
   const api = useGameApi();

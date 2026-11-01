@@ -5,13 +5,8 @@ import type { Prompt } from '@kotodama/core';
 import { PButton, PText } from '../ui/Pixel';
 import { speakJa } from '../audio/speak';
 import { C, F } from '../theme';
+import { PROMPT_HEADING } from '../ui/promptLabels';
 
-const KIND_LABEL = {
-  recognize: 'READ IT',
-  recall: 'FIND THE KANA',
-  listen: 'LISTEN',
-  type: 'TYPE THE READING',
-} as const;
 
 /** The question. Calls onAnswer(value, elapsedMs) exactly once. */
 export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purify: boolean; onAnswer: (value: string, elapsedMs: number) => void }) {
@@ -47,7 +42,7 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
 
   return (
     <View style={styles.card} testID="prompt">
-      <PText style={[styles.kind, purify && { color: C.violet }]}>{purify ? 'PURIFY: TYPE ITS TRUE NAME' : KIND_LABEL[prompt.kind]}</PText>
+      <PText style={[styles.kind, purify && { color: C.violet }]}>{purify ? 'PURIFY: TYPE ITS TRUE NAME' : PROMPT_HEADING[prompt.kind]}</PText>
       {prompt.timeLimitMs !== null ? (
         <View style={styles.track}>
           <Animated.View style={[styles.fill, barStyle]} />

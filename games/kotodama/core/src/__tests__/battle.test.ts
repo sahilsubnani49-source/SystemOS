@@ -91,7 +91,7 @@ describe('battle engine', () => {
     while (s.phase === 'choose' && guard++ < 50) s = answerRight(s);
     expect(s.phase).toBe('won');
     expect(s.answers.every((a) => a.correct)).toBe(true);
-    for (const a of s.answers) expect(s.srs[a.kanaId]?.stage).toBeGreaterThan(0);
+    for (const a of s.answers) expect(s.srs[a.itemId]?.stage).toBeGreaterThan(0);
     expect(battleXp(s)).toBeGreaterThan(0);
   });
 
@@ -153,7 +153,7 @@ describe('battle engine', () => {
     expect(canPurify(s)).toBe(true);
     s = reduce(s, { type: 'purify' });
     expect(s.prompt?.kind).toBe('type');
-    expect(s.prompt?.kanaId).toBe(foe.trueKana);
+    expect(s.prompt?.itemId).toBe(foe.trueKana);
     s = reduce(s, { type: 'answer', value: getKana(foe.trueKana!).romaji, elapsedMs: 0, now: NOW });
     expect(s.phase).toBe('recruited');
     expect(s.events).toContainEqual({ type: 'purify', target: 'foe1', familyId: 'kobi' });

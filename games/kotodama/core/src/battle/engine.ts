@@ -40,7 +40,7 @@ export type BattlePhase = 'choose' | 'answer' | 'won' | 'lost' | 'fled' | 'recru
 
 export type BattleEvent =
   | { type: 'prompt'; prompt: Prompt }
-  | { type: 'graded'; grade: Grade; kanaId: string; answer: string }
+  | { type: 'graded'; grade: Grade; itemId: string; answer: string }
   | { type: 'fx'; fx: FxKind; from: string; to: string }
   | { type: 'damage'; target: string; amount: number; crit: boolean; effective: 'super' | 'weak' | 'normal' }
   | { type: 'miss'; from: string; to: string }
@@ -57,7 +57,7 @@ export type BattleEvent =
   | { type: 'end'; outcome: 'won' | 'lost' | 'fled' | 'recruited' };
 
 export interface AnswerLogEntry {
-  kanaId: string;
+  itemId: string;
   correct: boolean;
 }
 
@@ -160,9 +160,9 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       const actor = s.party[s.actor];
       if (!actor || !actor.moves.includes(action.move)) return state;
       const move = getMove(action.move);
-      const lastKana = s.answers[s.answers.length - 1]?.kanaId;
-      const kanaId = pickNextPrompt(s.kanaPool, s.srs, action.now, rng, lastKana);
-      s.prompt = buildPrompt(move.prompt, kanaId, s.kanaPool, rng, move.timeLimitMs);
+      const lastItem = s.answers[s.answers.length - 1]?.itemId;
+      const itemId = pickNextPrompt(s.kanaPool, s.srs, action.now, rng, lastItem);
+      s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, move.timeLimitMs);
       s.pendingMove = action.move;
       s.phase = 'answer';
       s.events.push({ type: 'prompt', prompt: s.prompt });
@@ -185,10 +185,10 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       const prompt = s.prompt;
       const grade = gradeAnswer(prompt, action.value, action.elapsedMs);
       const correct = grade === 'correct';
-      s.answers = [...s.answers, { kanaId: prompt.kanaId, correct }];
+      s.answers = [...s.answers, { itemId: prompt.itemId, correct }];
       // Live SRS: a kana missed now becomes due now, so it comes back this battle.
-      s.srs = recordAnswer(s.srs, prompt.kanaId, correct, action.now);
-      s.events.push({ type: 'graded', grade, kanaId: prompt.kanaId, answer: prompt.answer });
+      s.srs = recordAnswer(s.srs, prompt.itemId, correct, action.now);
+      s.events.push({ type: 'graded', grade, itemId: prompt.itemId, answer: prompt.answer });
 
       const actor = s.party[s.actor] as Combatant;
       const target = alive(s.enemies)[0] as Combatant;
