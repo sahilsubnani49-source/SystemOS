@@ -13,7 +13,7 @@ It runs inside SystemOS (Stats tab → *Gate of Words*) **and** as its own app.
 |---|---|---|---|
 | 1 | Sakura Valley (8 maps) | All hiragana: basic, voiced, combined | Playable |
 | 2 | Frost Harbor (6 maps, reached by ferry after the Oni) | All katakana; 60 loanwords with ー and ッ; hiragana↔katakana Mirror prompts | Playable |
-| 3 | Castle Capital (6 maps, reached on Runa's longship after the Champion) | 106 N5 kanji in 10 groups; 104 N5 words; the Shadow Shogun's N5 mock exam | Playable |
+| 3 | Castle Capital (6 maps, reached on Runa's longship after the Champion) | 106 N5 kanji in 10 groups; 102 N5 words; the Shadow Shogun's N5 mock exam | Playable |
 | 4–5 | Mountain Temples, Northern Runeforge | JLPT N4 → N3 kanji and vocabulary | Not written |
 
 ## Packages

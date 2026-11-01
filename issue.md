@@ -205,7 +205,7 @@ the backend to any other user or public network.
 - **Priority:** P2
 - **Area:** `games/kotodama/`, `mobile/src/presentation/screens/KotodamaScreen.tsx`
 - **State (2026-11-01):** Arc 1 (hiragana), Arc 2 (katakana + 60 loanwords) and Arc 3 (106 N5
-  kanji + 104 N5 words) are playable in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
+  kanji + 102 N5 words) are playable in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
   battles, purify and recruit, defeat, and save/reload were verified by a Playwright
   playthrough. Arc 2 was verified from seeded saves: ferry → Frost Harbor → Runa → a Mirror
   battle → purifying a Norse spirit, and the Skald's word trial with meaning and spell
