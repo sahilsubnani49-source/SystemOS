@@ -1,6 +1,7 @@
 import { getKana, type Kana } from './kana';
 import { getKanji, primaryReading, type Kanji } from './kanji';
 import { getWord, type Word } from './words';
+import { getSentence, type Sentence } from './sentences';
 import { toRomaji } from '../util/romaji';
 
 /**
@@ -11,13 +12,18 @@ import { toRomaji } from '../util/romaji';
 export type StudyItem =
   | { kind: 'kana'; id: string; kana: Kana }
   | { kind: 'kanji'; id: string; kanji: Kanji }
-  | { kind: 'word'; id: string; word: Word };
+  | { kind: 'word'; id: string; word: Word }
+  | { kind: 'sentence'; id: string; sentence: Sentence };
 
 export const isWordId = (id: string) => id.startsWith('w-') || id.startsWith('v-');
 export const isKanjiId = (id: string) => id.startsWith('j-');
+export const isSentenceId = (id: string) => id.startsWith('c-');
+/** Kana are the only items that are NOT one of the other namespaces. Ask explicitly. */
+export const isKanaId = (id: string) => id.startsWith('h-') || id.startsWith('k-');
 
 export function getItem(id: string): StudyItem {
   if (isWordId(id)) return { kind: 'word', id, word: getWord(id) };
+  if (isSentenceId(id)) return { kind: 'sentence', id, sentence: getSentence(id) };
   if (isKanjiId(id)) return { kind: 'kanji', id, kanji: getKanji(id) };
   return { kind: 'kana', id, kana: getKana(id) };
 }
@@ -25,17 +31,20 @@ export function getItem(id: string): StudyItem {
 /** What the item looks like written. */
 export function itemText(id: string): string {
   const it = getItem(id);
+  if (it.kind === 'sentence') return it.sentence.text;
   return it.kind === 'kana' ? it.kana.char : it.kind === 'kanji' ? it.kanji.char : it.word.text;
 }
 
 /** How it is read aloud, in kana (what text-to-speech should say). */
 export function itemReading(id: string): string {
   const it = getItem(id);
+  if (it.kind === 'sentence') return it.sentence.text.replace('＿＿', it.sentence.answer);
   return it.kind === 'kana' ? it.kana.char : it.kind === 'kanji' ? primaryReading(it.kanji) : it.word.reading;
 }
 
 export function itemRomaji(id: string): string {
   const it = getItem(id);
+  if (it.kind === 'sentence') return '';
   return it.kind === 'kana' ? it.kana.romaji : it.kind === 'kanji' ? toRomaji(primaryReading(it.kanji)) : it.word.romaji;
 }
 

@@ -7,8 +7,9 @@ import type { Element } from './elements';
  * meaning:   see テレビ, choose "television"
  * spell:     see "terebi", choose テレビ among near-miss spellings
  * reading:   see 学生 (or 水), choose がくせい (or みず) among near-miss readings
+ * context:   read a sentence with a blank, choose the word that completes it
  */
-export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading';
+export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading' | 'context';
 
 /** Visual effect the renderer plays when the move lands. */
 export type FxKind =
@@ -67,6 +68,10 @@ export const MOVES = {
   umbrellaSpin: m({ id: 'umbrellaSpin', name: 'Umbrella Spin', nameJa: '傘回し', prompt: 'reading', power: 1.2, element: 'water', fx: 'water', timeLimitMs: null, description: 'A spinning karakasa throws rain.' }),
   inkBrush: m({ id: 'inkBrush', name: 'Ink Brush', nameJa: '墨筆', prompt: 'meaning', power: 1.15, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Name what the brushstroke means.' }),
   sunflare: m({ id: 'sunflare', name: 'Sun Flare', nameJa: '日炎', prompt: 'reading', power: 1.3, element: 'fire', fx: 'fire', timeLimitMs: null, description: 'Read the kanji and it burns.' }),
+  // ── Arc 4: mountain yokai moves ───────────────────────────────────
+  echoCall: m({ id: 'echoCall', name: 'Echo Call', nameJa: '山彦', prompt: 'context', power: 1.35, element: 'light', fx: 'light', timeLimitMs: null, description: 'Finish the sentence the mountain echoes back.' }),
+  frostBreath: m({ id: 'frostBreath', name: 'Frost Breath', nameJa: '雪息', prompt: 'reading', power: 1.25, element: 'water', fx: 'water', timeLimitMs: null, description: 'The snow woman\'s cold breath.' }),
+  sickleWind: m({ id: 'sickleWind', name: 'Sickle Wind', nameJa: '鎌風', prompt: 'meaning', power: 1.3, element: 'wind', fx: 'slash', timeLimitMs: 5000, description: 'Three weasels, one invisible cut.' }),
   // ── Enemy-only ────────────────────────────────────────────────────
   rend: m({ id: 'rend', name: 'Garbled Rend', nameJa: '文字化け', prompt: 'recognize', power: 1.0, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Corrupted glyphs tear at you.' }),
   shieldBash: m({ id: 'shieldBash', name: 'Shield Bash', nameJa: '盾打ち', prompt: 'recognize', power: 1.2, element: 'steel', fx: 'rock', timeLimitMs: null, description: 'A painted round shield, to the face.' }),

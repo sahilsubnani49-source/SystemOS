@@ -6,7 +6,10 @@ import { toRomaji } from '../util/romaji';
 //   - Vocabulary (Arc 3): N5 words written with kanji. Id `v-<romaji>`.
 // Ids are stable save-file keys: never rename one.
 
-export type WordArea = 'tower' | 'longship' | 'castle' | 'market' | 'teahouse' | 'gardens' | 'keep';
+export type WordArea =
+  | 'tower' | 'longship' // Arc 2 loanwords
+  | 'castle' | 'market' | 'teahouse' | 'gardens' | 'keep' // Arc 3 N5
+  | 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks'; // Arc 4 N4
 
 export interface Word {
   id: string;
@@ -109,6 +112,58 @@ const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship'>, VocabRow[]> = {
     ['新しい', 'あたらしい', 'new (adj.)'], ['古い', 'ふるい', 'old (adj.)'], ['大きい', 'おおきい', 'big (adj.)'],
     ['小さい', 'ちいさい', 'small (adj.)'], ['長い', 'ながい', 'long (adj.)'], ['早い', 'はやい', 'early (adj.)'],
     ['中国', 'ちゅうごく', 'China'], ['入学', 'にゅうがく', 'starting school'], ['国語', 'こくご', 'national language (class)'],
+  ],
+  // ── Arc 4: N4. Same rule: only kanji taught by this area or earlier. ──
+  // + family + seasons
+  foothills: [
+    ['お兄さん', 'おにいさん', 'older brother (polite)'], ['お姉さん', 'おねえさん', 'older sister (polite)'], ['兄弟', 'きょうだい', 'siblings'],
+    ['姉妹', 'しまい', 'sisters'], ['家族', 'かぞく', 'family'], ['医者', 'いしゃ', 'doctor'],
+    ['会社員', 'かいしゃいん', 'office worker'], ['店員', 'てんいん', 'shop clerk'], ['主人', 'しゅじん', 'husband; master'],
+    ['春休み', 'はるやすみ', 'spring break'], ['夏休み', 'なつやすみ', 'summer holidays'], ['冬休み', 'ふゆやすみ', 'winter break'],
+    ['今朝', 'けさ', 'this morning'], ['毎朝', 'まいあさ', 'every morning'], ['昼休み', 'ひるやすみ', 'lunch break'],
+    ['今夜', 'こんや', 'tonight'], ['夜中', 'よなか', 'middle of the night'], ['始める', 'はじめる', 'to begin (something)'],
+    ['終わる', 'おわる', 'to end'], ['急ぐ', 'いそぐ', 'to hurry'], ['待つ', 'まつ', 'to wait'],
+  ],
+  // + food + qualities
+  village: [
+    ['牛肉', 'ぎゅうにく', 'beef'], ['お茶', 'おちゃ', 'green tea'], ['茶色', 'ちゃいろ', 'brown'],
+    ['料理', 'りょうり', 'cooking; cuisine'], ['ご飯', 'ごはん', 'cooked rice; a meal'], ['食べ物', 'たべもの', 'food'],
+    ['飲み物', 'のみもの', 'a drink'], ['品物', 'しなもの', 'goods; merchandise'], ['売る', 'うる', 'to sell'],
+    ['買い物', 'かいもの', 'shopping'], ['赤い', 'あかい', 'red (adj.)'], ['青い', 'あおい', 'blue (adj.)'],
+    ['黒い', 'くろい', 'black (adj.)'], ['強い', 'つよい', 'strong (adj.)'], ['弱い', 'よわい', 'weak (adj.)'],
+    ['重い', 'おもい', 'heavy (adj.)'], ['軽い', 'かるい', 'light (adj.)'], ['近い', 'ちかい', 'near (adj.)'],
+    ['遠い', 'とおい', 'far (adj.)'], ['広い', 'ひろい', 'wide; spacious (adj.)'], ['悪い', 'わるい', 'bad (adj.)'],
+  ],
+  // + study + health
+  monastery: [
+    ['勉強', 'べんきょう', 'study'], ['教える', 'おしえる', 'to teach'], ['習う', 'ならう', 'to learn (from someone)'],
+    ['研究', 'けんきゅう', 'research'], ['試験', 'しけん', 'examination'], ['答え', 'こたえ', 'an answer'],
+    ['問題', 'もんだい', 'problem; question'], ['文字', 'もじ', 'written character'], ['英語', 'えいご', 'English (language)'],
+    ['漢字', 'かんじ', 'kanji'], ['文学', 'ぶんがく', 'literature'], ['病気', 'びょうき', 'illness'],
+    ['病院', 'びょういん', 'hospital'], ['大学院', 'だいがくいん', 'graduate school'], ['死ぬ', 'しぬ', 'to die'],
+  ],
+  // + movement + nature
+  forest: [
+    ['歩く', 'あるく', 'to walk'], ['走る', 'はしる', 'to run'], ['起きる', 'おきる', 'to get up'],
+    ['着る', 'きる', 'to wear'], ['帰る', 'かえる', 'to go home'], ['送る', 'おくる', 'to send'],
+    ['運動', 'うんどう', 'exercise'], ['運転', 'うんてん', 'driving'], ['動く', 'うごく', 'to move'],
+    ['止まる', 'とまる', 'to come to a stop'], ['使う', 'つかう', 'to use'], ['持つ', 'もつ', 'to hold'],
+    ['借りる', 'かりる', 'to borrow'], ['貸す', 'かす', 'to lend'], ['西洋', 'せいよう', 'the West'],
+    ['子犬', 'こいぬ', 'puppy'], ['海外', 'かいがい', 'overseas'],
+  ],
+  // + town + thought + function
+  peaks: [
+    ['東京', 'とうきょう', 'Tokyo'], ['京都', 'きょうと', 'Kyoto'], ['図書館', 'としょかん', 'library'],
+    ['映画館', 'えいがかん', 'cinema'], ['本屋', 'ほんや', 'bookshop'], ['食堂', 'しょくどう', 'dining hall'],
+    ['教室', 'きょうしつ', 'classroom'], ['会場', 'かいじょう', 'venue'], ['地図', 'ちず', 'map'],
+    ['世界', 'せかい', 'the world'], ['思う', 'おもう', 'to think'], ['考える', 'かんがえる', 'to consider'],
+    ['知る', 'しる', 'to come to know'], ['歌う', 'うたう', 'to sing'], ['音楽', 'おんがく', 'music'],
+    ['楽しい', 'たのしい', 'fun; enjoyable (adj.)'], ['映画', 'えいが', 'film'], ['時計', 'とけい', 'clock; watch'],
+    ['用事', 'ようじ', 'errand'], ['注意', 'ちゅうい', 'caution'], ['意味', 'いみ', 'meaning'],
+    ['自分', 'じぶん', 'oneself'], ['同じ', 'おなじ', 'the same'], ['仕事', 'しごと', 'job; work'],
+    ['有名', 'ゆうめい', 'famous'], ['無理', 'むり', 'impossible; unreasonable'], ['以上', 'いじょう', 'or more; above'],
+    ['出発', 'しゅっぱつ', 'departure'], ['開ける', 'あける', 'to open (something)'], ['作る', 'つくる', 'to make'],
+    ['大事', 'だいじ', 'important'],
   ],
 };
 

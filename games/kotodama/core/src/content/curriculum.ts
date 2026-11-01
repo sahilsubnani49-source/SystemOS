@@ -1,6 +1,7 @@
 import { kanaWhere, type KanaKind, type KanaRow, type Script } from './kana';
 import { wordsForArea, type WordArea } from './words';
 import { kanjiInGroup, type KanjiGroup } from './kanji';
+import { sentencesForArea, type Sentence } from './sentences';
 
 /**
  * Which items each area tests. Pools are cumulative: earlier rows keep coming back,
@@ -19,9 +20,17 @@ export interface AreaCurriculum {
   words?: WordArea[];
   /** Kanji groups included in the pool (Arc 3+). */
   kanji?: KanjiGroup[];
+  /** Context-sentence sets included in the pool (Arc 4+). */
+  sentences?: Sentence['area'][];
 }
 
 const BASIC_ALL: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
+
+/** The first `n` N4 kanji groups, in teaching order. */
+const N4_ORDER: KanjiGroup[] = [
+  'n4family', 'n4seasons', 'n4food', 'n4qualities', 'n4study', 'n4health', 'n4movement', 'n4nature', 'n4town', 'n4thought', 'n4function',
+];
+const N4_UP_TO = (n: number) => N4_ORDER.slice(0, n);
 
 const area = (a: Omit<AreaCurriculum, 'script'> & { script?: Script }): AreaCurriculum => ({ script: 'hiragana', ...a });
 
@@ -50,10 +59,20 @@ export const CURRICULUM: Record<string, AreaCurriculum> = {
   gardens: kanjiArea('gardens', 'Kanji: nature + actions', ['numbers', 'days', 'time', 'people', 'body', 'directions', 'nature', 'actions'], ['teahouse', 'gardens']),
   keep: kanjiArea('keep', 'Kanji: adjectives + places', ['numbers', 'days', 'time', 'people', 'body', 'directions', 'nature', 'actions', 'adjectives', 'places'], ['gardens', 'keep']),
   hall: kanjiArea('hall', 'N5 mock exam: every kanji and word', ['numbers', 'days', 'time', 'people', 'body', 'directions', 'nature', 'actions', 'adjectives', 'places'], ['castle', 'market', 'teahouse', 'gardens', 'keep']),
+  // ── Arc 4: Mountain Temples (N4 kanji, vocabulary and sentences) ────
+  foothills: { ...kanjiArea('foothills', 'N4: family + seasons', N4_UP_TO(2), ['foothills'], 4), sentences: ['foothills'] },
+  village: { ...kanjiArea('village', 'N4: food + qualities', N4_UP_TO(4), ['foothills', 'village'], 4), sentences: ['foothills', 'village'] },
+  monastery: { ...kanjiArea('monastery', 'N4: study + health', N4_UP_TO(6), ['village', 'monastery'], 4), sentences: ['village', 'monastery'] },
+  forest: { ...kanjiArea('forest', 'N4: movement + nature', N4_UP_TO(8), ['monastery', 'forest'], 4), sentences: ['monastery', 'forest'] },
+  peaks: { ...kanjiArea('peaks', 'N4: town + thought + function', N4_UP_TO(11), ['forest', 'peaks'], 4), sentences: ['forest', 'peaks'] },
+  summit: {
+    ...kanjiArea('summit', 'N4 mock exam: every N4 kanji, word and sentence', N4_UP_TO(11), ['foothills', 'village', 'monastery', 'forest', 'peaks'], 4),
+    sentences: ['foothills', 'village', 'monastery', 'forest', 'peaks'],
+  },
 };
 
-function kanjiArea(id: string, label: string, kanji: KanjiGroup[], words: WordArea[]): AreaCurriculum {
-  return { id, arc: 3, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji, words };
+function kanjiArea(id: string, label: string, kanji: KanjiGroup[], words: WordArea[], arc: 3 | 4 = 3): AreaCurriculum {
+  return { id, arc, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji, words };
 }
 
 /** The first area (in curriculum order) that teaches a kanji group. */
@@ -80,5 +99,6 @@ export function poolForArea(areaId: string): string[] {
     ...kanaPoolForArea(areaId),
     ...(a.kanji ?? []).flatMap((g) => kanjiInGroup(g).map((k) => k.id)),
     ...(a.words ?? []).flatMap((set) => wordsForArea(set).map((w) => w.id)),
+    ...(a.sentences ?? []).flatMap((set) => sentencesForArea(set).map((s) => s.id)),
   ];
 }

@@ -3,14 +3,15 @@ import { HEROES, type HeroClass } from './content/heroes';
 import { familyForRow, familyItemIds, getFamily, movesAt, stageForMastery, statsAt } from './content/spirits';
 import { getKana } from './content/kana';
 import { getKanji } from './content/kanji';
-import { isKanjiId, isWordId } from './content/items';
+import { isKanaId, isKanjiId } from './content/items';
 import { averageStage, type SrsTable } from './srs/schedule';
 import type { Combatant } from './battle/engine';
 import type { FoeSpec } from './world/types';
 import type { OwnedSpirit, Save } from './save/schema';
 import type { Rng } from './util/rng';
 
-export const MAX_LEVEL = 50;
+// Arc 4 foes reach the mid-50s and Arc 5 goes higher, so the cap must stay ahead of them.
+export const MAX_LEVEL = 80;
 
 export function xpToNext(level: number): number {
   return 20 + level * level * 6;
@@ -95,9 +96,8 @@ export function foeCombatant(spec: FoeSpec, uid: string, pool: readonly string[]
   // The true name is always one kana or one kanji (purifying means TYPING its
   // reading), taken from what the family embodies. Words are never candidates.
   const own = (id: string): boolean => {
-    if (isWordId(id)) return false;
     if (family.kanjiGroup) return isKanjiId(id) && getKanji(id).group === family.kanjiGroup;
-    if (isKanjiId(id)) return false;
+    if (!isKanaId(id)) return false;
     const k = getKana(id);
     return k.script === family.script && (k.row === family.row || (family.row === 'w' && k.row === 'nn'));
   };

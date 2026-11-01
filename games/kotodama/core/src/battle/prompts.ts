@@ -1,5 +1,5 @@
 import { getKana, KANA, lookalikesOf, acceptsRomaji, type Kana } from '../content/kana';
-import { getItem, isKanjiId, isWordId, mirrorKanaId } from '../content/items';
+import { getItem, isKanaId, isKanjiId, isSentenceId, isWordId, mirrorKanaId } from '../content/items';
 import { getWord, WORDS, type Word } from '../content/words';
 import { KANJI, acceptedKanjiRomaji, getKanji, kanjiLookalikes, kanjiReadings, primaryReading, type Kanji } from '../content/kanji';
 import { toHiragana, toRomaji } from '../util/romaji';
@@ -18,6 +18,8 @@ export interface Prompt {
   choices: string[];
   /** The correct choice (for 'type', the canonical romaji). */
   answer: string;
+  /** Optional line under the prompt (a sentence's English translation). */
+  hint?: string;
   timeLimitMs: number | null;
 }
 
@@ -45,7 +47,7 @@ export function pickDistractors(target: Kana, pool: readonly string[], rng: Rng,
   const sameScript = KANA.filter((k) => k.script === target.script);
   take(sameScript.filter((k) => lookalikesOf(target.char).includes(k.char)));
   take(sameScript.filter((k) => k.row === target.row && k.kind === target.kind));
-  take(pool.filter((id) => !isWordId(id) && !isKanjiId(id)).map(getKana).filter((k) => k.script === target.script));
+  take(pool.filter(isKanaId).map(getKana).filter((k) => k.script === target.script));
   take(sameScript.filter((k) => k.kind === target.kind));
   return chosen;
 }
@@ -173,6 +175,9 @@ function shownReadings(k: Kanji): string[] {
  * usable in every area.
  */
 export function resolveKind(kind: PromptKind, itemId: string): PromptKind {
+  // A sentence is only ever a fill-in-the-blank; nothing else uses 'context'.
+  if (isSentenceId(itemId)) return 'context';
+  if (kind === 'context') return isWordId(itemId) && getWord(itemId).kind === 'vocab' ? 'reading' : isKanjiId(itemId) ? 'meaning' : isWordId(itemId) ? 'meaning' : 'recognize';
   if (isWordId(itemId)) {
     const vocab = getWord(itemId).kind === 'vocab';
     if (kind === 'recall') return 'spell';
@@ -230,6 +235,11 @@ export function buildPrompt(requested: PromptKind, itemId: string, pool: readonl
   const base = { kind, itemId, timeLimitMs };
 
   if (item.kind === 'kanji') return buildKanjiPrompt(kind, item.kanji, pool, rng, timeLimitMs);
+
+  if (item.kind === 'sentence') {
+    const s = item.sentence;
+    return { ...base, display: s.text, hint: s.en, speak: s.text.replace('＿＿', s.answer), answer: s.answer, choices: rng.shuffle([s.answer, ...s.wrong]) };
+  }
 
   if (item.kind === 'word') {
     const w = item.word;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KANJI, KANJI_GROUPS, kanjiByChar, kanjiInGroup, kanjiReadings, primaryReading } from '../content/kanji';
+import { KANJI, KANJI_GROUPS, kanjiAt, kanjiByChar, kanjiGroupsAt, kanjiInGroup, kanjiReadings, primaryReading } from '../content/kanji';
 import { LOANWORDS, VOCABULARY, WORDS } from '../content/words';
 import { CURRICULUM, areaIntroducingGroup } from '../content/curriculum';
 import { toHiragana, toRomaji } from '../util/romaji';
@@ -25,11 +25,13 @@ describe('romaji converter', () => {
 });
 
 describe('N5 kanji data', () => {
-  it('has ~108 unique kanji in ten groups with unique primary meanings', () => {
-    expect(KANJI.length).toBeGreaterThanOrEqual(100);
+  it('has 106 N5 + ~130 N4 unique kanji with unique primary meanings across both levels', () => {
+    expect(kanjiAt('N5')).toHaveLength(106);
+    expect(kanjiAt('N4').length).toBeGreaterThanOrEqual(125);
     expect(new Set(KANJI.map((k) => k.char)).size).toBe(KANJI.length);
     expect(new Set(KANJI.map((k) => k.meanings[0])).size).toBe(KANJI.length);
-    expect(KANJI_GROUPS).toHaveLength(10);
+    expect(kanjiGroupsAt('N5')).toHaveLength(10);
+    expect(kanjiGroupsAt('N4')).toHaveLength(11);
     for (const g of KANJI_GROUPS) expect(kanjiInGroup(g).length, g).toBeGreaterThanOrEqual(5);
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KANJI, getKanji, kanjiInGroup, kanjiLookalikes, kanjiReadings } from '../content/kanji';
+import { KANJI, getKanji, kanjiAt, kanjiInGroup, kanjiLookalikes, kanjiReadings } from '../content/kanji';
 import { VOCABULARY } from '../content/words';
 import { acceptsTyped, buildPrompt, gradeAnswer, kanjiMisspellings, readingMutations, resolveKind } from '../battle/prompts';
 import { poolForArea } from '../content/curriculum';
@@ -89,7 +89,7 @@ describe('vocabulary prompts', () => {
 });
 
 describe('castle-town spirits', () => {
-  const kanjiFamilies = SPIRIT_FAMILIES.filter((f) => f.script === 'kanji');
+  const kanjiFamilies = SPIRIT_FAMILIES.filter((f) => f.script === 'kanji' && !f.kanjiGroup!.startsWith('n4'));
 
   it('has one family per kanji group, each named with a kanji from its own group', () => {
     expect(kanjiFamilies).toHaveLength(10);
@@ -127,8 +127,9 @@ describe('Arc 3 curriculum', () => {
     const kanjiIn = (a: string) => poolForArea(a).filter((id) => id.startsWith('j-')).length;
     expect(kanjiIn('castle')).toBe(21);
     expect(kanjiIn('market')).toBeGreaterThan(kanjiIn('castle'));
-    expect(kanjiIn('hall')).toBe(KANJI.length);
-    expect(poolForArea('hall').filter((id) => id.startsWith('v-'))).toHaveLength(VOCABULARY.length);
+    expect(kanjiIn('hall')).toBe(kanjiAt('N5').length);
+    const n5Vocab = VOCABULARY.filter((v) => ['castle', 'market', 'teahouse', 'gardens', 'keep'].includes(v.area));
+    expect(poolForArea('hall').filter((id) => id.startsWith('v-'))).toHaveLength(n5Vocab.length);
     expect(poolForArea('castle').some((id) => id.startsWith('h-') || id.startsWith('k-'))).toBe(false);
   });
 });
