@@ -1,0 +1,16 @@
+{
+  "name": "@kotodama/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kotodama game rules, content and spaced repetition. Pure TypeScript: no React, no Expo.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "5.0.5"
+  }
+}
