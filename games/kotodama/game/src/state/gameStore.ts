@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, poolForArea,
+  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, battlePool,
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
@@ -87,7 +87,8 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
     const startStoryOrWildBattle = (foes: FoeSpec[], opts: { isBoss: boolean; area: string; winFlag?: string; title: string }) => {
       const save = get().save as Save;
       const rng = createRng(save.seed);
-      const pool = poolForArea(opts.area);
+      // The Daily Trial ('review') builds its pool from the save's own SRS table.
+      const pool = battlePool(opts.area, save.srs, now());
       const enemies = foes.map((f, i) => foeCombatant(f, `foe${i}`, pool, rng));
       const party = [heroCombatant(save), ...save.party.slice(0, PARTY_SIZE).map((p) => spiritCombatant(p, save.srs))];
       const state = startBattle({ party, enemies, kanaPool: pool, srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32 });
@@ -101,7 +102,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
 
     const runNpcEffects = (npc: NpcDef) => {
       const save = get().save as Save;
-      if (npc.battle && !save.flags[npc.battle.winFlag]) {
+      if (npc.battle && (npc.battle.repeatable || !save.flags[npc.battle.winFlag])) {
         startStoryOrWildBattle(npc.battle.foes, {
           isBoss: npc.battle.isBoss ?? true,
           area: npc.battle.pool ?? getMap(save.mapId).def.area,

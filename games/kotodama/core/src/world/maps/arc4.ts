@@ -223,10 +223,12 @@ const tengu_summit: MapDef = {
         { familyId: 'baku', level: 58, name: 'Tengu King', nameJa: 'てんぐのおう', sprite: 'tenguking', recruitable: false, hpScale: 3 },
       ] } },
     { id: 'arc4_ending', name: 'Tengu King', x: 6, y: 4, sprite: 'tenguking', facing: 'down', showIf: 'beat_tengu_king',
+      travelsTo: { map: 'rune_coast', x: 9, y: 7 },
       dialogue: [
         { speaker: 'Tengu King', text: 'Hmph. You read better than the Jarl ever will. He has fled north, to his Runeforge, to write his own language over ours.' },
         { speaker: 'Tengu King', text: 'Go, scribe. The northern kanji are the hardest of all.' },
-        { speaker: 'System', text: 'ARC 4 COMPLETE: the N4 kanji are yours. Arc 5: Northern Runeforge (N3) is coming.' },
+        { speaker: 'System', text: 'ARC 4 COMPLETE: the N4 kanji are yours.' },
+        { speaker: 'Tengu King', text: 'My winds will carry you north to the Rune Coast. Speak to me again whenever you wish to go.' },
       ] },
   ],
   encounterRate: 0, encounters: [], music: 'boss', weather: 'snow', rideable: false,

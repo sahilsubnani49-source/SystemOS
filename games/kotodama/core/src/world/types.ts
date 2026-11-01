@@ -9,7 +9,9 @@ export type TileKind =
   // Arc 3 (Castle Capital)
   | 'stoneWall' | 'gravel' | 'noren'
   // Arc 4 (Mountain Temples)
-  | 'waterfall' | 'stairs' | 'cliff';
+  | 'waterfall' | 'stairs' | 'cliff'
+  // Arc 5 (Northern Runeforge)
+  | 'runeIce' | 'forgeFire' | 'ironWall';
 
 export interface TileProps {
   solid: boolean;
@@ -60,6 +62,10 @@ export const TILE_PROPS: Record<TileKind, TileProps> = {
   waterfall: { solid: true, encounter: false, animated: true },
   stairs: { solid: false, encounter: false, animated: false },
   cliff: { solid: true, encounter: false, animated: false },
+  /** Ice etched with glowing runes: Arc 5's tall grass. */
+  runeIce: { solid: false, encounter: true, animated: true },
+  forgeFire: { solid: true, encounter: false, animated: true },
+  ironWall: { solid: true, encounter: false, animated: false },
 };
 
 /** One character per tile in a map's ASCII rows. */
@@ -75,6 +81,8 @@ export const DEFAULT_LEGEND: Record<string, TileKind> = {
   'm': 'stoneWall', 'g': 'gravel', 'N': 'noren',
   // Arc 4
   'v': 'waterfall', 'e': 'stairs', 'c': 'cliff',
+  // Arc 5
+  'x': 'runeIce', 'F': 'forgeFire', 'X': 'ironWall',
 };
 
 export type Facing = 'up' | 'down' | 'left' | 'right';
@@ -119,7 +127,11 @@ export interface NpcDef {
   dialogue: DialogueLine[];
   /** Dialogue after `battle` is won. */
   afterDialogue?: DialogueLine[];
-  battle?: { foes: FoeSpec[]; isBoss?: boolean; winFlag: string; pool?: string };
+  /**
+   * `pool` overrides the map's curriculum area ('review' = the Daily Trial).
+   * `repeatable` battles start every time you talk, even after `winFlag` is set.
+   */
+  battle?: { foes: FoeSpec[]; isBoss?: boolean; winFlag: string; pool?: string; repeatable?: boolean };
   /** Shown only while this flag is unset / set. */
   hideIf?: string;
   showIf?: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_MAPS, getMap } from '../world/maps';
 import { TILE_PROPS, tileAt, visibleNpcs, warpAt, type ParsedMap } from '../world/types';
 import { CURRICULUM } from '../content/curriculum';
+import { REVIEW_AREA } from '../srs/review';
 import { getFamily } from '../content/spirits';
 import { START_MAP, START_POS } from '../save/schema';
 
@@ -57,7 +58,7 @@ describe('Arc 1 maps', () => {
         expect(walkableTile(dest, n.travelsTo.x, n.travelsTo.y), `${n.id} ferries onto a solid tile`).toBe(true);
         expect(warpAt(dest, n.travelsTo.x, n.travelsTo.y), `${n.id} ferries onto a warp`).toBeUndefined();
       }
-      if (n.battle?.pool) expect(CURRICULUM[n.battle.pool]).toBeDefined();
+      if (n.battle?.pool && n.battle.pool !== REVIEW_AREA) expect(CURRICULUM[n.battle.pool]).toBeDefined();
     }
     m.def.encounters.forEach((e) => expect(() => getFamily(e.familyId)).not.toThrow());
   });
@@ -139,6 +140,32 @@ describe('Arc 1 maps', () => {
       expect(reached(i, map), `${map} reachable too early`).toBe(false);
       expect(reached(i + 1, map), `${map} unreachable`).toBe(true);
     });
+  });
+
+  it('opens the Arc 5 story gates in order, starting from the Tengu King\'s winds', () => {
+    const before = Object.fromEntries(
+      ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni', 'learned_mirror', 'beat_sigrun', 'beat_ulf',
+        'beat_warden', 'skald_trial', 'beat_champion', 'beat_takeda', 'beat_kaze', 'tea_trial', 'beat_hotaru', 'beat_otomo',
+        'beat_shogun', 'beat_genkai', 'beat_akaoni', 'abbot_trial', 'beat_kamaitachi', 'beat_kuro'].map((f) => [f, true]),
+    );
+    const story = ['beat_tengu_king', 'beat_hakon', 'beat_hrimr', 'forge_trial', 'beat_valkyrie', 'beat_golem'];
+    const order = ['rune_coast', 'glacier_pass', 'dvergr_forge', 'hall_of_valor', 'runeforge_gate', 'runeforge_throne'];
+    const reached = (n: number, map: string) =>
+      [...explore({ ...before, ...Object.fromEntries(story.slice(0, n).map((f) => [f, true])) })].some((k) => k.startsWith(`${map}:`));
+    order.forEach((map, i) => {
+      expect(reached(i, map), `${map} reachable too early`).toBe(false);
+      expect(reached(i + 1, map), `${map} unreachable`).toBe(true);
+    });
+  });
+
+  it('offers the Daily Trial only after the game is complete, as a repeatable review battle', () => {
+    const dojo = getMap('hayate_dojo');
+    const trial = dojo.def.npcs.find((n) => n.id === 'daily_trial')!;
+    expect(trial.battle).toMatchObject({ pool: REVIEW_AREA, repeatable: true });
+    expect(visibleNpcs(dojo, { starter: true }).map((n) => n.id)).not.toContain('daily_trial');
+    expect(visibleNpcs(dojo, { starter: true, game_complete: true }).map((n) => n.id)).toContain('daily_trial');
+    const ending = getMap('runeforge_throne').def.npcs.find((n) => n.id === 'ending')!;
+    expect(ending).toMatchObject({ showIf: 'beat_jarl', setsFlag: 'game_complete' });
   });
 
   it('opens the story gates in order', () => {

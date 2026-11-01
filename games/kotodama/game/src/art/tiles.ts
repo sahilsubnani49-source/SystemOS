@@ -280,6 +280,37 @@ const P: Record<TileKind, TilePainter> = {
     c.line(x - 2, oy + 7, x, oy + 15, '#3A2E24');
     if (hash2(tx + 3, ty) > 0.7) c.rect(ox + 3, oy, 4, 2, '#4A7A3A');
   },
+  // ── Arc 5: Northern Runeforge ───────────────────────────────────────
+  runeIce(c, ox, oy, tx, ty, frame) {
+    // Dark glacier ice with a carved rune that pulses cyan: wild spirits lurk here.
+    c.rect(ox, oy, TILE, TILE, '#4A6A8A');
+    c.line(ox + 1, oy + 14, ox + 6, oy + 9, '#6A8AAA');
+    c.line(ox + 10, oy + 3, ox + 15, oy + 1, '#6A8AAA');
+    const glow = (frame + tx + ty) % 2 === 0 ? '#7FF4FF' : '#3FB8D8';
+    const r = Math.floor(hash2(tx, ty) * 3); // three rune shapes
+    c.line(ox + 8, oy + 4, ox + 8, oy + 12, glow);
+    if (r === 0) { c.line(ox + 8, oy + 4, ox + 11, oy + 7, glow); c.line(ox + 11, oy + 7, ox + 8, oy + 9, glow); }
+    else if (r === 1) { c.line(ox + 5, oy + 6, ox + 11, oy + 10, glow); c.line(ox + 11, oy + 6, ox + 5, oy + 10, glow); }
+    else { c.line(ox + 8, oy + 7, ox + 11, oy + 4, glow); c.line(ox + 8, oy + 7, ox + 5, oy + 4, glow); }
+  },
+  forgeFire(c, ox, oy, tx, ty, frame) {
+    // A brick hearth with flames that flicker between frames.
+    c.rect(ox, oy, TILE, TILE, '#3A2A2A');
+    for (let y = 10; y < TILE; y += 3) c.rect(ox, oy + y, TILE, 1, '#2A1A1A');
+    const lift = frame ? 1 : 0;
+    c.ellipse(ox + 2, oy + 3 - lift, 12, 11, '#D84A1E');
+    c.ellipse(ox + 4, oy + 5 - lift, 8, 8, '#F49A2A');
+    c.ellipse(ox + 6, oy + 7 - lift, 4, 5, '#FFE27A');
+    if (hash2(tx, ty + frame) > 0.5) c.set(ox + 4 + Math.floor(hash2(ty, tx) * 8), oy + 1, '#FFE27A');
+  },
+  ironWall(c, ox, oy, tx, ty) {
+    // Riveted iron plates, darkened by forge smoke.
+    c.rect(ox, oy, TILE, TILE, '#3A3E46');
+    c.rect(ox, oy + 7, TILE, 1, '#24272E');
+    c.rect(ox + ((ty % 2) ? 4 : 11), oy, 1, TILE, '#24272E');
+    for (const [x, y] of [[2, 2], [13, 2], [2, 12], [13, 12]] as const) c.set(ox + x, oy + y, '#8A929E');
+    if (hash2(tx, ty) > 0.75) c.rect(ox + 5, oy + 9, 3, 2, '#5A3A2A'); // rust
+  },
   void(c, ox, oy) {
     c.rect(ox, oy, TILE, TILE, '#0B0B12');
   },

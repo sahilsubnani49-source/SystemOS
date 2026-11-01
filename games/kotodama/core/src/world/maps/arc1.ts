@@ -44,6 +44,19 @@ const hayate_dojo: MapDef = {
   encounterRate: 0, encounters: [], music: 'dojo', weather: 'none', rideable: false,
 };
 
+// Post-game: the Daily Trial. Its pool is built from the player's own SRS table
+// (srs/review.ts), so it tests whatever they are about to forget across all arcs.
+hayate_dojo.npcs.push({
+  id: 'daily_trial', name: 'Master Kaito', x: 3, y: 5, sprite: 'master', facing: 'right', showIf: 'game_complete', heals: true,
+  dialogue: [
+    { speaker: 'Master Kaito', ja: '復習', text: 'Fukushuu: review. A scribe who stops reading starts forgetting. Every day I will test you on what is slipping away.' },
+    { speaker: 'System', text: 'DAILY TRIAL: a battle built from your most overdue items, from every arc.' },
+  ],
+  battle: { winFlag: 'daily_trial_won', isBoss: true, pool: 'review', repeatable: true, foes: [
+    { familyId: 'volva', level: 68, name: 'Master Kaito', nameJa: 'かいと', sprite: 'master', recruitable: false, hpScale: 5 },
+  ] },
+});
+
 const sakura_village: MapDef = {
   id: 'sakura_village', name: 'Sakura Village', nameJa: 'さくらむら', area: 'dojo',
   rows: [

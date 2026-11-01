@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_MAPS } from '../world/maps';
 import { reduce, startBattle, type BattleState } from '../battle/engine';
-import { poolForArea } from '../content/curriculum';
+import { battlePool } from '../srs/review';
 import { getItem } from '../content/items';
 import { foeCombatant, heroCombatant, spiritCombatant } from '../progression';
 import { newGame } from '../save/schema';
@@ -13,7 +13,7 @@ const NOW = 1_800_000_000_000;
 function answersToWin(foeLevel: number, foes: Parameters<typeof foeCombatant>[0][], area: string, hero: 'samurai' | 'ninja', seed: number): number {
   const level = Math.max(1, foeLevel - 2);
   const save = { ...newGame(hero, 'Ren', 'x', 1), heroLevel: level, flags: { learned_mirror: foeLevel > 16 } };
-  const pool = poolForArea(area);
+  const pool = battlePool(area, {}, NOW);
   const rng = createRng(seed);
   const party = [
     heroCombatant(save),
