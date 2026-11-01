@@ -126,6 +126,21 @@ describe('Arc 1 maps', () => {
     });
   });
 
+  it('opens the Arc 4 story gates in order, starting from the Shogun\'s escort', () => {
+    const before = Object.fromEntries(
+      ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni', 'learned_mirror', 'beat_sigrun', 'beat_ulf',
+        'beat_warden', 'skald_trial', 'beat_champion', 'beat_takeda', 'beat_kaze', 'tea_trial', 'beat_hotaru', 'beat_otomo'].map((f) => [f, true]),
+    );
+    const story = ['beat_shogun', 'beat_genkai', 'beat_akaoni', 'abbot_trial', 'beat_kamaitachi', 'beat_kuro'];
+    const order = ['mountain_foothills', 'mountain_village', 'monastery', 'waterfall_forest', 'tengu_peaks', 'tengu_summit'];
+    const reached = (n: number, map: string) =>
+      [...explore({ ...before, ...Object.fromEntries(story.slice(0, n).map((f) => [f, true])) })].some((k) => k.startsWith(`${map}:`));
+    order.forEach((map, i) => {
+      expect(reached(i, map), `${map} reachable too early`).toBe(false);
+      expect(reached(i + 1, map), `${map} unreachable`).toBe(true);
+    });
+  });
+
   it('opens the story gates in order', () => {
     const story = ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni'];
     const reached = (flags: Record<string, boolean>, map: string) => [...explore(flags)].some((k) => k.startsWith(`${map}:`));

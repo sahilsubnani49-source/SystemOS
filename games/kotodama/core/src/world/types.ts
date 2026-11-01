@@ -7,7 +7,9 @@ export type TileKind =
   // Arc 2 (Frost Harbor)
   | 'ice' | 'drift' | 'dock' | 'pine' | 'snowPine' | 'longhouseWall' | 'longhouseRoof' | 'runestone' | 'hull'
   // Arc 3 (Castle Capital)
-  | 'stoneWall' | 'gravel' | 'noren';
+  | 'stoneWall' | 'gravel' | 'noren'
+  // Arc 4 (Mountain Temples)
+  | 'waterfall' | 'stairs' | 'cliff';
 
 export interface TileProps {
   solid: boolean;
@@ -55,6 +57,9 @@ export const TILE_PROPS: Record<TileKind, TileProps> = {
   gravel: { solid: false, encounter: true, animated: false },
   /** Shop front with a hanging noren curtain. */
   noren: { solid: true, encounter: false, animated: true },
+  waterfall: { solid: true, encounter: false, animated: true },
+  stairs: { solid: false, encounter: false, animated: false },
+  cliff: { solid: true, encounter: false, animated: false },
 };
 
 /** One character per tile in a map's ASCII rows. */
@@ -68,6 +73,8 @@ export const DEFAULT_LEGEND: Record<string, TileKind> = {
   'R': 'longhouseRoof', 'r': 'runestone', 'k': 'hull',
   // Arc 3
   'm': 'stoneWall', 'g': 'gravel', 'N': 'noren',
+  // Arc 4
+  'v': 'waterfall', 'e': 'stairs', 'c': 'cliff',
 };
 
 export type Facing = 'up' | 'down' | 'left' | 'right';

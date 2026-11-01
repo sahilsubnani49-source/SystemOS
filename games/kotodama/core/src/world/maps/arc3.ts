@@ -232,10 +232,12 @@ const shogun_hall: MapDef = {
         { familyId: 'dosojin', level: 44, name: 'Shadow Shogun', nameJa: 'かげしょうぐん', sprite: 'shogun', recruitable: false, hpScale: 3 },
       ] } },
     { id: 'arc3_ending', name: 'The Shogun', x: 6, y: 2, sprite: 'shogun', facing: 'down', showIf: 'beat_shogun',
+      travelsTo: { map: 'mountain_foothills', x: 9, y: 12 },
       dialogue: [
         { speaker: 'The Shogun', text: 'The shadow is gone and I am free. You read the capital back to life, scribe.' },
         { speaker: 'The Shogun', text: 'But the Jarl fled into the mountains, toward the temples where the monks keep the older, harder characters.' },
-        { speaker: 'System', text: 'ARC 3 COMPLETE: the N5 kanji are yours. Arc 4: Mountain Temples (N4) is coming.' },
+        { speaker: 'The Shogun', text: 'Take my palanquin to the foot of the mountain. My escort will bring you home whenever you need.' },
+        { speaker: 'System', text: 'ARC 3 COMPLETE: the N5 kanji are yours. Next: Arc 4, Mountain Temples, and the N4 kanji.' },
       ] },
   ],
   encounterRate: 0, encounters: [], music: 'boss', weather: 'none', rideable: false,
