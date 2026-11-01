@@ -21,6 +21,13 @@ import { C, hpColor } from '../theme';
 import { PROMPT_TAG } from '../ui/promptLabels';
 
 const SKY: Record<string, [string, string]> = {
+  coast: ['#1A2A3A', '#7A9AB8'],
+  glacier: ['#2A3A5A', '#DFF4FF'],
+  forge: ['#1A0A0A', '#D8642A'],
+  valor: ['#2A1A0E', '#E8B04B'],
+  runeforge: ['#0A1018', '#3FB8D8'],
+  finale: ['#0A0A14', '#2A5A7A'],
+  review: ['#1A1430', '#8E6CEF'],
   foothills: ['#2A4A3A', '#C8D8A8'],
   village: ['#3A4A6A', '#E8C88A'],
   monastery: ['#3A2A1A', '#C88A4A'],

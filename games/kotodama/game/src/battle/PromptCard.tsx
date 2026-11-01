@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, cancelAnimation } from 'react-native-reanimated';
 import type { Prompt } from '@kotodama/core';
 import { PButton, PText } from '../ui/Pixel';
@@ -49,8 +49,9 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
     prompt.kind === 'reading' ||
     prompt.kind === 'context';
   const isSentence = prompt.kind === 'context';
+  const isPassage = prompt.kind === 'passage';
   const isKanji = prompt.itemId.startsWith('j-');
-  const choicesAreEnglish = prompt.kind === 'meaning';
+  const choicesAreEnglish = prompt.kind === 'meaning' || isPassage;
   const longest = Math.max(1, ...prompt.choices.map((c) => [...c].length));
 
   return (
@@ -67,6 +68,14 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
           <PText style={styles.listenIcon}>🔊</PText>
           <PText style={styles.listenHint}>tap to hear again</PText>
         </Pressable>
+      ) : isPassage ? (
+        // A reading passage scrolls in its own box, with the English question under it.
+        <View style={{ gap: 6 }}>
+          <ScrollView style={styles.passageBox} contentContainerStyle={{ padding: 8 }} testID="passage">
+            <PText ja style={styles.passage}>{prompt.display}</PText>
+          </ScrollView>
+          {prompt.hint ? <PText style={styles.question}>{prompt.hint}</PText> : null}
+        </View>
       ) : isSentence ? (
         // A sentence wraps at a readable size; its translation sits underneath.
         <View style={{ gap: 6 }}>
@@ -119,7 +128,7 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
               accessibilityRole="button"
               accessibilityLabel={c}
               onPress={() => submit(c)}
-              style={({ pressed }) => [styles.choice, pressed && { backgroundColor: '#2E2A44' }]}
+              style={({ pressed }) => [styles.choice, isPassage && styles.choiceWide, pressed && { backgroundColor: '#2E2A44' }]}
             >
               <PText
                 ja={choicesAreJa}
@@ -175,6 +184,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sentence: { fontSize: 24, lineHeight: 34, color: C.paper, textAlign: 'center' },
+  passageBox: { maxHeight: 150, backgroundColor: '#15131F', borderColor: C.panelEdge, borderWidth: 2, borderRadius: 6 },
+  passage: { fontSize: 18, lineHeight: 28, color: C.paper },
+  question: { fontSize: 9, lineHeight: 15, color: C.gold, textAlign: 'center' },
+  choiceWide: { width: '100%', minHeight: 40, paddingVertical: 6 },
   hint: { fontSize: 7, lineHeight: 12, color: C.dim, textAlign: 'center' },
   displayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   speaker: { padding: 6, borderRadius: 6, borderWidth: 2, borderColor: C.panelEdge },

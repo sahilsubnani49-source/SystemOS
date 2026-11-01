@@ -226,6 +226,12 @@ export const CHARACTERS: Record<string, CharacterSpec> = {
   karasu: { skin: '#3A3A4A', hair: '#14141E', hairStyle: 'hood', top: '#1E1E2A', trim: '#B3262E', bottom: '#14141E', gear: ['fan'], eye: '#FFE14B' },
   tenguking: { skin: '#C83A2A', hair: '#F4F1EA', hairStyle: 'long', top: '#3A2A6A', trim: '#E8B04B', bottom: '#1E1E3A', gear: ['beard', 'fan', 'staff'], eye: '#FFE14B' },
   merchant: { skin: '#EBC29C', hair: '#2A1E14', hairStyle: 'topknot', top: '#3A6A8A', trim: '#E8E0C8', bottom: '#2A3A4A', gear: [] },
+  // ── Arc 5: Northern Runeforge ─────────────────────────────────────
+  hakon: { skin: '#F0C2A0', hair: '#8A929E', hairStyle: 'helmet', top: '#2E4A6A', trim: '#B3262E', bottom: '#3A2A20', gear: ['beard', 'shield'] },
+  hrimr: { skin: '#9CCDE2', hair: '#E8F8FF', hairStyle: 'long', top: '#4A6A8A', trim: '#DFF4FF', bottom: '#2A3A4A', gear: ['beard', 'club'], eye: '#2A4A6A' },
+  brokk: { skin: '#E8B48E', hair: '#B8642A', hairStyle: 'bald', top: '#5A4A6A', trim: '#8A929E', bottom: '#3A2A20', gear: ['beard', 'club'] },
+  valkyrie: { skin: '#F4D2B4', hair: '#E8C86A', hairStyle: 'helmet', top: '#E8E0F0', trim: '#E8B04B', bottom: '#5A7AAA', gear: ['shield', 'staff'] },
+  jarl: { skin: '#F0C2A0', hair: '#1E1E2A', hairStyle: 'helmet', top: '#2A1A2E', trim: '#7FF4FF', bottom: '#14141E', gear: ['axe', 'shield'], eye: '#7FF4FF' },
 };
 
 /** 16×16 warhorse, side view (mirror for left). frame 1 = gallop pose. */

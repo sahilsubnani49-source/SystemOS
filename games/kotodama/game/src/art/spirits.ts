@@ -491,6 +491,127 @@ const PAINTERS: Record<string, Painter> = {
     if (stage >= 1) c.set(2, 2, '#FFE14B');
     if (stage === 2) c.rect(8, 4, 5, 1, '#E8B04B');
   },
+  // ── Arc 5: Norse rune spirits ─────────────────────────────────────
+  einherjar(c, stage) {
+    // Ghostly warrior: a pale spectral body under a helmet, shield gaining a rim.
+    const ghost = stage === 2 ? '#BFEAFF' : '#9ACCE0';
+    c.ellipse(4, 4, 8, 11, ghost);
+    c.rect(4, 2, 8, 3, '#8A929E'); c.rect(7, 1, 2, 1, '#8A929E'); // helmet
+    c.set(6, 6, EYE); c.set(9, 6, EYE);
+    c.ellipse(0, 7, 6, 6, stage >= 1 ? '#B3262E' : '#6E4A2E');
+    if (stage === 2) c.ellipse(1, 8, 4, 4, '#E8B04B');
+    c.line(13, 3, 13, 13, '#C9D2DC');
+    for (let y = 13; y < 16; y += 2) c.set(5 + (y % 4), y, shade(ghost, 0.2)); // wispy tail
+  },
+  valkyrja(c, stage) {
+    // Valkyrie: winged helm, golden braid, a spear.
+    c.rect(5, 2, 6, 5, '#F4D2B4');
+    c.rect(4, 1, 8, 2, '#C9D2DC');
+    c.rect(2, 0, 2, 3, W); c.rect(12, 0, 2, 3, W); // helm wings
+    c.set(6, 4, EYE); c.set(9, 4, EYE);
+    c.rect(4, 7, 8, 6, stage === 2 ? '#E8B04B' : '#5A7AAA');
+    c.rect(11, 4, 2, 7, '#E8C86A'); // braid
+    c.line(14, 1, 14, 15, '#8A6A4A'); c.rect(13, 0, 3, 2, '#C9D2DC');
+    if (stage >= 1) { c.ellipse(0, 6, 4, 7, W); c.ellipse(12, 7, 3, 6, W); }
+  },
+  mare(c, stage) {
+    // The mare: a black horse-spirit with a glowing dream-mane.
+    const coat = stage === 2 ? '#2A1E3A' : '#1E1E2A';
+    c.ellipse(2, 7, 11, 6, coat);
+    c.rect(10, 3, 3, 6, coat); c.rect(11, 2, 5, 3, coat);
+    c.set(14, 3, '#E8574B');
+    const mane = stage >= 1 ? '#B48CFF' : '#6A5A8A';
+    c.rect(9, 2, 2, 6, mane); c.rect(0, 7, 3, 3, mane);
+    for (const x of [3, 5, 9, 11]) c.rect(x, 12, 1, 3, coat);
+    if (stage === 2) c.ellipse(0, 0, 5, 4, '#E8E0F8'); // a stolen dream
+  },
+  dvergr(c, stage) {
+    // Dwarf smith: wide body, huge beard, hammer.
+    c.rect(4, 2, 8, 2, stage === 2 ? '#E8B04B' : '#5A4A3A'); // cap
+    c.rect(4, 4, 8, 4, '#E8B48E');
+    c.set(6, 5, EYE); c.set(9, 5, EYE);
+    c.rect(3, 7, 10, 5, '#B8642A'); // beard
+    c.rect(2, 10, 12, 4, '#5A4A6A');
+    c.rect(4, 14, 3, 2, '#3A2A20'); c.rect(9, 14, 3, 2, '#3A2A20');
+    c.line(14, 6, 14, 13, '#6E4A2E'); c.rect(12, 4, 4, 3, '#8A929E');
+    if (stage >= 1) c.set(13, 3, '#FFB347');
+  },
+  jotunn(c, stage) {
+    // Frost giant: hulking icy body, icicle crown and beard.
+    const ice = stage === 2 ? '#DFF4FF' : '#9CCDE2';
+    c.ellipse(1, 3, 14, 13, ice);
+    c.set(5, 6, '#2A4A6A'); c.set(10, 6, '#2A4A6A');
+    for (let x = 4; x < 12; x += 2) c.rect(x, 9, 1, 3 + (x % 4 ? 1 : 0), W); // icicle beard
+    const crown = stage + 2;
+    for (let i = 0; i < crown; i++) c.rect(4 + i * 2, 0, 1, 3, '#E8F8FF');
+    c.rect(0, 8, 2, 5, shade(ice, -0.2)); c.rect(14, 8, 2, 5, shade(ice, -0.2));
+  },
+  selkie(c, stage) {
+    // Selkie: a grey seal, half-shed skin revealing a person's face at stage 2.
+    c.ellipse(1, 6, 14, 8, '#7A8A94');
+    c.ellipse(9, 4, 6, 6, stage === 2 ? '#F4D2B4' : '#8A9AA4');
+    c.set(11, 6, EYE); c.set(13, 6, EYE);
+    c.rect(0, 11, 3, 2, '#5A6A74'); // tail flipper
+    c.rect(6, 13, 3, 2, '#5A6A74');
+    if (stage >= 1) for (let x = 1; x < 15; x += 4) c.set(x, 15, '#9CCDE2'); // sea foam
+  },
+  huldra(c, stage) {
+    // Huldra: a forest woman of moss hair, with a cow's tail peeking out.
+    c.rect(4, 1, 8, 9, '#4A7A3A'); // mossy hair
+    c.rect(5, 3, 6, 5, '#F4D2B4');
+    c.set(6, 5, '#2A5A2A'); c.set(9, 5, '#2A5A2A');
+    c.rect(4, 9, 8, 6, stage === 2 ? '#E8E0C8' : '#6E8A4A');
+    c.line(12, 13, 15, 10, '#B8946A'); c.rect(14, 9, 2, 2, '#3A2A20'); // the tail
+    if (stage >= 1) { c.set(5, 1, '#F4A8C8'); c.set(10, 1, '#F4F1EA'); } // flowers
+  },
+  myling(c, stage) {
+    // Myling: a small pale child-ghost in a shroud, carrying a lantern of the past.
+    c.ellipse(3, 2, 9, 12, '#E8E8F0');
+    c.ellipse(4, 3, 7, 6, '#C8C8D8');
+    c.rect(5, 5, 2, 2, EYE); c.rect(9, 5, 2, 2, EYE);
+    for (let x = 3; x < 12; x += 3) c.rect(x, 13, 2, 2, '#E8E8F0'); // ragged hem
+    if (stage >= 1) { c.rect(13, 8, 3, 4, '#3A3A4A'); c.rect(14, 9, 1, 2, stage === 2 ? '#7FF4FF' : '#FFE14B'); }
+  },
+  volva(c, stage) {
+    // Völva: a hooded seeress with a rune staff that gains glowing staves.
+    c.ellipse(3, 1, 10, 9, '#3A2A5A'); // hood
+    c.rect(5, 4, 6, 4, '#F0C8A2');
+    c.set(6, 5, '#B48CFF'); c.set(9, 5, '#B48CFF');
+    c.rect(3, 8, 10, 7, '#4A3A6A');
+    c.line(14, 1, 14, 15, '#8A6A4A');
+    const runes = stage + 1;
+    for (let i = 0; i < runes; i++) c.rect(12, 2 + i * 3, 1, 2, '#7FF4FF');
+  },
+  nykr(c, stage) {
+    // Nykr: a water horse made of river, with weed in its mane; storms at stage 2.
+    const body = stage === 2 ? '#3A5A9A' : '#4A8AAA';
+    c.ellipse(1, 7, 12, 6, body);
+    c.rect(10, 3, 3, 6, body); c.rect(11, 2, 5, 3, body);
+    c.set(14, 3, W);
+    c.rect(9, 2, 2, 6, '#2A6A3A'); // weed mane
+    for (const x of [3, 5, 9, 11]) c.rect(x, 12, 1, 3, shade(body, -0.2));
+    if (stage >= 1) for (let x = 0; x < 16; x += 3) c.set(x, 15, '#9CCDE2');
+    if (stage === 2) c.line(2, 0, 5, 4, '#FFE14B');
+  },
+  // ── Arc 5 NPCs that aren't people ─────────────────────────────────
+  raven(c) {
+    // Huginn-like raven, wings half spread.
+    c.ellipse(4, 5, 8, 7, '#1E1E2A');
+    c.ellipse(9, 2, 5, 5, '#1E1E2A');
+    c.set(11, 3, '#FFE14B');
+    c.rect(13, 4, 3, 1, '#4A4A54'); // beak
+    c.rect(0, 6, 5, 3, '#2A2A3A'); c.rect(11, 8, 4, 2, '#2A2A3A');
+    c.rect(6, 12, 1, 3, '#4A4A54'); c.rect(9, 12, 1, 3, '#4A4A54');
+  },
+  golem(c) {
+    // Rune golem: stacked iron and stone blocks with glowing runes.
+    c.rect(4, 0, 8, 5, '#6A6A74');
+    c.set(6, 2, '#7FF4FF'); c.set(9, 2, '#7FF4FF');
+    c.rect(1, 5, 14, 6, '#4A4A54');
+    c.rect(0, 6, 2, 6, '#5A5A64'); c.rect(14, 6, 2, 6, '#5A5A64');
+    c.line(8, 6, 8, 10, '#7FF4FF'); c.line(8, 7, 10, 6, '#7FF4FF');
+    c.rect(3, 11, 4, 5, '#5A5A64'); c.rect(9, 11, 4, 5, '#5A5A64');
+  },
 };
 
 export function drawSpirit(familyId: string, stage: number): PixelCanvas {

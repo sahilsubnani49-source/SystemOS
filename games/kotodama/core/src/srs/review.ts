@@ -40,6 +40,11 @@ export function reviewPool(srs: SrsTable, now: number, limit = REVIEW_POOL_SIZE)
   return picked.length > 0 ? picked : poolForArea('finale').slice(0, limit);
 }
 
+/** How many items the player has seen that are due now (the Daily Trial's headline). */
+export function dueCount(srs: SrsTable, now: number): number {
+  return Object.values(srs).filter((it) => it.lastSeenAt > 0 && isDue(it, now) && exists(it.id)).length;
+}
+
 /** What a battle in `areaId` may test: the curriculum pool, or the Daily Trial's. */
 export function battlePool(areaId: string, srs: SrsTable, now: number): string[] {
   return areaId === REVIEW_AREA ? reviewPool(srs, now) : poolForArea(areaId);

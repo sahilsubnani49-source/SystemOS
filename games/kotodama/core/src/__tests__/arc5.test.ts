@@ -8,7 +8,7 @@ import { familyStage, foeCombatant, spiritCombatant } from '../progression';
 import { reduce, startBattle } from '../battle/engine';
 import { itemReading, itemText } from '../content/items';
 import { MAX_STAGE, newItem, type SrsTable } from '../srs/schedule';
-import { REVIEW_AREA, battlePool, reviewPool } from '../srs/review';
+import { REVIEW_AREA, battlePool, dueCount, reviewPool } from '../srs/review';
 import { createRng } from '../util/rng';
 
 const N3_AREAS = ['coast', 'glacier', 'forge', 'valor', 'runeforge'];
@@ -100,6 +100,7 @@ describe('Daily Trial pool', () => {
     };
     const pool = reviewPool(srs, now, 3);
     expect(pool).toEqual(['v-gakusei', 'j-水', 'h-ka']);
+    expect(dueCount(srs, now)).toBe(3);
   });
 
   it('tops up with the weakest seen items when few are due, with no duplicates', () => {

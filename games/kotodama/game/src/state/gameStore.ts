@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, battlePool,
+  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, battlePool, dueCount, REVIEW_AREA,
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
@@ -107,7 +107,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
           isBoss: npc.battle.isBoss ?? true,
           area: npc.battle.pool ?? getMap(save.mapId).def.area,
           winFlag: npc.battle.winFlag,
-          title: npc.name ?? 'Battle',
+          title: npc.battle.pool === REVIEW_AREA ? `Daily Trial · ${dueCount(save.srs, now())} due` : npc.name ?? 'Battle',
         });
         return;
       }

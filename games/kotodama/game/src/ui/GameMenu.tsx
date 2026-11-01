@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
-  KANJI, KANJI_GROUPS, MAX_STAGE, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
-  type KanaRow, type Save, type Script, type SpiritFamily,
+  KANJI, KANJI_GROUPS, MAX_STAGE, dueCount, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
+  type KanaRow, type KanjiGroup, type Save, type Script, type SpiritFamily,
 } from '@kotodama/core';
 import { characterImage, spiritImage } from '../art/atlas';
 import { SpriteView } from './Sprite';
@@ -64,6 +64,7 @@ function PartyTab({ save }: { save: Save }) {
           <PText style={styles.dim}>Lv {save.heroLevel} · {save.heroXp}/{xpToNext(save.heroLevel)} XP</PText>
           <PText style={styles.dim}>Study streak: {save.streakDays} day{save.streakDays === 1 ? '' : 's'}</PText>
           {save.horse.owned ? <PText style={styles.dim}>Hayate rides at {horseSpeed(save.streakDays).toFixed(1)}x speed</PText> : null}
+          {save.flags.game_complete ? <PText style={styles.dim}>Daily Trial: {dueCount(save.srs, Date.now())} items due (Master Kaito, Hayate Dojo)</PText> : null}
         </View>
       </View>
       {[...save.party, ...save.box].map((sp, i) => {
@@ -89,8 +90,17 @@ function PartyTab({ save }: { save: Save }) {
   );
 }
 
+/** 'n3conflict' → { level: 'N3', name: 'conflict' }; N5 groups have no prefix. */
+function groupParts(group: KanjiGroup): { level: string; name: string } {
+  const m = /^n([34])(.+)$/.exec(group);
+  return m ? { level: `N${m[1]}`, name: m[2] as string } : { level: 'N5', name: group };
+}
+
 function masteryLabel(fam: SpiritFamily): string {
-  if (fam.kanjiGroup) return `the ${fam.kanjiGroup.startsWith('n4') ? `N4 ${fam.kanjiGroup.slice(2)}` : `N5 ${fam.kanjiGroup}`} kanji`;
+  if (fam.kanjiGroup) {
+    const g = groupParts(fam.kanjiGroup);
+    return `the ${g.level} ${g.name} kanji`;
+  }
   return `the ${fam.script} ${fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}`;
 }
 
@@ -101,10 +111,10 @@ function KanjiTab({ save }: { save: Save }) {
   }
   return (
     <>
-      <PText style={styles.dim}>{met}/{KANJI.length} kanji met (N5 + N4). Colour = mastery. Tap to hear a reading.</PText>
+      <PText style={styles.dim}>{met}/{KANJI.length} kanji met (N5, N4, N3). Colour = mastery. Tap to hear a reading.</PText>
       {KANJI_GROUPS.map((group) => (
         <View key={group} style={{ gap: 4 }}>
-          <PText style={styles.groupLabel}>{group.startsWith('n4') ? `N4 · ${group.slice(2).toUpperCase()}` : `N5 · ${group.toUpperCase()}`}</PText>
+          <PText style={styles.groupLabel}>{`${groupParts(group).level} · ${groupParts(group).name.toUpperCase()}`}</PText>
           <View style={styles.kanjiGrid}>
             {KANJI.filter((k) => k.group === group).map((k) => {
               const stage = save.srs[k.id]?.stage ?? -1;
