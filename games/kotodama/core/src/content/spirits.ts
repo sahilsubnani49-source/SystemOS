@@ -1,5 +1,6 @@
 import type { Element } from './elements';
-import type { KanaRow, Script } from './kana';
+import { kanaWhere, type KanaRow, type Script } from './kana';
+import { kanjiInGroup, type KanjiGroup } from './kanji';
 import type { MoveId } from './moves';
 
 export interface BaseStats {
@@ -24,9 +25,12 @@ export interface SpiritStage {
  */
 export interface SpiritFamily {
   id: string;
-  /** Which script's row this family embodies (and evolves from). */
-  script: Script;
-  row: KanaRow;
+  /** What this family embodies (and evolves from): a kana row, or a kanji group. */
+  script: Script | 'kanji';
+  /** Kana families: their row. */
+  row?: KanaRow;
+  /** Kanji families: their group. */
+  kanjiGroup?: KanjiGroup;
   element: Element;
   folklore: string;
   stages: [SpiritStage, SpiritStage, SpiritStage];
@@ -99,6 +103,38 @@ export const SPIRIT_FAMILIES: readonly SpiritFamily[] = [
   { id: 'wyrm', script: 'katakana', row: 'w', element: 'water', folklore: 'Sea serpent (wyrm)',
     stages: [s('Wyrmling', 'ワームリング', 'wyrm0'), s('Wyrm', 'ワーム', 'wyrm1'), s('Worldwyrm', 'ワールドワーム', 'wyrm2')],
     base: { hp: 50, atk: 13, def: 11, spd: 8 }, moves: [['torrent'], ['frostbite'], ['tide']] },
+  // ── Arc 3: castle-town spirits (tsukumogami and guardians), bound to KANJI groups.
+  // Every Japanese name contains a kanji from its own group.
+  { id: 'soroban', script: 'kanji', kanjiGroup: 'numbers', element: 'steel', folklore: 'Abacus-bead spirit (tsukumogami)',
+    stages: [s('Hitotsudama', '一つ玉', 'soroban0'), s('Hyakudama', '百玉', 'soroban1'), s('Mandama', '万玉', 'soroban2')],
+    base: { hp: 42, atk: 13, def: 13, spd: 8 }, moves: [['abacus'], ['inkBrush'], ['boulder']] },
+  { id: 'koyomi', script: 'kanji', kanjiGroup: 'days', element: 'fire', folklore: 'Almanac spirit of the days',
+    stages: [s('Hikoyomi', '日暦', 'koyomi0'), s('Tsukigoyomi', '月暦', 'koyomi1'), s('Kingoyomi', '金暦', 'koyomi2')],
+    base: { hp: 36, atk: 14, def: 8, spd: 12 }, moves: [['ember'], ['sunflare'], ['foxfire']] },
+  { id: 'hansho', script: 'kanji', kanjiGroup: 'time', element: 'thunder', folklore: 'Fire-watch bell (tsukumogami)',
+    stages: [s('Hansho', '半鐘', 'hansho0'), s('Jisho', '時鐘', 'hansho1'), s('Shusho', '週鐘', 'hansho2')],
+    base: { hp: 40, atk: 13, def: 10, spd: 10 }, moves: [['bellToll'], ['thunder'], ['runebolt']] },
+  { id: 'hina', script: 'kanji', kanjiGroup: 'people', element: 'shadow', folklore: 'Hina dolls that walk at night',
+    stages: [s('Kohina', '子雛', 'hina0'), s('Mebina', '女雛', 'hina1'), s('Obina', '男雛', 'hina2')],
+    base: { hp: 34, atk: 13, def: 8, spd: 14 }, moves: [['inkBrush'], ['nightclaw'], ['smoke']] },
+  { id: 'ashigaru', script: 'kanji', kanjiGroup: 'body', element: 'earth', folklore: 'Clockwork karakuri foot-soldier',
+    stages: [s('Teguruma', '手車', 'ashigaru0'), s('Ashigaru', '足軽', 'ashigaru1'), s('Taijutsu', '体術', 'ashigaru2')],
+    base: { hp: 50, atk: 14, def: 12, spd: 6 }, moves: [['boulder'], ['axeCleave'], ['guardian']] },
+  { id: 'kazamuki', script: 'kanji', kanjiGroup: 'directions', element: 'wind', folklore: 'Weathervane spirit',
+    stages: [s('Kitamuki', '北向き', 'kazamuki0'), s('Kochi', '東風', 'kazamuki1'), s('Nanboku', '南北', 'kazamuki2')],
+    base: { hp: 34, atk: 13, def: 8, spd: 15 }, moves: [['gale'], ['shuriken'], ['inkBrush']] },
+  { id: 'karakasa', script: 'kanji', kanjiGroup: 'nature', element: 'water', folklore: 'One-eyed paper umbrella (kasa-obake)',
+    stages: [s('Amagasa', '雨傘', 'karakasa0'), s('Hanagasa', '花笠', 'karakasa1'), s('Tengasa', '天傘', 'karakasa2')],
+    base: { hp: 40, atk: 12, def: 10, spd: 11 }, moves: [['umbrellaSpin'], ['torrent'], ['tide']] },
+  { id: 'zori', script: 'kanji', kanjiGroup: 'actions', element: 'fire', folklore: 'Running straw sandal (bake-zori)',
+    stages: [s('Detachi', '出立', 'zori0'), s('Tachimi', '立見', 'zori1'), s('Angya', '行脚', 'zori2')],
+    base: { hp: 36, atk: 14, def: 8, spd: 14 }, moves: [['ember'], ['kunai'], ['sunflare']] },
+  { id: 'kagami', script: 'kanji', kanjiGroup: 'adjectives', element: 'light', folklore: 'Mirror that shows true natures (ungaikyo)',
+    stages: [s('Shirokagami', '白鏡', 'kagami0'), s('Kokagami', '古鏡', 'kagami1'), s('Okagami', '大鏡', 'kagami2')],
+    base: { hp: 40, atk: 12, def: 12, spd: 9 }, moves: [['blossom'], ['inkBrush'], ['sunflare']] },
+  { id: 'dosojin', script: 'kanji', kanjiGroup: 'places', element: 'steel', folklore: 'Roadside guardian of travellers (dosojin)',
+    stages: [s('Monban', '門番', 'dosojin0'), s('Doso', '道祖', 'dosojin1'), s('Dosojin', '道祖神', 'dosojin2')],
+    base: { hp: 52, atk: 12, def: 14, spd: 5 }, moves: [['guardian'], ['abacus'], ['boulder']] },
 ];
 
 const BY_ID = new Map(SPIRIT_FAMILIES.map((f) => [f.id, f]));
@@ -107,6 +143,17 @@ export function getFamily(id: string): SpiritFamily {
   const f = BY_ID.get(id);
   if (!f) throw new Error(`Unknown spirit family: ${id}`);
   return f;
+}
+
+/**
+ * The study items a family embodies: its kana row (w-row families also take ん),
+ * or its kanji group. Evolution reads mastery of exactly these, and a wild member's
+ * true name is drawn from them.
+ */
+export function familyItemIds(f: SpiritFamily): string[] {
+  if (f.kanjiGroup) return kanjiInGroup(f.kanjiGroup).map((k) => k.id);
+  const rows: KanaRow[] = f.row === 'w' ? ['w', 'nn'] : [f.row as KanaRow];
+  return rows.flatMap((row) => kanaWhere({ script: f.script as Script, row, kind: 'basic' }).map((k) => k.id));
 }
 
 /** ん has no family of its own; it trains with its script's w-row spirit. */

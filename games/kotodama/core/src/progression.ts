@@ -1,8 +1,9 @@
 import { addDaysStr } from './util/dates';
 import { HEROES, type HeroClass } from './content/heroes';
-import { familyForRow, getFamily, movesAt, stageForMastery, statsAt } from './content/spirits';
-import { getKana, kanaWhere } from './content/kana';
-import { isWordId } from './content/items';
+import { familyForRow, familyItemIds, getFamily, movesAt, stageForMastery, statsAt } from './content/spirits';
+import { getKana } from './content/kana';
+import { getKanji } from './content/kanji';
+import { isKanjiId, isWordId } from './content/items';
 import { averageStage, type SrsTable } from './srs/schedule';
 import type { Combatant } from './battle/engine';
 import type { FoeSpec } from './world/types';
@@ -31,12 +32,9 @@ export function applyXp(level: number, xp: number, gain: number): { level: numbe
 /** Mastery-flag that teaches both heroes their Mirror move. */
 export const MIRROR_FLAG = 'learned_mirror';
 
-/** Evolution stage of a family, from mastery of its row IN ITS OWN SCRIPT. */
+/** Evolution stage of a family, from mastery of the exact items it embodies. */
 export function familyStage(familyId: string, srs: SrsTable): 0 | 1 | 2 {
-  const family = getFamily(familyId);
-  const rows = family.row === 'w' ? (['w', 'nn'] as const) : [family.row];
-  const ids = rows.flatMap((row) => kanaWhere({ script: family.script, row, kind: 'basic' }).map((k) => k.id));
-  return stageForMastery(averageStage(srs, ids));
+  return stageForMastery(averageStage(srs, familyItemIds(getFamily(familyId))));
 }
 
 export function heroCombatant(save: Save): Combatant {
@@ -94,16 +92,17 @@ export function spiritCombatant(owned: OwnedSpirit, srs: SrsTable): Combatant {
 export function foeCombatant(spec: FoeSpec, uid: string, pool: readonly string[], rng: Rng): Combatant {
   const family = getFamily(spec.familyId);
   const stats = statsAt(family.base, spec.level, 0);
-  // The true kana is always a single kana (purifying means TYPING it), from the
-  // family's own row and script. Words in the pool are never candidates.
-  const kanaInPool = pool.filter((id) => !isWordId(id));
-  const ownRow = (id: string) => {
+  // The true name is always one kana or one kanji (purifying means TYPING its
+  // reading), taken from what the family embodies. Words are never candidates.
+  const own = (id: string): boolean => {
+    if (isWordId(id)) return false;
+    if (family.kanjiGroup) return isKanjiId(id) && getKanji(id).group === family.kanjiGroup;
+    if (isKanjiId(id)) return false;
     const k = getKana(id);
     return k.script === family.script && (k.row === family.row || (family.row === 'w' && k.row === 'nn'));
   };
-  const rowKana = kanaInPool.filter(ownRow);
-  const fallback = kanaWhere({ script: family.script, row: family.row, kind: 'basic' }).map((k) => k.id);
-  const trueKana = rng.pick(rowKana.length > 0 ? rowKana : fallback);
+  const inPool = pool.filter(own);
+  const trueName = rng.pick(inPool.length > 0 ? inPool : familyItemIds(family));
   const hp = Math.round(stats.hp * (spec.hpScale ?? 1));
   const form = family.stages[0];
   return {
@@ -124,7 +123,7 @@ export function foeCombatant(spec: FoeSpec, uid: string, pool: readonly string[]
     guard: false,
     evade: false,
     familyId: spec.recruitable === false ? undefined : family.id,
-    trueKana: getKana(trueKana).id,
+    trueName,
   };
 }
 

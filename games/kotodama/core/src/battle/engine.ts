@@ -31,7 +31,7 @@ export interface Combatant {
   /** Enemy only: spirit family this foe can be purified into, if any. */
   familyId?: string;
   /** Enemy only: its true kana, tested when purifying. */
-  trueKana?: string;
+  trueName?: string;
   /** Enemy only: already survived one lethal blow (see `hit`). */
   spared?: boolean;
 }
@@ -139,7 +139,7 @@ export function canPurify(state: BattleState): boolean {
     state.phase === 'choose' &&
     !state.isBoss &&
     !!target?.familyId &&
-    !!target.trueKana &&
+    !!target.trueName &&
     target.hp / target.maxHp <= PURIFY_THRESHOLD
   );
 }
@@ -173,7 +173,7 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       if (!canPurify(s)) return state;
       const target = alive(s.enemies)[0] as Combatant;
       // The true name must be TYPED: purification is the hardest test in the game.
-      s.prompt = buildPrompt('type', target.trueKana as string, s.kanaPool, rng, null);
+      s.prompt = buildPrompt('type', target.trueName as string, s.kanaPool, rng, null);
       s.pendingMove = 'purify';
       s.phase = 'answer';
       s.events.push({ type: 'prompt', prompt: s.prompt });

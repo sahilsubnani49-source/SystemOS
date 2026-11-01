@@ -20,3 +20,5 @@ export {
 export * from './world/maps';
 export * from './content/words';
 export * from './content/items';
+export * from './content/kanji';
+export * from './util/romaji';

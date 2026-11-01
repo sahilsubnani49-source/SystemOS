@@ -1,20 +1,27 @@
-// Everyday loanwords (gairaigo), taught in Arc 2 after the basic katakana. Words
-// are multiple-choice only, never typed: "koohii / kōhī / kohi" would make typing
-// a test of romanization rather than reading.
-//
+import { toRomaji } from '../util/romaji';
+
+// Words the game teaches as whole units. Multiple-choice only, never typed:
+// "koohii / kōhī / kohi" would make typing a test of romanization, not reading.
+//   - Loanwords (Arc 2): katakana gairaigo. Id `w-<romaji>`. Reading = spelling.
+//   - Vocabulary (Arc 3): N5 words written with kanji. Id `v-<romaji>`.
 // Ids are stable save-file keys: never rename one.
+
+export type WordArea = 'tower' | 'longship' | 'castle' | 'market' | 'teahouse' | 'gardens' | 'keep';
 
 export interface Word {
   id: string;
-  /** Katakana spelling. */
+  kind: 'loanword' | 'vocab';
+  /** How it is written (katakana, or kanji + okurigana). */
   text: string;
-  /** Wāpuro romaji with doubled long vowels (コーヒー = koohii). Shown, never typed. */
+  /** How it is read, in kana. Equals `text` for loanwords. */
+  reading: string;
+  /** Wāpuro romaji of the reading (コーヒー = koohii). Shown, never typed. */
   romaji: string;
   meaning: string;
-  /** Source language, shown as a fun fact on reveal. */
+  /** Loanwords: source language, shown as a fun fact. Vocab: 'Japanese'. */
   from: string;
   /** Curriculum area that introduces it. */
-  area: 'tower' | 'longship';
+  area: WordArea;
 }
 
 type Row = [text: string, romaji: string, meaning: string, from?: string];
@@ -45,10 +52,75 @@ const LONGSHIP: Row[] = [
   ['カナダ', 'kanada', 'Canada'], ['マラソン', 'marason', 'marathon'], ['ホッチキス', 'hotchikisu', 'stapler'],
 ];
 
-const build = (rows: Row[], area: Word['area']): Word[] =>
-  rows.map(([text, romaji, meaning, from = 'English']) => ({ id: `w-${romaji}`, text, romaji, meaning, from, area }));
+const build = (rows: Row[], area: WordArea): Word[] =>
+  rows.map(([text, romaji, meaning, from = 'English']) => ({ id: `w-${romaji}`, kind: 'loanword', text, reading: text, romaji, meaning, from, area }));
 
-export const WORDS: readonly Word[] = [...build(TOWER, 'tower'), ...build(LONGSHIP, 'longship')];
+// ── Arc 3: N5 vocabulary. Every kanji used must already be taught by the word's
+// area or an earlier one (checked by arc3.test.ts). ─────────────────────────
+type VocabRow = [text: string, reading: string, meaning: string];
+
+const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship'>, VocabRow[]> = {
+  // numbers + days
+  castle: [
+    ['一つ', 'ひとつ', 'one (thing)'], ['二つ', 'ふたつ', 'two (things)'], ['三つ', 'みっつ', 'three (things)'],
+    ['四日', 'よっか', 'the 4th (day)'], ['五日', 'いつか', 'the 5th (day)'], ['十日', 'とおか', 'the 10th (day)'],
+    ['四月', 'しがつ', 'April'], ['七月', 'しちがつ', 'July'], ['九月', 'くがつ', 'September'],
+    ['百円', 'ひゃくえん', '100 yen'], ['千円', 'せんえん', '1,000 yen'], ['一万円', 'いちまんえん', '10,000 yen'],
+    ['お金', 'おかね', 'money'],
+  ],
+  // + time + people
+  market: [
+    ['日曜日', 'にちようび', 'Sunday'], ['月曜日', 'げつようび', 'Monday'], ['火曜日', 'かようび', 'Tuesday'],
+    ['水曜日', 'すいようび', 'Wednesday'], ['木曜日', 'もくようび', 'Thursday'], ['金曜日', 'きんようび', 'Friday'],
+    ['土曜日', 'どようび', 'Saturday'], ['毎日', 'まいにち', 'every day'], ['毎週', 'まいしゅう', 'every week'],
+    ['今日', 'きょう', 'today'], ['今年', 'ことし', 'this year'], ['今月', 'こんげつ', 'this month'],
+    ['今週', 'こんしゅう', 'this week'], ['午前', 'ごぜん', 'a.m. (morning)'], ['午後', 'ごご', 'p.m. (afternoon)'],
+    ['半分', 'はんぶん', 'half'], ['一人', 'ひとり', 'one person; alone'], ['二人', 'ふたり', 'two people'],
+    ['男の子', 'おとこのこ', 'boy'], ['女の子', 'おんなのこ', 'girl'], ['先生', 'せんせい', 'teacher'],
+    ['学生', 'がくせい', 'student'], ['先月', 'せんげつ', 'last month'], ['先週', 'せんしゅう', 'last week'],
+    ['名前', 'なまえ', 'name'], ['子ども', 'こども', 'child (kid)'],
+  ],
+  // + body + directions
+  teahouse: [
+    ['上手', 'じょうず', 'skilful'], ['下手', 'へた', 'unskilful'], ['右手', 'みぎて', 'right hand'],
+    ['左手', 'ひだりて', 'left hand'], ['人口', 'じんこう', 'population'], ['北口', 'きたぐち', 'north exit'],
+    ['南口', 'みなみぐち', 'south exit'], ['東口', 'ひがしぐち', 'east exit'], ['西口', 'にしぐち', 'west exit'],
+    ['中学生', 'ちゅうがくせい', 'junior-high student'], ['時間', 'じかん', 'time (duration)'], ['一時間', 'いちじかん', 'one hour'],
+    ['一週間', 'いっしゅうかん', 'one week (period)'], ['目上', 'めうえ', 'one\'s superior'], ['上下', 'じょうげ', 'up and down'],
+  ],
+  // + nature + actions
+  gardens: [
+    ['天気', 'てんき', 'weather'], ['花見', 'はなみ', 'flower viewing'], ['火山', 'かざん', 'volcano'],
+    ['空気', 'くうき', 'air'], ['人気', 'にんき', 'popularity'], ['気分', 'きぶん', 'mood'],
+    ['休日', 'きゅうじつ', 'holiday'], ['休み', 'やすみ', 'rest; day off'], ['一休み', 'ひとやすみ', 'a short break'],
+    ['飲み水', 'のみみず', 'drinking water'], ['出口', 'でぐち', 'exit'], ['入口', 'いりぐち', 'entrance'],
+    ['来年', 'らいねん', 'next year'], ['来月', 'らいげつ', 'next month'], ['来週', 'らいしゅう', 'next week'],
+    ['会話', 'かいわ', 'conversation'], ['読書', 'どくしょ', 'reading (books)'], ['外出', 'がいしゅつ', 'going out'],
+  ],
+  // + adjectives + places
+  keep: [
+    ['大学', 'だいがく', 'university'], ['大人', 'おとな', 'adult'], ['小学生', 'しょうがくせい', 'elementary pupil'],
+    ['高校', 'こうこう', 'high school'], ['学校', 'がっこう', 'school'], ['外国', 'がいこく', 'foreign country'],
+    ['外国人', 'がいこくじん', 'foreigner'], ['日本', 'にほん', 'Japan'], ['日本語', 'にほんご', 'Japanese (language)'],
+    ['電車', 'でんしゃ', 'train'], ['電気', 'でんき', 'electricity; lights'], ['電話', 'でんわ', 'telephone'],
+    ['会社', 'かいしゃ', 'company'], ['社長', 'しゃちょう', 'company president'], ['店長', 'てんちょう', 'store manager'],
+    ['新年', 'しんねん', 'New Year'], ['古本', 'ふるほん', 'second-hand book'], ['少し', 'すこし', 'a little'],
+    ['白い', 'しろい', 'white (adj.)'], ['高い', 'たかい', 'tall; expensive (adj.)'], ['安い', 'やすい', 'cheap (adj.)'],
+    ['新しい', 'あたらしい', 'new (adj.)'], ['古い', 'ふるい', 'old (adj.)'], ['大きい', 'おおきい', 'big (adj.)'],
+    ['小さい', 'ちいさい', 'small (adj.)'], ['長い', 'ながい', 'long (adj.)'], ['早い', 'はやい', 'early (adj.)'],
+    ['中国', 'ちゅうごく', 'China'], ['入学', 'にゅうがく', 'starting school'], ['国語', 'こくご', 'national language (class)'],
+  ],
+};
+
+const buildVocab = (area: keyof typeof VOCAB): Word[] =>
+  VOCAB[area].map(([text, reading, meaning]) => {
+    const romaji = toRomaji(reading);
+    return { id: `v-${romaji}`, kind: 'vocab', text, reading, romaji, meaning, from: 'Japanese', area };
+  });
+
+export const LOANWORDS: readonly Word[] = [...build(TOWER, 'tower'), ...build(LONGSHIP, 'longship')];
+export const VOCABULARY: readonly Word[] = (Object.keys(VOCAB) as (keyof typeof VOCAB)[]).flatMap(buildVocab);
+export const WORDS: readonly Word[] = [...LOANWORDS, ...VOCABULARY];
 
 const BY_ID = new Map(WORDS.map((w) => [w.id, w]));
 
@@ -58,6 +130,6 @@ export function getWord(id: string): Word {
   return w;
 }
 
-export function wordsForArea(area: Word['area']): Word[] {
+export function wordsForArea(area: WordArea): Word[] {
   return WORDS.filter((w) => w.area === area);
 }

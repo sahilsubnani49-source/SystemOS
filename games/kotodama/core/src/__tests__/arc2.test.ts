@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WORDS } from '../content/words';
+import { LOANWORDS as WORDS } from '../content/words';
 import { KANA, getKana, kanaWhere } from '../content/kana';
 import { getItem, mirrorKanaId } from '../content/items';
 import { buildPrompt, misspellings, resolveKind } from '../battle/prompts';
@@ -107,12 +107,12 @@ describe('Norse spirit families', () => {
     const rng = createRng(3);
     for (let i = 0; i < 20; i++) {
       const foe = foeCombatant({ familyId: 'kobold', level: 20 }, 'f', poolForArea('longship'), rng);
-      const k = getKana(foe.trueKana!);
+      const k = getKana(foe.trueName!);
       expect(k.script).toBe('katakana');
       expect(k.row).toBe('k');
     }
     // Area pool lacks the row → still a valid kana of the family's own row.
-    expect(getKana(foeCombatant({ familyId: 'wyrm', level: 20 }, 'f', poolForArea('harbor'), rng).trueKana!).script).toBe('katakana');
+    expect(getKana(foeCombatant({ familyId: 'wyrm', level: 20 }, 'f', poolForArea('harbor'), rng).trueName!).script).toBe('katakana');
   });
 });
 

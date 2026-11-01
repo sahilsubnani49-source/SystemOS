@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOutUp, ZoomIn, useSharedValue, withSequence, withTiming, useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { BlendColor, Canvas, Circle, Group, Image, LinearGradient, Oval, Rect, useClock, vec } from '@shopify/react-native-skia';
 import {
-  canPurify, getItem, getKana, getMap, getMove, itemText,
+  canPurify, getItem, getMap, getMove, itemReading, itemText, kanjiReadings, primaryReading,
+  type StudyItem,
   type BattleEvent, type BattleState, type Combatant,
 } from '@kotodama/core';
 import { spriteImage } from '../art/atlas';
@@ -114,17 +115,10 @@ export function BattleScreen() {
           case 'graded': {
             const item = getItem(ev.itemId);
             const ok = ev.grade === 'correct';
-            speakJa(itemText(ev.itemId));
+            speakJa(itemReading(ev.itemId));
             bump(ok ? 'success' : 'error');
-            // Words reveal their meaning; mirror prompts reveal both twins.
-            const sub =
-              item.kind === 'word'
-                ? `${item.word.text} = ${item.word.meaning}`
-                : ev.answer !== item.kana.romaji && ev.answer !== item.kana.char
-                  ? `${item.kana.char} ↔ ${ev.answer}  (${item.kana.romaji})`
-                  : `${item.kana.char} = ${item.kana.romaji}`;
-            setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub });
-            await sleep(ok ? 650 : 1500);
+            setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub: revealLine(item, ev.answer) });
+            await sleep(ok ? 650 : 1700);
             setVerdict(null);
             break;
           }
@@ -246,9 +240,9 @@ export function BattleScreen() {
           <PText ja style={styles.hpJa}>{foe.nameJa}  Lv{foe.level}</PText>
           <HpBar value={hp[foe.uid] ?? foe.hp} max={foe.maxHp} />
         </View>
-        {foe.trueKana && !state.isBoss && !fainted[foe.uid] ? (
+        {foe.trueName && !state.isBoss && !fainted[foe.uid] ? (
           <Animated.View entering={ZoomIn} style={[styles.seal, { left: layout[foe.uid]!.x - 26, top: layout[foe.uid]!.y - layout[foe.uid]!.size * 0.78 }]}>
-            <PText ja style={styles.sealKana}>{getKana(foe.trueKana).char}</PText>
+            <PText ja style={styles.sealKana}>{itemText(foe.trueName)}</PText>
           </Animated.View>
         ) : null}
         <View style={[styles.hpPanel, { right: 10, bottom: 10, minWidth: width * 0.46 }]}>
@@ -443,3 +437,21 @@ const styles = StyleSheet.create({
   resultTitle: { fontSize: 20, lineHeight: 28 },
   resultLine: { fontSize: 9, lineHeight: 14, textAlign: 'center' },
 });
+
+/**
+ * What the reveal teaches: kana = its sound; mirror = both twins; kanji = meaning
+ * plus readings; words = reading and meaning.
+ */
+function revealLine(item: StudyItem, answer: string): string {
+  if (item.kind === 'word') {
+    const w = item.word;
+    return w.kind === 'vocab' ? `${w.text} (${w.reading}) = ${w.meaning}` : `${w.text} = ${w.meaning}`;
+  }
+  if (item.kind === 'kanji') {
+    const k = item.kanji;
+    const readings = kanjiReadings(k).filter((r) => r.length > 1 || k.kun.length === 0).slice(0, 3);
+    return `${k.char} = ${k.meanings[0]} (${[primaryReading(k), ...readings.filter((r) => r !== primaryReading(k))].slice(0, 3).join(', ')})`;
+  }
+  const kana = item.kana;
+  return answer !== kana.romaji && answer !== kana.char ? `${kana.char} ↔ ${answer}  (${kana.romaji})` : `${kana.char} = ${kana.romaji}`;
+}

@@ -166,8 +166,8 @@ describe('battle engine', () => {
     expect(canPurify(s)).toBe(true);
     s = reduce(s, { type: 'purify' });
     expect(s.prompt?.kind).toBe('type');
-    expect(s.prompt?.itemId).toBe(foe.trueKana);
-    s = reduce(s, { type: 'answer', value: getKana(foe.trueKana!).romaji, elapsedMs: 0, now: NOW });
+    expect(s.prompt?.itemId).toBe(foe.trueName);
+    s = reduce(s, { type: 'answer', value: getKana(foe.trueName!).romaji, elapsedMs: 0, now: NOW });
     expect(s.phase).toBe('recruited');
     expect(s.events).toContainEqual({ type: 'purify', target: 'foe1', familyId: 'kobi' });
   });

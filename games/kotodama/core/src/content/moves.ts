@@ -6,8 +6,9 @@ import type { Element } from './elements';
  * mirror:    see か, choose カ (or カ → か)
  * meaning:   see テレビ, choose "television"
  * spell:     see "terebi", choose テレビ among near-miss spellings
+ * reading:   see 学生 (or 水), choose がくせい (or みず) among near-miss readings
  */
-export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell';
+export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading';
 
 /** Visual effect the renderer plays when the move lands. */
 export type FxKind =
@@ -60,6 +61,12 @@ export const MOVES = {
   runebolt: m({ id: 'runebolt', name: 'Rune Bolt', nameJa: 'ルーン雷', prompt: 'mirror', power: 1.3, element: 'thunder', fx: 'lightning', timeLimitMs: null, description: 'A rune flips into its mirror and strikes.' }),
   axeCleave: m({ id: 'axeCleave', name: 'Axe Cleave', nameJa: '斧割り', prompt: 'recall', power: 1.25, element: 'steel', fx: 'heavySlash', timeLimitMs: null, description: 'A bearded axe, swung low.' }),
   berserk: m({ id: 'berserk', name: 'Berserk Flame', nameJa: '狂炎', prompt: 'spell', power: 1.5, element: 'fire', fx: 'fire', timeLimitMs: null, description: 'Spell the word right and burn bright.' }),
+  // ── Arc 3: castle-town spirit moves ───────────────────────────────
+  abacus: m({ id: 'abacus', name: 'Abacus Volley', nameJa: '算盤撃ち', prompt: 'recall', power: 1.2, element: 'steel', fx: 'shuriken', timeLimitMs: null, description: 'Find the kanji for the meaning; beads fly.' }),
+  bellToll: m({ id: 'bellToll', name: 'Temple Bell', nameJa: '鐘鳴らし', prompt: 'reading', power: 1.25, element: 'thunder', fx: 'lightning', timeLimitMs: null, description: 'Ring true: pick the right reading.' }),
+  umbrellaSpin: m({ id: 'umbrellaSpin', name: 'Umbrella Spin', nameJa: '傘回し', prompt: 'reading', power: 1.2, element: 'water', fx: 'water', timeLimitMs: null, description: 'A spinning karakasa throws rain.' }),
+  inkBrush: m({ id: 'inkBrush', name: 'Ink Brush', nameJa: '墨筆', prompt: 'meaning', power: 1.15, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Name what the brushstroke means.' }),
+  sunflare: m({ id: 'sunflare', name: 'Sun Flare', nameJa: '日炎', prompt: 'reading', power: 1.3, element: 'fire', fx: 'fire', timeLimitMs: null, description: 'Read the kanji and it burns.' }),
   // ── Enemy-only ────────────────────────────────────────────────────
   rend: m({ id: 'rend', name: 'Garbled Rend', nameJa: '文字化け', prompt: 'recognize', power: 1.0, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Corrupted glyphs tear at you.' }),
   shieldBash: m({ id: 'shieldBash', name: 'Shield Bash', nameJa: '盾打ち', prompt: 'recognize', power: 1.2, element: 'steel', fx: 'rock', timeLimitMs: null, description: 'A painted round shield, to the face.' }),

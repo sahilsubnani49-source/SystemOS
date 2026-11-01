@@ -46,7 +46,6 @@ describe('boss pacing', () => {
       return { hero, runs, avg: runs.reduce((x, y) => x + y, 0) / runs.length };
     });
     const label = results.map((r) => `${r.hero} ${r.runs.join(',')}`).join(' | ');
-    if (process.env.BALANCE_LOG) console.log(`${b.id}: ${label}`);
     for (const r of results) {
       expect(r.avg, `${b.id}: ${label}`).toBeGreaterThanOrEqual(8);
       expect(r.avg, `${b.id}: ${label}`).toBeLessThanOrEqual(20);
