@@ -396,8 +396,9 @@ function ResultCard({ result, onContinue }: { result: NonNullable<BattleContext[
       <PText style={[styles.resultTitle, { color }]}>{title}</PText>
       {result.recruited ? <PText style={styles.resultLine}>{result.recruited} joined your party!</PText> : null}
       {result.xp > 0 ? <PText style={styles.resultLine}>+{result.xp} XP</PText> : null}
-      {result.levelUps.map((l) => (
-        <PText key={l} style={[styles.resultLine, { color: C.gold }]}>{l}</PText>
+      {/* Index keys: two spirits of one species and level produce identical lines. */}
+      {result.levelUps.map((l, i) => (
+        <PText key={`lvl-${i}`} style={[styles.resultLine, { color: C.gold }]}>{l}</PText>
       ))}
       {result.outcome === 'lost' ? <PText style={styles.resultLine}>Every miss is now due for review. Come back stronger.</PText> : null}
       <PButton testID="continue-battle" label="CONTINUE" onPress={onContinue} style={{ alignSelf: 'stretch', marginTop: 4 }} />
