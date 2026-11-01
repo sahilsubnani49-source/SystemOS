@@ -112,6 +112,20 @@ describe('Arc 1 maps', () => {
     expect(reached(6, 'jarl_longship')).toBe(true);
   });
 
+  it('opens the Arc 3 story gates in order, starting from Runa\'s voyage', () => {
+    const before = Object.fromEntries(
+      ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni', 'learned_mirror', 'beat_sigrun', 'beat_ulf', 'beat_warden', 'skald_trial'].map((f) => [f, true]),
+    );
+    const story = ['beat_champion', 'beat_takeda', 'beat_kaze', 'tea_trial', 'beat_hotaru', 'beat_otomo'];
+    const order = ['castle_town', 'market_street', 'teahouse', 'castle_gardens', 'castle_keep', 'shogun_hall'];
+    const reached = (n: number, map: string) =>
+      [...explore({ ...before, ...Object.fromEntries(story.slice(0, n).map((f) => [f, true])) })].some((k) => k.startsWith(`${map}:`));
+    order.forEach((map, i) => {
+      expect(reached(i, map), `${map} reachable too early`).toBe(false);
+      expect(reached(i + 1, map), `${map} unreachable`).toBe(true);
+    });
+  });
+
   it('opens the story gates in order', () => {
     const story = ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni'];
     const reached = (flags: Record<string, boolean>, map: string) => [...explore(flags)].some((k) => k.startsWith(`${map}:`));

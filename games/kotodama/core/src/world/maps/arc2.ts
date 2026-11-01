@@ -231,10 +231,12 @@ const jarl_longship: MapDef = {
         { familyId: 'troll', level: 31, name: "Jarl's Champion", nameJa: 'チャンピオン', sprite: 'champion', recruitable: false, hpScale: 3.4 },
       ] } },
     { id: 'arc2_ending', name: 'Runa', x: 6, y: 3, sprite: 'runa', facing: 'down', showIf: 'beat_champion',
+      travelsTo: { map: 'castle_town', x: 9, y: 12 },
       dialogue: [
         { speaker: 'Runa', text: 'The Champion is beaten and the longships are turning for home. You read every katakana and every word they threw at you.' },
         { speaker: 'Runa', text: 'But the Jarl himself has sailed for the Castle Capital, where the Shogun\'s scribes write in KANJI.' },
-        { speaker: 'System', text: 'ARC 2 COMPLETE. Arc 3: Castle Capital (N5 kanji) is coming.' },
+        { speaker: 'Runa', text: 'This ship is ours now. Hold on: we sail for the capital.' },
+        { speaker: 'System', text: 'ARC 2 COMPLETE. Next: Arc 3, Castle Capital, where everything is written in N5 kanji.' },
       ] },
   ],
   encounterRate: 0, encounters: [], music: 'boss', weather: 'snow', rideable: false,

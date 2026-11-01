@@ -5,7 +5,9 @@ export type TileKind =
   | 'rock' | 'wall' | 'roof' | 'floor' | 'door' | 'bridge' | 'flower' | 'torii' | 'fence'
   | 'lantern' | 'sakura' | 'tatami' | 'snow' | 'void'
   // Arc 2 (Frost Harbor)
-  | 'ice' | 'drift' | 'dock' | 'pine' | 'snowPine' | 'longhouseWall' | 'longhouseRoof' | 'runestone' | 'hull';
+  | 'ice' | 'drift' | 'dock' | 'pine' | 'snowPine' | 'longhouseWall' | 'longhouseRoof' | 'runestone' | 'hull'
+  // Arc 3 (Castle Capital)
+  | 'stoneWall' | 'gravel' | 'noren';
 
 export interface TileProps {
   solid: boolean;
@@ -48,6 +50,11 @@ export const TILE_PROPS: Record<TileKind, TileProps> = {
   longhouseRoof: { solid: true, encounter: false, animated: false },
   runestone: { solid: true, encounter: false, animated: false },
   hull: { solid: true, encounter: false, animated: false },
+  stoneWall: { solid: true, encounter: false, animated: false },
+  /** Raked gravel of castle gardens: Arc 3's tall grass. */
+  gravel: { solid: false, encounter: true, animated: false },
+  /** Shop front with a hanging noren curtain. */
+  noren: { solid: true, encounter: false, animated: true },
 };
 
 /** One character per tile in a map's ASCII rows. */
@@ -59,6 +66,8 @@ export const DEFAULT_LEGEND: Record<string, TileKind> = {
   // Arc 2
   'i': 'ice', 'f': 'drift', 'd': 'dock', 'p': 'pine', 'P': 'snowPine', 'w': 'longhouseWall',
   'R': 'longhouseRoof', 'r': 'runestone', 'k': 'hull',
+  // Arc 3
+  'm': 'stoneWall', 'g': 'gravel', 'N': 'noren',
 };
 
 export type Facing = 'up' | 'down' | 'left' | 'right';
