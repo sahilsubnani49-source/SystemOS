@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildPrompt, gradeAnswer, pickDistractors } from '../battle/prompts';
 import { computeDamage, MAX_COMBO_MULTIPLIER, comboMultiplier } from '../battle/damage';
-import { battleXp, canPurify, reduce, startBattle, type BattleState, type Combatant } from '../battle/engine';
+import { battleXp, canPurify, reduce, startBattle, type BattleEvent, type BattleState, type Combatant } from '../battle/engine';
 import { getKana, KANA } from '../content/kana';
+import { elementMultiplier } from '../content/elements';
 import { kanaPoolForArea } from '../content/curriculum';
 import { foeCombatant, heroCombatant } from '../progression';
 import { newGame } from '../save/schema';
@@ -52,6 +53,11 @@ describe('prompts', () => {
 
 describe('damage', () => {
   const base = { atk: 12, def: 10, power: 1, level: 5, attackElement: 'fire', defendElement: 'water', combo: 0, comboStep: 0.1, crit: false, variance: 1 } as const;
+  it('keeps the samurai neutral against the fire spirits of the opening area', () => {
+    expect(elementMultiplier('fire', 'steel')).toBe(1);
+    expect(elementMultiplier('steel', 'fire')).toBe(1);
+    expect(elementMultiplier('thunder', 'steel')).toBe(1.5);
+  });
   it('never deals less than 1 and caps combo', () => {
     expect(computeDamage({ ...base, atk: 1, def: 999 })).toBe(1);
     expect(comboMultiplier(100, 0.15)).toBe(MAX_COMBO_MULTIPLIER);
@@ -102,6 +108,33 @@ describe('battle engine', () => {
     expect(battleXp(s)).toBe(0);
   });
 
+  it('lets enemies act once per round, not once per party member', () => {
+    const save = newGame('samurai', 'Ren', '2026-11-01', 1);
+    const pool = kanaPoolForArea('bamboo');
+    const foe = foeCombatant({ familyId: 'tanu', level: 1, hpScale: 50 }, 'foe1', pool, createRng(1));
+    const spirit = { ...heroCombatant(save), uid: 'sp1', name: 'Spirit', moves: ['kesa' as const] };
+    let s = startBattle({ party: [heroCombatant(save), spirit], enemies: [foe], kanaPool: pool, srs: {}, seed: 4 });
+    const hitsOnParty = (st: BattleState) =>
+      st.events.filter((e) => e.type === 'damage' && (e.target === 'hero' || e.target === 'sp1')).length;
+    s = answerRight(s); // hero acts: round not over yet
+    expect(s.actor).toBe(1);
+    expect(hitsOnParty(s)).toBe(0);
+    s = answerRight(s); // spirit acts: round ends, the foe strikes once
+    expect(s.actor).toBe(0);
+    expect(hitsOnParty(s)).toBe(1);
+  });
+
+  it('punishes a wrong answer with an immediate half-power counter on the one who missed', () => {
+    let s = setup(21);
+    s = reduce(s, { type: 'choose', move: 'kesa', now: NOW });
+    s = reduce(s, { type: 'answer', value: '__wrong__', elapsedMs: 100, now: NOW });
+    const counters = s.events.filter((e) => e.type === 'damage' && e.target === 'hero');
+    // Solo hero: the counter, then the end-of-round attack.
+    expect(counters).toHaveLength(2);
+    const [counter, roundHit] = counters as Extract<BattleEvent, { type: 'damage' }>[];
+    expect(counter!.amount).toBeLessThan(roundHit!.amount * 0.8);
+  });
+
   it('is deterministic for a given seed', () => {
     expect(answerRight(setup(99))).toEqual(answerRight(setup(99)));
   });
@@ -124,6 +157,25 @@ describe('battle engine', () => {
     s = reduce(s, { type: 'answer', value: getKana(foe.trueKana!).romaji, elapsedMs: 0, now: NOW });
     expect(s.phase).toBe('recruited');
     expect(s.events).toContainEqual({ type: 'purify', target: 'foe1', familyId: 'kobi' });
+  });
+
+  it('lets a recruitable wild foe survive its first lethal blow at 1 HP, exactly once', () => {
+    let s = setup(8);
+    const foe = s.enemies[0] as Combatant;
+    s = { ...s, enemies: [{ ...foe, hp: 2 }] };
+    s = answerRight(s);
+    expect(s.enemies[0]!.hp).toBe(1);
+    expect(s.events).toContainEqual({ type: 'spared', target: 'foe1' });
+    expect(canPurify(s)).toBe(true);
+    s = answerRight(s);
+    expect(s.phase).toBe('won');
+  });
+
+  it('does not spare bosses or named foes', () => {
+    let s = setup(8);
+    s = { ...s, enemies: [{ ...(s.enemies[0] as Combatant), familyId: undefined, hp: 2 }] };
+    s = answerRight(s);
+    expect(s.phase).toBe('won');
   });
 
   it('never lets you flee or purify a boss', () => {

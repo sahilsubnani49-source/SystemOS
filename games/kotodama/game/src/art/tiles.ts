@@ -1,0 +1,185 @@
+import type { TileKind } from '@kotodama/core';
+import { hash2, PixelCanvas, shade } from './pixel';
+
+export const TILE = 16;
+
+type Neighbor = (dx: number, dy: number) => TileKind;
+type TilePainter = (c: PixelCanvas, ox: number, oy: number, tx: number, ty: number, frame: number, n: Neighbor) => void;
+
+const GRASS = '#5FA84A';
+const GRASS_DK = '#4A8A3A';
+
+function grassBase(c: PixelCanvas, ox: number, oy: number, tx: number, ty: number) {
+  c.rect(ox, oy, TILE, TILE, GRASS);
+  for (let i = 0; i < 6; i++) {
+    const x = Math.floor(hash2(tx, ty, i) * 15);
+    const y = Math.floor(hash2(tx, ty, i + 9) * 15);
+    c.set(ox + x, oy + y, GRASS_DK);
+    c.set(ox + x, oy + y - 1, shade(GRASS, 0.08));
+  }
+}
+
+const isWater = (k: TileKind) => k === 'water' || k === 'deepWater';
+
+const P: Record<TileKind, TilePainter> = {
+  grass: (c, ox, oy, tx, ty) => grassBase(c, ox, oy, tx, ty),
+  tallGrass(c, ox, oy, tx, ty, frame) {
+    c.rect(ox, oy, TILE, TILE, '#4E9A3E');
+    for (let i = 0; i < 4; i++) {
+      const bx = ox + 1 + i * 4;
+      const sway = (frame + i) % 2;
+      c.line(bx, oy + 15, bx + sway, oy + 6, '#2E6A2A');
+      c.line(bx + 2, oy + 15, bx + 2 + sway, oy + 4, '#3A7A32');
+      c.set(bx + 2 + sway, oy + 4, '#8ACA5A');
+    }
+  },
+  path(c, ox, oy, tx, ty) {
+    c.rect(ox, oy, TILE, TILE, '#C8A66A');
+    for (let i = 0; i < 5; i++)
+      c.set(ox + Math.floor(hash2(tx, ty, i) * 16), oy + Math.floor(hash2(tx, ty, i + 5) * 16), '#A8864E');
+  },
+  sand(c, ox, oy, tx, ty) {
+    c.rect(ox, oy, TILE, TILE, '#E6CF8E');
+    for (let i = 0; i < 4; i++)
+      c.set(ox + Math.floor(hash2(tx, ty, i) * 16), oy + Math.floor(hash2(tx, ty, i + 3) * 16), '#D2B670');
+  },
+  water(c, ox, oy, tx, ty, frame, n) {
+    c.rect(ox, oy, TILE, TILE, '#3A86C8');
+    for (let i = 0; i < 3; i++) {
+      const y = oy + 3 + i * 5;
+      const x = ox + ((Math.floor(hash2(tx, ty, i) * 10) + frame * 2) % 12);
+      c.rect(x, y, 3, 1, '#7FC4F2');
+    }
+    if (!isWater(n(0, -1))) c.rect(ox, oy, TILE, 2, '#D8F0FF');
+    if (!isWater(n(-1, 0))) c.rect(ox, oy, 1, TILE, '#BEE6F2');
+    if (!isWater(n(1, 0))) c.rect(ox + 15, oy, 1, TILE, '#BEE6F2');
+  },
+  deepWater(c, ox, oy, tx, ty, frame) {
+    c.rect(ox, oy, TILE, TILE, '#24589A');
+    const x = ox + ((Math.floor(hash2(tx, ty) * 10) + frame * 3) % 12);
+    c.rect(x, oy + 7, 4, 1, '#3A7ACA');
+  },
+  tree(c, ox, oy, tx, ty) {
+    grassBase(c, ox, oy, tx, ty);
+    c.rect(ox + 6, oy + 11, 4, 5, '#6E4A2A');
+    c.ellipse(ox + 1, oy, 14, 13, '#2E6A3A');
+    c.ellipse(ox + 3, oy + 1, 9, 7, '#3E8A4A');
+    c.set(ox + 5, oy + 3, '#5AAA5A');
+  },
+  sakura(c, ox, oy, tx, ty, frame) {
+    grassBase(c, ox, oy, tx, ty);
+    c.rect(ox + 7, oy + 10, 3, 6, '#5A3A2A');
+    c.ellipse(ox, oy, 16, 12, '#E88AA8');
+    c.ellipse(ox + 2, oy + 1, 11, 7, '#F4B4CA');
+    for (let i = 0; i < 4; i++)
+      c.set(ox + Math.floor(hash2(tx, ty, i + frame) * 14) + 1, oy + Math.floor(hash2(tx, ty, i + 7) * 10), '#FFE0EA');
+  },
+  bamboo(c, ox, oy, tx, ty, frame) {
+    c.rect(ox, oy, TILE, TILE, '#3E7A3A');
+    for (let i = 0; i < 3; i++) {
+      const x = ox + 2 + i * 5 + ((frame + i) % 2);
+      c.rect(x, oy, 2, TILE, '#8AC85A');
+      c.rect(x, oy + 5 + i, 2, 1, '#5A8A3A');
+      c.rect(x, oy + 12 - i, 2, 1, '#5A8A3A');
+      c.set(x + 2, oy + 4 + i * 3, '#6AB04A');
+    }
+  },
+  rock(c, ox, oy, tx, ty) {
+    grassBase(c, ox, oy, tx, ty);
+    c.ellipse(ox + 1, oy + 3, 14, 12, '#7A7A84');
+    c.ellipse(ox + 3, oy + 4, 8, 5, '#9A9AA4');
+    c.set(ox + 10, oy + 10, '#5A5A64');
+  },
+  wall(c, ox, oy) {
+    c.rect(ox, oy, TILE, TILE, '#E8DCC0'); // plaster
+    c.rect(ox, oy, TILE, 2, '#5A3A2A'); // beam
+    c.rect(ox, oy + 14, TILE, 2, '#3A2A20');
+    c.rect(ox + 7, oy + 2, 2, 12, '#5A3A2A');
+  },
+  roof(c, ox, oy, tx) {
+    c.rect(ox, oy, TILE, TILE, '#3A3A5A');
+    for (let y = 0; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#2A2A44');
+    for (let x = (tx % 2) * 2; x < TILE; x += 4) c.rect(ox + x, oy, 1, TILE, '#4A4A6E');
+  },
+  floor(c, ox, oy) {
+    c.rect(ox, oy, TILE, TILE, '#B88A5A');
+    for (let y = 3; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#9A6E44');
+  },
+  tatami(c, ox, oy, tx, ty) {
+    const horiz = (tx + ty) % 2 === 0;
+    c.rect(ox, oy, TILE, TILE, '#C8C08A');
+    for (let i = 1; i < TILE; i += 2) horiz ? c.rect(ox, oy + i, TILE, 1, '#B8B07A') : c.rect(ox + i, oy, 1, TILE, '#B8B07A');
+    c.rect(ox, oy, TILE, 1, '#3A5A3A');
+    c.rect(ox, oy, 1, TILE, '#3A5A3A');
+  },
+  door(c, ox, oy) {
+    c.rect(ox, oy, TILE, TILE, '#5A3A2A');
+    c.rect(ox + 1, oy + 1, 14, 15, '#F0E6CC'); // shōji
+    for (let x = 4; x < 15; x += 4) c.rect(ox + x, oy + 1, 1, 15, '#7A5A3A');
+    for (let y = 5; y < 16; y += 5) c.rect(ox + 1, oy + y, 14, 1, '#7A5A3A');
+  },
+  bridge(c, ox, oy, tx, ty, frame, n) {
+    P.water(c, ox, oy, tx, ty, frame, n);
+    c.rect(ox, oy + 1, TILE, 14, '#A8784A');
+    for (let x = 0; x < TILE; x += 4) c.rect(ox + x, oy + 1, 1, 14, '#7A5432');
+    c.rect(ox, oy, TILE, 1, '#C0392B');
+    c.rect(ox, oy + 15, TILE, 1, '#C0392B');
+  },
+  flower(c, ox, oy, tx, ty, frame) {
+    grassBase(c, ox, oy, tx, ty);
+    const colors = ['#F4A7C0', '#FFE14B', '#FFFFFF', '#9A7AEF'];
+    for (let i = 0; i < 4; i++) {
+      const x = ox + 2 + Math.floor(hash2(tx, ty, i) * 11);
+      const y = oy + 2 + Math.floor(hash2(tx, ty, i + 4) * 11) - (frame % 2);
+      c.set(x, y, colors[i % colors.length] as string);
+      c.set(x, y + 1, '#2E6A2A');
+    }
+  },
+  torii(c, ox, oy, tx, ty) {
+    P.path(c, ox, oy, tx, ty, 0, () => 'path');
+    c.rect(ox, oy + 1, TILE, 2, '#C8302A');
+    c.rect(ox, oy, TILE, 1, '#2A1A1A');
+    c.rect(ox + 1, oy + 5, 14, 1, '#C8302A');
+    c.rect(ox + 2, oy + 3, 2, 13, '#C8302A');
+    c.rect(ox + 12, oy + 3, 2, 13, '#C8302A');
+  },
+  fence(c, ox, oy, tx, ty) {
+    grassBase(c, ox, oy, tx, ty);
+    c.rect(ox, oy + 6, TILE, 2, '#8A6A3A');
+    c.rect(ox, oy + 11, TILE, 2, '#8A6A3A');
+    c.rect(ox + 2, oy + 4, 2, 11, '#6E4A2A');
+    c.rect(ox + 12, oy + 4, 2, 11, '#6E4A2A');
+  },
+  lantern(c, ox, oy, tx, ty, frame, n) {
+    // Stand on whatever surrounds it: tatami indoors, path or grass outside.
+    const under = n(0, 1);
+    const base: TileKind = under === 'tatami' || under === 'floor' || under === 'grass' ? under : 'path';
+    P[base](c, ox, oy, tx, ty, 0, n);
+    c.rect(ox + 6, oy + 11, 4, 4, '#7A7A84');
+    c.rect(ox + 4, oy + 9, 8, 2, '#8A8A94');
+    c.rect(ox + 5, oy + 4, 6, 5, '#9A9AA4');
+    c.rect(ox + 7, oy + 5, 2, 3, frame ? '#FFD86A' : '#FFB347');
+    c.rect(ox + 3, oy + 2, 10, 2, '#7A7A84');
+  },
+  snow(c, ox, oy, tx, ty) {
+    c.rect(ox, oy, TILE, TILE, '#E8F0F8');
+    c.set(ox + Math.floor(hash2(tx, ty) * 16), oy + Math.floor(hash2(ty, tx) * 16), '#C8D8E8');
+  },
+  void(c, ox, oy) {
+    c.rect(ox, oy, TILE, TILE, '#0B0B12');
+  },
+};
+
+/** Paint one tile at (ox, oy) inside a larger canvas. */
+export function paintTile(
+  c: PixelCanvas,
+  kind: TileKind,
+  ox: number,
+  oy: number,
+  tx: number,
+  ty: number,
+  frame: number,
+  neighbor: Neighbor,
+) {
+  P[kind](c, ox, oy, tx, ty, frame, neighbor);
+}

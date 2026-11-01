@@ -32,6 +32,8 @@ export interface Combatant {
   familyId?: string;
   /** Enemy only: its true kana, tested when purifying. */
   trueKana?: string;
+  /** Enemy only: already survived one lethal blow (see `hit`). */
+  spared?: boolean;
 }
 
 export type BattlePhase = 'choose' | 'answer' | 'won' | 'lost' | 'fled' | 'recruited';
@@ -48,6 +50,7 @@ export type BattleEvent =
   | { type: 'buff'; target: string; buff: 'guard' | 'evade' }
   | { type: 'combo'; count: number }
   | { type: 'faint'; target: string }
+  | { type: 'spared'; target: string }
   | { type: 'purify'; target: string; familyId: string }
   | { type: 'purifyFail'; target: string }
   | { type: 'flee'; success: boolean }
@@ -96,6 +99,8 @@ export interface BattleSetup {
 
 /** A foe below this HP fraction can be purified (recruited). */
 export const PURIFY_THRESHOLD = 0.35;
+/** Damage multiplier for the instant counter a wrong answer provokes. */
+export const COUNTER_POWER = 0.5;
 
 export function startBattle(setup: BattleSetup): BattleState {
   if (setup.kanaPool.length === 0) throw new Error('startBattle: empty kana pool');
@@ -211,13 +216,24 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
           s.events.push({ type: 'miss', from: actor.uid, to: target.uid });
         }
       }
+      if (!correct && target.hp > 0) {
+        // A misread opens your guard: the foe counters the one who missed, at half power.
+        const move = getMove(rng.pick(target.moves));
+        hit(s, target, actor, Math.max(0.6, move.power) * COUNTER_POWER, move.element, move.fx, false, 0, rng);
+      }
 
       s.prompt = null;
       s.pendingMove = null;
       if (alive(s.enemies).length === 0) return end(s, 'won', rng);
-
-      enemyTurn(s, rng);
       if (alive(s.party).length === 0) return end(s, 'lost', rng);
+
+      // Enemies act once per ROUND (after every living party member has moved), so a
+      // bigger party is an advantage, never a liability.
+      const nextActor = firstAlive(s.party, s.actor + 1);
+      if (nextActor <= s.actor) {
+        enemyTurn(s, rng);
+        if (alive(s.party).length === 0) return end(s, 'lost', rng);
+      }
 
       s.turn += 1;
       s.actor = firstAlive(s.party, s.actor + 1);
@@ -307,6 +323,17 @@ function hit(
     defender.guard = false;
     amount = Math.max(1, Math.round(amount / 2));
     s.events.push({ type: 'guarded', target: defender.uid });
+  }
+  // The first blow that would destroy a recruitable wild spirit leaves it clinging on
+  // at 1 HP instead. Without this, combo/crit damage skips straight past the purify
+  // window and recruiting becomes luck. Bosses and named foes have no familyId.
+  if (defender.side === 'enemy' && defender.familyId && !defender.spared && amount >= defender.hp && defender.hp > 1) {
+    amount = defender.hp - 1;
+    defender.spared = true;
+    defender.hp = 1;
+    s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element) });
+    s.events.push({ type: 'spared', target: defender.uid });
+    return;
   }
   defender.hp = Math.max(0, defender.hp - amount);
   s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element) });

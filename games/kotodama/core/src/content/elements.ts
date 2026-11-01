@@ -1,9 +1,11 @@
 export type Element = 'fire' | 'water' | 'wind' | 'earth' | 'thunder' | 'shadow' | 'light' | 'steel';
 
 // Wheel: fire > wind > earth > thunder > water > fire. Shadow and light hit each
-// other hard. Steel (samurai, raiders' iron) resists the wheel but is weak to thunder.
+// other hard. Steel (samurai, raiders' iron) sits outside the wheel and is weak only
+// to thunder, which arrives mid-game. (It was once weak to fire too, but both
+// opening-area spirit families are fire, so samurai players were punished from turn one.)
 const STRONG: Record<Element, Element[]> = {
-  fire: ['wind', 'steel'],
+  fire: ['wind'],
   wind: ['earth'],
   earth: ['thunder'],
   thunder: ['water', 'steel'],

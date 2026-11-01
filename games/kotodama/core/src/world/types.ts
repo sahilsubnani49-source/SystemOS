@@ -96,6 +96,12 @@ export interface NpcDef {
   setsFlag?: string;
   /** Heals the party (dojo masters, shrine maidens). */
   heals?: boolean;
+  /** Talking adds this spirit to the party (once, guarded by `setsFlag`). */
+  givesSpirit?: { familyId: string; level: number };
+  /** Talking grants the warhorse (guarded by `setsFlag`). */
+  givesHorse?: boolean;
+  /** Display name over the dialogue box. */
+  name?: string;
 }
 
 export interface EncounterEntry {

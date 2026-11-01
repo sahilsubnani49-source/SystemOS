@@ -17,3 +17,4 @@ export {
   MAX_LEVEL, xpToNext, applyXp, familyStage, heroCombatant, spiritCombatant,
   foeCombatant, nextStreak, horseSpeed,
 } from './progression';
+export * from './world/maps';

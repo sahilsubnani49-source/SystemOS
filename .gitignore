@@ -25,3 +25,6 @@ dist/
 
 # --- OS ---
 .DS_Store
+
+# Skia web runtime: copied by `npm run export:web` (setup-skia-web), never committed
+games/kotodama/app/public/canvaskit.wasm

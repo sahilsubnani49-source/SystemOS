@@ -7,8 +7,8 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "export:web": "expo export --platform web",
+    "web": "setup-skia-web public && expo start --web",
+    "export:web": "setup-skia-web public && expo export --platform web",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
