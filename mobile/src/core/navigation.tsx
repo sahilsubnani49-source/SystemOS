@@ -12,6 +12,7 @@ import { TaskDetailScreen } from '../presentation/screens/TaskDetailScreen';
 import { StatsScreen } from '../presentation/screens/StatsScreen';
 import { TrainingScreen } from '../presentation/screens/TrainingScreen';
 import { SettingsScreen } from '../presentation/screens/SettingsScreen';
+import { KotodamaScreen } from '../presentation/screens/KotodamaScreen';
 import { LoginScreen } from '../presentation/screens/LoginScreen';
 import { SignupScreen } from '../presentation/screens/SignupScreen';
 import { useAuthStore } from '../presentation/stores/useAuthStore';
@@ -22,6 +23,8 @@ export type RootStackParamList = {
   Main: undefined;
   Inventory: undefined;
   TaskDetail: { categoryId: string };
+  /** The Kotodama game, opened from the Stats-tab portal. */
+  Kotodama: undefined;
 };
 
 export type BottomTabParamList = {
@@ -128,6 +131,11 @@ export function AppNavigator() {
               name="TaskDetail"
               component={TaskDetailScreen}
               options={{ ...detailHeader, title: 'TASK' }}
+            />
+            <Stack.Screen
+              name="Kotodama"
+              component={KotodamaScreen}
+              options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }}
             />
           </>
         ) : (

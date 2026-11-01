@@ -11,7 +11,11 @@ import {
   Typography,
   withAlpha,
 } from '../../core/theme';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePlayerStore } from '../stores/usePlayerStore';
+import { GatePortal } from '../components/GatePortal';
+import type { RootStackParamList } from '../../core/navigation';
 import { STAT_KEYS, StatKey } from '../../core/constants';
 
 const STAT_ICONS: Record<StatKey, string> = {
@@ -87,6 +91,7 @@ const barStyles = StyleSheet.create({
 
 export function StatsScreen() {
   const { player, loading } = usePlayerStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -120,6 +125,9 @@ export function StatsScreen() {
               </View>
               {player.bio && <Text style={styles.bio}>{player.bio}</Text>}
             </View>
+
+            {/* Portal to the Kotodama Japanese-learning game (games/kotodama). */}
+            <GatePortal onPress={() => navigation.navigate('Kotodama')} />
 
             {/* Stats */}
             <View style={styles.card}>

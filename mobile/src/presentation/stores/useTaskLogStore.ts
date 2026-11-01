@@ -91,6 +91,20 @@ export interface LogSessionInput {
   note: string;
 }
 
+/**
+ * A study session reported by an embedded game (Kotodama). Declared structurally
+ * here so this store never imports the game package: anything with these fields
+ * can be bridged into the Hunter Log.
+ */
+export interface ExternalStudySession {
+  activeMinutes: number;
+  promptsAnswered: number;
+  correct: number;
+}
+
+/** Hunter Log bucket that game study time is filed under. */
+export const JAPANESE_CATEGORY = { name: 'Japanese', icon: '🗾' } as const;
+
 export interface LogSessionResult {
   xp: number;
   leveledUp: boolean;
@@ -112,6 +126,12 @@ interface TaskLogState {
   loadSessions: (categoryId: string) => Promise<void>;
   addCategory: (name: string, icon: string) => Promise<void>;
   logSession: (input: LogSessionInput) => Promise<LogSessionResult>;
+  /**
+   * File a Kotodama session under the "Japanese" bucket (created on first use).
+   * Goes through logSession, so XP is paid exactly once and the daily cap applies.
+   * Returns null when there was nothing worth logging.
+   */
+  recordJapaneseSession: (session: ExternalStudySession) => Promise<LogSessionResult | null>;
   clearError: () => void;
   resetTaskLogs: () => Promise<void>;
 }
@@ -275,6 +295,27 @@ export const useTaskLogStore = create<TaskLogState>((set, get) => ({
       });
       throw e;
     }
+  },
+
+  recordJapaneseSession: async (session) => {
+    const minutes = Math.min(Math.round(session.activeMinutes), MAX_SESSION_MINUTES);
+    if (minutes < 1) return null;
+    if (get().categories.length === 0) await get().load();
+    const find = () =>
+      get().categories.find(
+        (c) => !c.synthetic && c.name.toLowerCase() === JAPANESE_CATEGORY.name.toLowerCase(),
+      );
+    if (!find()) await get().addCategory(JAPANESE_CATEGORY.name, JAPANESE_CATEGORY.icon);
+    const category = find();
+    if (!category) return null;
+    const accuracy = session.promptsAnswered
+      ? Math.round((session.correct / session.promptsAnswered) * 100)
+      : 0;
+    return get().logSession({
+      categoryId: category.id,
+      minutes,
+      note: `Kotodama: ${session.promptsAnswered} prompts, ${accuracy}% correct`,
+    });
   },
 
   clearError: () => set({ error: null }),
