@@ -10,6 +10,7 @@ import { ApiQuest, ApiGoalPlanResponse } from '../../data/datasources/ApiTypes';
 import {
   DailyTimelineService,
   LAST_DAILY_NOTIFICATION_DATE,
+  PENALTY_NOTICE_KEY,
   TimelineTickResult,
 } from '../../data/services/DailyTimelineService';
 import { deleteMeta } from '../../data/services/AppMeta';
@@ -327,6 +328,8 @@ export const useGoalStore = create<GoalState>((set, get) => ({
     await goalRepo.deleteAllGoals();
     await deleteMeta('last_timeline_date');
     await deleteMeta(LAST_DAILY_NOTIFICATION_DATE);
+    // A pending penalty notice would otherwise greet the freshly-reset Hunter.
+    await deleteMeta(PENALTY_NOTICE_KEY);
     set({ activeGoals: [] });
   },
 

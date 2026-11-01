@@ -12,6 +12,12 @@ function parseJson<T>(value: unknown): T | null {
   }
 }
 
+// Rank letters don't sort alphabetically (A < B < … < E < S), so order by the
+// actual E → S ladder: easiest quest first.
+const DIFFICULTY_ORDER = `CASE difficulty
+  WHEN 'E' THEN 0 WHEN 'D' THEN 1 WHEN 'C' THEN 2
+  WHEN 'B' THEN 3 WHEN 'A' THEN 4 WHEN 'S' THEN 5 ELSE 6 END`;
+
 function rowToQuest(row: Record<string, unknown>): Quest {
   return {
     id: row.id as string,
@@ -128,7 +134,7 @@ export class QuestRepository implements IQuestRepository {
     const rows = await db.getAllAsync<Record<string, unknown>>(
       `SELECT * FROM quests
         WHERE quest_type = 'daily' AND scheduled_for = ?
-        ORDER BY difficulty ASC`,
+        ORDER BY ${DIFFICULTY_ORDER}`,
       [dateStr],
     );
     return rows.map(rowToQuest);
@@ -139,7 +145,7 @@ export class QuestRepository implements IQuestRepository {
     const rows = await db.getAllAsync<Record<string, unknown>>(
       `SELECT * FROM quests
         WHERE quest_type = 'daily' AND goal_id = ? AND scheduled_for = ?
-        ORDER BY difficulty ASC`,
+        ORDER BY ${DIFFICULTY_ORDER}`,
       [goalId, dateStr],
     );
     return rows.map(rowToQuest);

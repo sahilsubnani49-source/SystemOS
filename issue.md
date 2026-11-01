@@ -186,6 +186,20 @@ the backend to any other user or public network.
 - **Why it matters:** “Offline-first” can be read as “everything works offline from a fresh install,” which is not currently true.
 - **Suggested resolution:** Decide and document the intended promise: “offline after initial setup,” or provide a local first-run player and deterministic offline campaign generator.
 
+### SYS-018 — Engine correctness sweep
+
+- **Status:** RESOLVED (2026-11-01), except the Hunter Log credit policy (still open, below).
+- **Priority:** P1
+- **Fixed:**
+  - Double-tapping complete on a quest or dungeon paid XP and loot twice. An in-flight id guard in `useQuestStore` now blocks the repeat.
+  - `addExperience` wrote the whole player row from memory (`INSERT OR REPLACE`), which could roll back keys and rank that the timeline had written. It now uses `PlayerRepository.saveProgress()`, which updates only level, XP and stats.
+  - Today's quests were sorted alphabetically by rank (A…E, S). They now sort by the E → S ladder.
+  - Campaigns never left `active`, so a finished campaign held one of the 3 slots forever. `DailyTimelineService.tick()` now marks a campaign `completed` once its end date has passed, and Hunter Rank still counts completed campaigns.
+  - SCRAM left `penalty_notice_date` behind.
+  - Backend: goal-mode reward completions were appended to the server inventory blob, which nothing reads. It grew without limit. An unknown `rarity` also reached the reward prompt unchanged.
+- **Still open:** `computeTaskCredit()` in `useTaskLogStore.ts` gives full XP with no daily cap (it is still a placeholder).
+- **Known, deliberate:** Settings → Daily reset clears today's completions, so the same quests can be completed again for XP and loot again. This is a dev affordance; gate it before release.
+
 ## Validation baseline
 
 | Check | Result |

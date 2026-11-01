@@ -29,6 +29,29 @@ export class GoalRepository implements IGoalRepository {
     return rows.map(rowToGoal);
   }
 
+  async getRankedGoals(): Promise<Goal[]> {
+    const db = await getDb();
+    const rows = await db.getAllAsync<Record<string, unknown>>(
+      `SELECT * FROM goals WHERE status IN ('active', 'completed') ORDER BY created_at DESC`,
+    );
+    return rows.map(rowToGoal);
+  }
+
+  async completeEndedGoals(today: string): Promise<Goal[]> {
+    // end_date is the campaign's LAST day (inclusive), so it has ended once today is past it.
+    const db = await getDb();
+    const rows = await db.getAllAsync<Record<string, unknown>>(
+      `SELECT * FROM goals WHERE status = 'active' AND end_date < ?`,
+      [today],
+    );
+    if (rows.length === 0) return [];
+    await db.runAsync(
+      `UPDATE goals SET status = 'completed' WHERE status = 'active' AND end_date < ?`,
+      [today],
+    );
+    return rows.map((r) => ({ ...rowToGoal(r), status: 'completed' as const }));
+  }
+
   async countActiveGoals(): Promise<number> {
     const db = await getDb();
     const row = await db.getFirstAsync<Record<string, unknown>>(

@@ -31,6 +31,8 @@ export interface TimelineTickResult {
   daysEvaluated: number;
   keysAwarded: number;
   penaltyApplied: boolean;
+  /** Campaigns whose final day passed during this tick. */
+  campaignsCompleted: number;
 }
 
 /**
@@ -40,7 +42,9 @@ export interface TimelineTickResult {
 async function refreshRank(): Promise<void> {
   const player = await playerRepo.getPlayer();
   if (!player) return;
-  const goals = await goalRepo.getActiveGoals();
+  // Finished campaigns still count — otherwise completing a campaign would drop the
+  // completion rate to zero and DEMOTE the Hunter for succeeding.
+  const goals = await goalRepo.getRankedGoals();
   const dungeons = await questRepo.getDungeons();
   const dungeonsCleared = dungeons.filter((d) => d.dungeonResult?.passed).length;
 
@@ -76,17 +80,35 @@ export const DailyTimelineService = {
     // No active campaigns — just keep the cursor current.
     if (goals.length === 0) {
       await setMeta(LAST_TIMELINE_DATE, today);
-      return { newDay: false, daysEvaluated: 0, keysAwarded: 0, penaltyApplied: false };
+      return {
+        newDay: false,
+        daysEvaluated: 0,
+        keysAwarded: 0,
+        penaltyApplied: false,
+        campaignsCompleted: 0,
+      };
     }
 
     const lastProcessed = await getMeta(LAST_TIMELINE_DATE);
     if (lastProcessed == null) {
       // First run — establish the cursor, evaluate nothing yet.
       await setMeta(LAST_TIMELINE_DATE, today);
-      return { newDay: false, daysEvaluated: 0, keysAwarded: 0, penaltyApplied: false };
+      return {
+        newDay: false,
+        daysEvaluated: 0,
+        keysAwarded: 0,
+        penaltyApplied: false,
+        campaignsCompleted: 0,
+      };
     }
     if (lastProcessed === today) {
-      return { newDay: false, daysEvaluated: 0, keysAwarded: 0, penaltyApplied: false };
+      return {
+        newDay: false,
+        daysEvaluated: 0,
+        keysAwarded: 0,
+        penaltyApplied: false,
+        campaignsCompleted: 0,
+      };
     }
 
     const player = await playerRepo.getPlayer();
@@ -130,8 +152,20 @@ export const DailyTimelineService = {
       if (dayHadQuests) daysEvaluated++;
     }
 
+    // Every day up to `today - 1` has now been evaluated, so any campaign whose last
+    // day is in the past is over. Without this, campaigns stayed 'active' forever and
+    // permanently consumed one of the 3 campaign slots.
+    const finished = await goalRepo.completeEndedGoals(today);
+
     await setMeta(LAST_TIMELINE_DATE, today);
     await refreshRank();
+
+    for (const g of finished) {
+      NotificationService.send(
+        '[Campaign Complete.]',
+        `"${g.title}" has ended. ${g.daysCompleted} of ${g.durationDays} days conquered.`,
+      ).catch(() => {});
+    }
 
     // PENALTY — a day ended with quests left incomplete: every earned reward is
     // confiscated. The notice date is stored so the System announces it on next open.
@@ -159,7 +193,13 @@ export const DailyTimelineService = {
       ).catch(() => {});
     }
 
-    return { newDay: true, daysEvaluated, keysAwarded, penaltyApplied: questsLeftIncomplete };
+    return {
+      newDay: true,
+      daysEvaluated,
+      keysAwarded,
+      penaltyApplied: questsLeftIncomplete,
+      campaignsCompleted: finished.length,
+    };
   },
 
   refreshRank,

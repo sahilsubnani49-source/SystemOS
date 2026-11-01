@@ -4,6 +4,10 @@ import { Quest } from '../models/Quest';
 export interface IGoalRepository {
   /** All active campaigns, most-recent first. */
   getActiveGoals(): Promise<Goal[]>;
+  /** Active AND finished campaigns — everything that still counts toward Hunter Rank. */
+  getRankedGoals(): Promise<Goal[]>;
+  /** Mark every active campaign whose end date is before `today` as completed; returns them. */
+  completeEndedGoals(today: string): Promise<Goal[]>;
   /** Number of campaigns currently in the 'active' status. */
   countActiveGoals(): Promise<number>;
   getGoal(goalId: string): Promise<Goal | null>;

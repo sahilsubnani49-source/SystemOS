@@ -310,7 +310,8 @@ async def generate_reward(
     Returns a dict matching the reward schema (with item_id added).
     Raises RuntimeError on failure — caller should catch and fall back.
     """
-    chosen_rarity = rarity or _pick_rarity()
+    # Unknown / mis-cased tiers would be passed verbatim into the prompt — re-roll instead.
+    chosen_rarity = rarity if rarity in _RARITY_MINUTES else _pick_rarity()
 
     llm = _get_llm(model_preference)
     prompt = _build_prompt()

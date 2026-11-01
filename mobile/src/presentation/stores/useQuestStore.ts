@@ -47,6 +47,13 @@ async function grantReward(category: string, rarity: Rarity): Promise<DynamicIte
   return RewardService.getFallbackReward(category, rarity);
 }
 
+/**
+ * Quest/dungeon ids whose completion is mid-flight. completeQuest awaits SQLite and
+ * often a network reward before state says "completed", so a fast double-tap used to
+ * pass the isCompleted check twice and pay XP + loot twice.
+ */
+const inFlight = new Set<string>();
+
 interface QuestState {
   quests: Quest[]; // today's daily quests
   dungeons: Quest[]; // dungeons available to enter today
@@ -65,6 +72,77 @@ interface QuestState {
   replayPendingMutations: () => Promise<void>;
   reset: () => Promise<void>;
   clearLastReward: () => void;
+}
+
+type SetQuestState = (
+  partial: Partial<QuestState> | ((state: QuestState) => Partial<QuestState>),
+) => void;
+
+async function completeQuestOnce(
+  quest: Quest,
+  set: SetQuestState,
+): Promise<{ leveledUp: boolean; xp: number }> {
+  const questId = quest.id;
+  // Optimistic local completion.
+  await questRepo.completeQuest(questId);
+  set((state) => ({
+    quests: state.quests.map((q) =>
+      q.id === questId ? { ...q, isCompleted: true, completedAt: new Date().toISOString() } : q,
+    ),
+  }));
+
+  // Apply XP locally (device is source of truth). Then roll the drop — odds scale
+  // with the quest's rank: higher rank → fewer empty rolls and better rarities.
+  const leveledUp = usePlayerStore.getState().addExperience(quest.xpReward);
+
+  const rarity = rollRewardRarity(quest.difficulty);
+  if (rarity) {
+    const reward = await grantReward(quest.category, rarity);
+    await inventoryRepo.addItem(reward);
+    set({ lastReward: reward });
+    NotificationService.sendRewardReceived(reward.name, reward.rarity).catch(() => {});
+  }
+
+  NotificationService.sendQuestComplete(quest.title, quest.xpReward).catch(() => {});
+  if (leveledUp) {
+    const lvl = usePlayerStore.getState().player?.level ?? 1;
+    NotificationService.sendLevelUp(lvl).catch(() => {});
+  }
+
+  // Level change can shift Hunter Rank — recompute and re-read the player.
+  await DailyTimelineService.refreshRank();
+  await usePlayerStore.getState().refreshFromLocal();
+
+  return { leveledUp, xp: quest.xpReward };
+}
+
+async function reportDungeonOnce(
+  dungeon: Quest,
+  passed: boolean,
+  score: string | null,
+  set: SetQuestState,
+): Promise<void> {
+  const questId = dungeon.id;
+  const result: DungeonResult = { passed, score, reportedAt: new Date().toISOString() };
+  await questRepo.setDungeonResult(questId, result);
+
+  if (passed) {
+    const xp = dungeon.dungeonChallenge?.xpReward ?? dungeon.xpReward;
+    usePlayerStore.getState().addExperience(xp);
+    // Dungeons are boss gates — they always drop, and at the top tier.
+    const reward = await grantReward(dungeon.category, 'Legendary');
+    await inventoryRepo.addItem(reward);
+    set({ lastReward: reward });
+    NotificationService.send(
+      '[Dungeon Cleared.]',
+      `You conquered ${dungeon.title}. The Gate yields its treasure.`,
+    ).catch(() => {});
+    NotificationService.sendRewardReceived(reward.name, reward.rarity).catch(() => {});
+  }
+
+  await DailyTimelineService.refreshRank();
+  await usePlayerStore.getState().refreshFromLocal();
+  set((state) => ({ dungeons: state.dungeons.filter((d) => d.id !== questId) }));
 }
 
 export const useQuestStore = create<QuestState>((set, get) => ({
@@ -95,65 +173,24 @@ export const useQuestStore = create<QuestState>((set, get) => ({
 
   completeQuest: async (questId: string) => {
     const quest = get().quests.find((q) => q.id === questId);
-    if (!quest || quest.isCompleted) return { leveledUp: false, xp: 0 };
-
-    // Optimistic local completion.
-    await questRepo.completeQuest(questId);
-    set((state) => ({
-      quests: state.quests.map((q) =>
-        q.id === questId ? { ...q, isCompleted: true, completedAt: new Date().toISOString() } : q,
-      ),
-    }));
-
-    // Apply XP locally (device is source of truth). Then roll the drop — odds scale
-    // with the quest's rank: higher rank → fewer empty rolls and better rarities.
-    const leveledUp = usePlayerStore.getState().addExperience(quest.xpReward);
-
-    const rarity = rollRewardRarity(quest.difficulty);
-    if (rarity) {
-      const reward = await grantReward(quest.category, rarity);
-      await inventoryRepo.addItem(reward);
-      set({ lastReward: reward });
-      NotificationService.sendRewardReceived(reward.name, reward.rarity).catch(() => {});
+    if (!quest || quest.isCompleted || inFlight.has(questId)) return { leveledUp: false, xp: 0 };
+    inFlight.add(questId);
+    try {
+      return await completeQuestOnce(quest, set);
+    } finally {
+      inFlight.delete(questId);
     }
-
-    NotificationService.sendQuestComplete(quest.title, quest.xpReward).catch(() => {});
-    if (leveledUp) {
-      const lvl = usePlayerStore.getState().player?.level ?? 1;
-      NotificationService.sendLevelUp(lvl).catch(() => {});
-    }
-
-    // Level change can shift Hunter Rank — recompute and re-read the player.
-    await DailyTimelineService.refreshRank();
-    await usePlayerStore.getState().refreshFromLocal();
-
-    return { leveledUp, xp: quest.xpReward };
   },
 
   reportDungeon: async (questId: string, passed: boolean, score: string | null) => {
     const dungeon = get().dungeons.find((d) => d.id === questId);
-    if (!dungeon) return;
-
-    const result: DungeonResult = { passed, score, reportedAt: new Date().toISOString() };
-    await questRepo.setDungeonResult(questId, result);
-
-    if (passed) {
-      const xp = dungeon.dungeonChallenge?.xpReward ?? dungeon.xpReward;
-      usePlayerStore.getState().addExperience(xp);
-      // Dungeons are boss gates — they always drop, and at the top tier.
-      const reward = await grantReward(dungeon.category, 'Legendary');
-      await inventoryRepo.addItem(reward);
-      set({ lastReward: reward });
-      NotificationService.send(
-        '[Dungeon Cleared.]',
-        `You conquered ${dungeon.title}. The Gate yields its treasure.`,
-      ).catch(() => {});
-      NotificationService.sendRewardReceived(reward.name, reward.rarity).catch(() => {});
+    if (!dungeon || inFlight.has(questId)) return;
+    inFlight.add(questId);
+    try {
+      await reportDungeonOnce(dungeon, passed, score, set);
+    } finally {
+      inFlight.delete(questId);
     }
-
-    await DailyTimelineService.refreshRank();
-    await usePlayerStore.getState().refreshFromLocal();
-    set((state) => ({ dungeons: state.dungeons.filter((d) => d.id !== questId) }));
   },
 
   resetTodaysQuests: async () => {
