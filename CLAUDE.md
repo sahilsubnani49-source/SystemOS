@@ -12,6 +12,10 @@ coupons. Device-side SQLite is the source of truth for gameplay state.
 **Core principle**: the engine is permanent. The UI, backend, and AI provider are all
 replaceable.
 
+The repo also contains **Kotodama** (`games/kotodama/`), a Japanese-learning RPG that
+SystemOS opens from the Stats tab and that also ships as its own app. See
+[`games/kotodama/README.md`](games/kotodama/README.md).
+
 **Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
 gaps, dead subsystems, and deploy blockers, and prevents "fixing" something that is
 deliberately unfinished.
@@ -20,7 +24,11 @@ deliberately unfinished.
 
 ## Tech Stack
 
+- **Monorepo**: npm workspaces (`mobile`, `games/kotodama/*`), one root `package-lock.json`.
+  Expo SDK 56 configures Metro for workspaces automatically: no `metro.config.js`.
 - **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
+- **Graphics**: `@shopify/react-native-skia` + `react-native-reanimated` (Kotodama and the
+  Stats-tab portal). These are native modules, so the dev client must be rebuilt after pulling them.
 - **Backend**: FastAPI (Python 3.12+) — `backend/`
 - **Device DB**: SQLite via `expo-sqlite` (WAL, singleton connection)
 - **Backend DB**: SQLAlchemy Core (no ORM) — SQLite at `backend/systemos.db` locally,
@@ -46,8 +54,8 @@ deliberately unfinished.
 ### Mobile (`mobile/`)
 
 ```bash
+npm install            # from the REPO ROOT: installs every workspace
 cd mobile
-npm install
 
 # Dev client build (required once; Expo Go will not work)
 cd ios && pod install && cd .. && npx expo run:ios   # iOS
@@ -290,9 +298,23 @@ See [`docs/DATABASE_ARCHITECTURE.md`](docs/DATABASE_ARCHITECTURE.md) for columns
 
 When code and docs disagree, the code wins — and update the doc.
 
+### Kotodama (`games/kotodama/`)
+
+```bash
+npm run test --workspace @kotodama/core        # the repo's only automated tests
+cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / npm run web)
+```
+
+- **Boundary rule:** nothing under `games/` may import from `mobile/`. SystemOS renders
+  `<KotodamaGame onExit onStudySession />` (`KotodamaScreen.tsx`) and receives study
+  sessions back; `useTaskLogStore.recordJapaneseSession` files them via `logSession`.
+- The game keeps its own SQLite file (`kotodama.db`), never SystemOS's tables.
+- `expo-asset` is pinned through a root `overrides` entry: `expo-audio`'s loose range
+  otherwise resolves the SDK 58 build, which breaks the Metro bundle.
+
 ## Not implemented
 
 No skill trees, achievements, titles, boss raids, memory/vector DB, analytics
-(streaks/heatmaps), voice, wearables, multiplayer, or Shadow Army. **There is no test
-suite** (SYS-014). Don't document these as existing, and don't assume a test command
-exists.
+(streaks/heatmaps), voice, wearables, multiplayer, or Shadow Army. **SystemOS itself has
+no test suite** (SYS-014); only `@kotodama/core` has Vitest tests. Don't document these
+as existing. SystemOS does not run on web.

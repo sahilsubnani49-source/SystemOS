@@ -200,6 +200,28 @@ the backend to any other user or public network.
 - **Still open:** `computeTaskCredit()` in `useTaskLogStore.ts` gives full XP with no daily cap (it is still a placeholder).
 - **Known, deliberate:** Settings → Daily reset clears today's completions, so the same quests can be completed again for XP and loot again. This is a dev affordance; gate it before release.
 
+### SYS-019 — Kotodama: open items
+
+- **Priority:** P2
+- **Area:** `games/kotodama/`, `mobile/src/presentation/screens/KotodamaScreen.tsx`
+- **State (2026-11-01):** Arc 1 (all hiragana) is playable in the standalone web build:
+  title, hero select, overworld, dialogue, encounters, battles, purify and recruit, defeat,
+  and save/reload were all verified by a Playwright playthrough. The core has 46 Vitest
+  tests, including a map validator.
+- **Open:**
+  - **Art and audio are procedural or absent.** The planned CC0 packs (Ninja Adventure, from
+    itch.io / OpenGameArt) were blocked by the build environment's network policy. `expo-audio`
+    is installed and configured, but nothing plays yet.
+  - **SystemOS click-through not verified on a device.** Portal → game → Hunter Log
+    type-checks and bundles for Android and iOS, but has only been exercised in code. SystemOS
+    cannot run on web: react-native-web lacks `useAnimatedValue`, and `expo-secure-store` has no
+    web implementation.
+  - **Hunter Log XP from the game is uncapped** until `computeTaskCredit()` (a placeholder in
+    `useTaskLogStore.ts`) is implemented; the bridge routes through it.
+  - **The SystemOS dev client must be rebuilt** (`npx expo run:android|ios`) for Skia,
+    Reanimated/Worklets, expo-audio, expo-speech and expo-haptics.
+  - Arcs 2–5 (katakana, N5–N3) are not written.
+
 ## Validation baseline
 
 | Check | Result |
@@ -207,7 +229,7 @@ the backend to any other user or public network.
 | `cd mobile && npx tsc --noEmit` | Passes |
 | `./backend/venv/bin/python -m compileall -q backend/app` | Passes |
 | `cd mobile && npm run lint` | Passes (0 errors, 0 warnings) as of 2026-07-23 |
-| Automated tests | None found |
+| Automated tests | SystemOS: none. `npm run test --workspace @kotodama/core`: 46 passing |
 
 ## Recommended implementation order
 

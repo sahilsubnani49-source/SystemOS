@@ -30,12 +30,21 @@ SystemOS/
 │   ├── app/services/               # LLM provider factory and generation workflows
 │   ├── requirements.txt            # Python/LangChain dependencies
 │   └── .env.example                # Local provider configuration template
+├── games/kotodama/                 # Japanese-learning RPG (see its README)
+│   ├── core/                       # @kotodama/core: pure-TS rules, content, SRS, maps (Vitest)
+│   ├── game/                       # @kotodama/game: React Native + Skia renderer, <KotodamaGame/>
+│   └── app/                        # @kotodama/app: standalone Expo app shell
+├── package.json                    # npm workspaces root (one lockfile for everything)
 ├── docs/                           # Current architecture and product documentation
 ├── web/                            # Standalone web prototype/static experiment
 ├── README.md                       # Product overview and development entry point
 ├── AGENTS.md                       # Repository guidance for coding agents
 └── issue.md                        # Active technical issue register
 ```
+
+SystemOS opens Kotodama from the Stats tab (`GatePortal` → `KotodamaScreen`, a
+full-screen modal). Code under `games/` never imports from `mobile/`; study sessions come
+back through `onStudySession` and are logged by `useTaskLogStore.recordJapaneseSession`.
 
 ## Mobile architecture
 
@@ -206,9 +215,11 @@ or provider-cost guardrail. See `issue.md` before exposing it to a network.
 ## Development commands
 
 ```bash
+# All JS workspaces (SystemOS + Kotodama), from the repository root
+npm install
+
 # Mobile app
 cd mobile
-npm install
 npm start
 npm run ios
 npm run android
