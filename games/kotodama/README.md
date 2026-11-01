@@ -13,7 +13,8 @@ It runs inside SystemOS (Stats tab → *Gate of Words*) **and** as its own app.
 |---|---|---|---|
 | 1 | Sakura Valley (8 maps) | All hiragana: basic, voiced, combined | Playable |
 | 2 | Frost Harbor (6 maps, reached by ferry after the Oni) | All katakana; 60 loanwords with ー and ッ; hiragana↔katakana Mirror prompts | Playable |
-| 3–5 | Castle Capital, Mountain Temples, Northern Runeforge | JLPT N5 → N3 kanji and vocabulary | Not written |
+| 3 | Castle Capital (6 maps, reached on Runa's longship after the Champion) | 106 N5 kanji in 10 groups; 104 N5 words; the Shadow Shogun's N5 mock exam | Playable |
+| 4–5 | Mountain Temples, Northern Runeforge | JLPT N4 → N3 kanji and vocabulary | Not written |
 
 ## Packages
 
@@ -70,9 +71,14 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
 
 - Each move maps to a prompt kind: **recognize** (see か → "ka"), **recall** ("ka" → か),
   **listen** (hear it → か), **type** (type "ka"), **mirror** (か → カ), **meaning**
-  (テレビ → "television") or **spell** ("terebi" → テレビ among near-miss spellings:
-  dropped ー, missing ッ, シ/ツ and ソ/ン swaps).
-- A prompt tests a study item: a kana (`h-ka`, `k-ka`) or a word (`w-terebi`).
+  (テレビ → "television", 水 → "water"), **spell** ("terebi" → テレビ among near-miss
+  spellings: dropped ー, missing ッ, シ/ツ and ソ/ン swaps) or **reading** (学生 →
+  がくせい, 水 → みず, among near-miss readings: dropped っ, lost long vowel, wrong voicing).
+  For a kanji, **recall** means "find the kanji for this meaning" among real look-alikes
+  (木/本/休/体), and no wrong reading choice is ever another valid reading of it.
+- Purifying a kanji spirit means typing **any** of its readings (水: `mizu` or `sui`;
+  macrons like `kō` accepted).
+- A prompt tests a study item: a kana (`h-ka`, `k-ka`), a kanji (`j-水`), a loanword (`w-terebi`) or an N5 word (`v-gakusei`).
   `resolveKind` maps a move's kind onto one the item supports, so words are never
   typed and bare kana never asked for a meaning.
 - Wrong answers come from real look-alikes first (ぬ/め/の, シ/ツ/ソ/ン).
@@ -95,10 +101,15 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
   (`travelsTo`) and checks each arc's story gates open in order.
 - **Curriculum:** `core/src/content/curriculum.ts` decides which kana each area tests.
 - **Spirits / moves / heroes:** `core/src/content/`.
-- **Words:** `core/src/content/words.ts` (loanwords, by area). Ids are `w-<romaji>`.
-- **Next arcs:** the N5–N3 arcs need a kanji/vocab content module, which can follow the
-  same pattern as words. JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an in-game
-  credits screen with them.
+- **Words:** `core/src/content/words.ts`: loanwords (`w-<romaji>`) and N5 vocabulary
+  (`v-<romaji>`), by area. Romaji is DERIVED from the kana reading (`util/romaji.ts`),
+  never typed; the converter is cross-checked against every hand-written loanword.
+- **Kanji:** `core/src/content/kanji.ts`: on'yomi in katakana, kun'yomi in hiragana with
+  okurigana after a `.` (た.べる). `arc3data.test.ts` checks the scripts, unique meanings,
+  and that every vocabulary word only uses kanji its area (or an earlier one) teaches.
+- **Next arcs (N4, N3):** add kanji groups and vocabulary areas the same way. The N5 data
+  was written by hand; for larger sets, JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an
+  in-game credits screen with them.
 
 ## Art
 
@@ -117,7 +128,7 @@ to the procedural art. No screen code needs to change.
 
 - Real art and music. The CC0 hosts were blocked from the build environment, and
   `expo-audio` is installed for music and SFX but nothing plays yet.
-- Arcs 3–5 (N5–N3 kanji and vocabulary).
+- Arcs 4–5 (N4 and N3 kanji and vocabulary).
 - Inside SystemOS, the portal → game → Hunter Log path type-checks and bundles for
   Android and iOS but has not been clicked through on a device. SystemOS itself does
   not run on web (no `useAnimatedValue` in react-native-web, no web `expo-secure-store`).
