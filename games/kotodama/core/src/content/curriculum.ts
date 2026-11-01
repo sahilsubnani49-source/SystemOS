@@ -2,6 +2,7 @@ import { kanaWhere, type KanaKind, type KanaRow, type Script } from './kana';
 import { wordsForArea, type WordArea } from './words';
 import { kanjiInGroup, type KanjiGroup } from './kanji';
 import { sentencesForArea, type Sentence } from './sentences';
+import { passagesForArea, type PassageArea } from './passages';
 
 /**
  * Which items each area tests. Pools are cumulative: earlier rows keep coming back,
@@ -22,6 +23,8 @@ export interface AreaCurriculum {
   kanji?: KanjiGroup[];
   /** Context-sentence sets included in the pool (Arc 4+). */
   sentences?: Sentence['area'][];
+  /** Reading-passage sets included in the pool (Arc 5). */
+  passages?: PassageArea[];
 }
 
 const BASIC_ALL: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
@@ -36,11 +39,11 @@ const N4_UP_TO = (n: number) => N4_ORDER.slice(0, n);
 const N3_ORDER: KanjiGroup[] = [
   'n3conflict', 'n3society', 'n3emotion', 'n3work', 'n3weather', 'n3action', 'n3comm', 'n3change', 'n3abstract', 'n3travel',
 ];
-const N3_WORDS: WordArea[] = ['coast', 'glacier', 'forge', 'valor', 'runeforge'];
+const N3_WORDS: PassageArea[] = ['coast', 'glacier', 'forge', 'valor', 'runeforge'];
 function n3(id: string, label: string, groups: number, all = false): AreaCurriculum {
   const step = groups / 2; // 1..5: this area's position in the arc
   const words = all ? N3_WORDS : N3_WORDS.slice(Math.max(0, step - 2), step);
-  return { id, arc: 5, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji: N3_ORDER.slice(0, groups), words };
+  return { id, arc: 5, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji: N3_ORDER.slice(0, groups), words, passages: words };
 }
 
 const area = (a: Omit<AreaCurriculum, 'script'> & { script?: Script }): AreaCurriculum => ({ script: 'hiragana', ...a });
@@ -118,5 +121,6 @@ export function poolForArea(areaId: string): string[] {
     ...(a.kanji ?? []).flatMap((g) => kanjiInGroup(g).map((k) => k.id)),
     ...(a.words ?? []).flatMap((set) => wordsForArea(set).map((w) => w.id)),
     ...(a.sentences ?? []).flatMap((set) => sentencesForArea(set).map((s) => s.id)),
+    ...(a.passages ?? []).flatMap((set) => passagesForArea(set).map((p) => p.id)),
   ];
 }

@@ -9,7 +9,7 @@ import type { Element } from './elements';
  * reading:   see 学生 (or 水), choose がくせい (or みず) among near-miss readings
  * context:   read a sentence with a blank, choose the word that completes it
  */
-export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading' | 'context';
+export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading' | 'context' | 'passage';
 
 /** Visual effect the renderer plays when the move lands. */
 export type FxKind =
@@ -72,6 +72,11 @@ export const MOVES = {
   echoCall: m({ id: 'echoCall', name: 'Echo Call', nameJa: '山彦', prompt: 'context', power: 1.35, element: 'light', fx: 'light', timeLimitMs: null, description: 'Finish the sentence the mountain echoes back.' }),
   frostBreath: m({ id: 'frostBreath', name: 'Frost Breath', nameJa: '雪息', prompt: 'reading', power: 1.25, element: 'water', fx: 'water', timeLimitMs: null, description: 'The snow woman\'s cold breath.' }),
   sickleWind: m({ id: 'sickleWind', name: 'Sickle Wind', nameJa: '鎌風', prompt: 'meaning', power: 1.3, element: 'wind', fx: 'slash', timeLimitMs: 5000, description: 'Three weasels, one invisible cut.' }),
+  // ── Arc 5: Norse rune-spirit moves ────────────────────────────────
+  runeScroll: m({ id: 'runeScroll', name: 'Rune Scroll', nameJa: '巻物', prompt: 'passage', power: 1.6, element: 'light', fx: 'light', timeLimitMs: null, description: 'Read the whole scroll, answer its riddle, and the runes ignite.' }),
+  forgeHammer: m({ id: 'forgeHammer', name: 'Forge Hammer', nameJa: '鍛冶槌', prompt: 'recall', power: 1.35, element: 'fire', fx: 'heavySlash', timeLimitMs: null, description: 'Find the kanji for the meaning; the anvil rings.' }),
+  valkyrieDive: m({ id: 'valkyrieDive', name: 'Valkyrie Dive', nameJa: '戦乙女', prompt: 'reading', power: 1.4, element: 'light', fx: 'light', timeLimitMs: 6000, description: 'A spear from the clouds. Read fast to crit.' }),
+  sealSong: m({ id: 'sealSong', name: 'Seal Song', nameJa: '海豹歌', prompt: 'meaning', power: 0, element: 'water', fx: 'water', timeLimitMs: null, self: 'heal', description: 'A selkie\'s song mends the user.' }),
   // ── Enemy-only ────────────────────────────────────────────────────
   rend: m({ id: 'rend', name: 'Garbled Rend', nameJa: '文字化け', prompt: 'recognize', power: 1.0, element: 'shadow', fx: 'shadow', timeLimitMs: null, description: 'Corrupted glyphs tear at you.' }),
   shieldBash: m({ id: 'shieldBash', name: 'Shield Bash', nameJa: '盾打ち', prompt: 'recognize', power: 1.2, element: 'steel', fx: 'rock', timeLimitMs: null, description: 'A painted round shield, to the face.' }),

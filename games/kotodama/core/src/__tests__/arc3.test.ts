@@ -89,7 +89,7 @@ describe('vocabulary prompts', () => {
 });
 
 describe('castle-town spirits', () => {
-  const kanjiFamilies = SPIRIT_FAMILIES.filter((f) => f.script === 'kanji' && !f.kanjiGroup!.startsWith('n4'));
+  const kanjiFamilies = SPIRIT_FAMILIES.filter((f) => f.script === 'kanji' && /^(numbers|days|time|people|body|directions|nature|actions|adjectives|places)$/.test(f.kanjiGroup!));
 
   it('has one family per kanji group, each named with a kanji from its own group', () => {
     expect(kanjiFamilies).toHaveLength(10);

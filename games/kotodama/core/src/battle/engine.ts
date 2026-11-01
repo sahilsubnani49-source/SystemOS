@@ -3,7 +3,8 @@
 // player's answers back in as actions.
 
 import { elementMultiplier, type Element } from '../content/elements';
-import { getMove, type FxKind, type MoveId } from '../content/moves';
+import { getMove, type FxKind, type MoveId, type PromptKind } from '../content/moves';
+import { isPassageId, isSentenceId } from '../content/items';
 import { pickNextPrompt } from '../srs/pickNextPrompt';
 import { recordAnswer, type SrsTable } from '../srs/schedule';
 import { createRng } from '../util/rng';
@@ -144,6 +145,12 @@ export function canPurify(state: BattleState): boolean {
   );
 }
 
+/** Prompt kinds that only make sense on one kind of item, and how to recognise it. */
+const DEDICATED_ITEMS: Partial<Record<PromptKind, (id: string) => boolean>> = {
+  context: isSentenceId,
+  passage: isPassageId,
+};
+
 export function reduce(state: BattleState, action: BattleAction): BattleState {
   const rng = createRng(state.seed);
   const s: BattleState = {
@@ -161,10 +168,12 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       if (!actor || !actor.moves.includes(action.move)) return state;
       const move = getMove(action.move);
       const lastItem = s.answers[s.answers.length - 1]?.itemId;
-      // Sentence moves (Echo Call) draw from the area's sentences when it has any;
-      // otherwise sentences would be ~1 prompt in 10 and the move would rarely be one.
-      const sentences = move.prompt === 'context' ? s.kanaPool.filter((id) => id.startsWith('c-')) : [];
-      const itemId = pickNextPrompt(sentences.length > 0 ? sentences : s.kanaPool, s.srs, action.now, rng, lastItem);
+      // Sentence moves (Echo Call) and passage moves (Rune Scroll) draw from the
+      // area's sentences / passages when it has any; otherwise those would be ~1
+      // prompt in 10 and the move would rarely be what it says.
+      const ownItems = DEDICATED_ITEMS[move.prompt];
+      const dedicated = ownItems ? s.kanaPool.filter(ownItems) : [];
+      const itemId = pickNextPrompt(dedicated.length > 0 ? dedicated : s.kanaPool, s.srs, action.now, rng, lastItem);
       s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, move.timeLimitMs);
       s.pendingMove = action.move;
       s.phase = 'answer';

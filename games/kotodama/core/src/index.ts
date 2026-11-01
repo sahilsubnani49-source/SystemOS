@@ -23,3 +23,5 @@ export * from './content/items';
 export * from './content/kanji';
 export * from './util/romaji';
 export * from './content/sentences';
+export * from './content/passages';
+export * from './srs/review';

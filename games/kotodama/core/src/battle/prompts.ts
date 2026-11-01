@@ -1,5 +1,5 @@
 import { getKana, KANA, lookalikesOf, acceptsRomaji, type Kana } from '../content/kana';
-import { getItem, isKanaId, isKanjiId, isSentenceId, isWordId, mirrorKanaId } from '../content/items';
+import { getItem, isKanaId, isKanjiId, isPassageId, isSentenceId, isWordId, mirrorKanaId } from '../content/items';
 import { getWord, WORDS, type Word } from '../content/words';
 import { KANJI, acceptedKanjiRomaji, getKanji, kanjiLookalikes, kanjiReadings, primaryReading, type Kanji } from '../content/kanji';
 import { toHiragana, toRomaji } from '../util/romaji';
@@ -175,9 +175,11 @@ function shownReadings(k: Kanji): string[] {
  * usable in every area.
  */
 export function resolveKind(kind: PromptKind, itemId: string): PromptKind {
-  // A sentence is only ever a fill-in-the-blank; nothing else uses 'context'.
+  // A sentence is only ever a fill-in-the-blank and a passage only ever a reading
+  // question; nothing else uses 'context' or 'passage'.
   if (isSentenceId(itemId)) return 'context';
-  if (kind === 'context') return isWordId(itemId) && getWord(itemId).kind === 'vocab' ? 'reading' : isKanjiId(itemId) ? 'meaning' : isWordId(itemId) ? 'meaning' : 'recognize';
+  if (isPassageId(itemId)) return 'passage';
+  if (kind === 'context' || kind === 'passage') return isWordId(itemId) && getWord(itemId).kind === 'vocab' ? 'reading' : isKanjiId(itemId) ? 'meaning' : isWordId(itemId) ? 'meaning' : 'recognize';
   if (isWordId(itemId)) {
     const vocab = getWord(itemId).kind === 'vocab';
     if (kind === 'recall') return 'spell';
@@ -235,6 +237,12 @@ export function buildPrompt(requested: PromptKind, itemId: string, pool: readonl
   const base = { kind, itemId, timeLimitMs };
 
   if (item.kind === 'kanji') return buildKanjiPrompt(kind, item.kanji, pool, rng, timeLimitMs);
+
+  if (item.kind === 'passage') {
+    const p = item.passage;
+    // Reading a passage takes as long as it takes: never on a clock, even from a timed move.
+    return { ...base, timeLimitMs: null, display: p.text, hint: p.question, speak: p.text, answer: p.answer, choices: rng.shuffle([p.answer, ...p.wrong]) };
+  }
 
   if (item.kind === 'sentence') {
     const s = item.sentence;
