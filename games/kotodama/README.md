@@ -14,7 +14,8 @@ It runs inside SystemOS (Stats tab → *Gate of Words*) **and** as its own app.
 | 1 | Sakura Valley (8 maps) | All hiragana: basic, voiced, combined | Playable |
 | 2 | Frost Harbor (6 maps, reached by ferry after the Oni) | All katakana; 60 loanwords with ー and ッ; hiragana↔katakana Mirror prompts | Playable |
 | 3 | Castle Capital (6 maps, reached on Runa's longship after the Champion) | 106 N5 kanji in 10 groups; 102 N5 words; the Shadow Shogun's N5 mock exam | Playable |
-| 4–5 | Mountain Temples, Northern Runeforge | JLPT N4 → N3 kanji and vocabulary | Not written |
+| 4 | Mountain Temples (6 maps, reached via the Shogun after the Arc 3 finale) | 133 N4 kanji in 11 groups; 105 N4 words; 30 fill-in-the-blank sentences; the Tengu King's N4 mock exam | Playable |
+| 5 | Northern Runeforge | JLPT N3 kanji and vocabulary | Not written |
 
 ## Packages
 
@@ -74,6 +75,9 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
   (テレビ → "television", 水 → "water"), **spell** ("terebi" → テレビ among near-miss
   spellings: dropped ー, missing ッ, シ/ツ and ソ/ン swaps) or **reading** (学生 →
   がくせい, 水 → みず, among near-miss readings: dropped っ, lost long vowel, wrong voicing).
+  **context** (Arc 4) shows a sentence with a blank and its English translation; each
+  sentence's wrong answers are hand-picked so none of them could also fit. Sentence
+  moves (Echo Call) always draw a sentence when the area has any.
   For a kanji, **recall** means "find the kanji for this meaning" among real look-alikes
   (木/本/休/体), and no wrong reading choice is ever another valid reading of it.
 - Purifying a kanji spirit means typing **any** of its readings (水: `mizu` or `sui`;
@@ -107,9 +111,11 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
 - **Kanji:** `core/src/content/kanji.ts`: on'yomi in katakana, kun'yomi in hiragana with
   okurigana after a `.` (た.べる). `arc3data.test.ts` checks the scripts, unique meanings,
   and that every vocabulary word only uses kanji its area (or an earlier one) teaches.
-- **Next arcs (N4, N3):** add kanji groups and vocabulary areas the same way. The N5 data
-  was written by hand; for larger sets, JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an
-  in-game credits screen with them.
+- **Sentences:** `core/src/content/sentences.ts` (`c-<n>` ids: append, never renumber).
+  `arc4.test.ts` checks one blank per sentence, distinct wrong answers, and taught kanji only.
+- **Next arc (N3):** add `n3…` kanji groups, vocabulary and sentence areas the same way, and
+  raise `MAX_LEVEL` (now 80) if foes need it. The N5/N4 data was written by hand; for larger
+  sets, JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an in-game credits screen with them.
 
 ## Art
 
@@ -128,7 +134,7 @@ to the procedural art. No screen code needs to change.
 
 - Real art and music. The CC0 hosts were blocked from the build environment, and
   `expo-audio` is installed for music and SFX but nothing plays yet.
-- Arcs 4–5 (N4 and N3 kanji and vocabulary).
+- Arc 5 (N3 kanji and vocabulary).
 - Inside SystemOS, the portal → game → Hunter Log path type-checks and bundles for
   Android and iOS but has not been clicked through on a device. SystemOS itself does
   not run on web (no `useAnimatedValue` in react-native-web, no web `expo-secure-store`).

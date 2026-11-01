@@ -204,15 +204,18 @@ the backend to any other user or public network.
 
 - **Priority:** P2
 - **Area:** `games/kotodama/`, `mobile/src/presentation/screens/KotodamaScreen.tsx`
-- **State (2026-11-01):** Arc 1 (hiragana), Arc 2 (katakana + 60 loanwords) and Arc 3 (106 N5
-  kanji + 102 N5 words) are playable in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
+- **State (2026-11-01):** Arc 1 (hiragana), Arc 2 (katakana + 60 loanwords), Arc 3 (106 N5
+  kanji + 102 N5 words) and Arc 4 (133 N4 kanji + 105 N4 words + 30 sentences) are playable
+  in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
   battles, purify and recruit, defeat, and save/reload were verified by a Playwright
   playthrough. Arc 2 was verified from seeded saves: ferry → Frost Harbor → Runa → a Mirror
   battle → purifying a Norse spirit, and the Skald's word trial with meaning and spell
   prompts. Arc 3 was verified from seeded saves: Runa's voyage → Castle Town → a kanji battle →
-  purifying a spirit by typing a reading of 土, and the Shadow Shogun's mock exam. The core has
-  103 Vitest tests, including a map validator, a boss-pacing simulation over all 16 bosses, and
-  data checks on every kanji reading and vocabulary word.
+  purifying a spirit by typing a reading of 土, and the Shadow Shogun's mock exam. Arc 4 was
+  verified from seeded saves: the Shogun's send-off → the foothills → a battle with sentence
+  prompts → purifying a snow woman by typing a reading of 待, and the Tengu King's mock exam.
+  The core has 126 Vitest tests, including a map validator, a boss-pacing simulation over all
+  22 bosses, and data checks on every kanji reading, word and sentence.
 - **Open:**
   - **Art and audio are procedural or absent.** The planned CC0 packs (Ninja Adventure, from
     itch.io / OpenGameArt) were blocked by the build environment's network policy. `expo-audio`
@@ -225,13 +228,14 @@ the backend to any other user or public network.
     `useTaskLogStore.ts`) is implemented; the bridge routes through it.
   - **The SystemOS dev client must be rebuilt** (`npx expo run:android|ios`) for Skia,
     Reanimated/Worklets, expo-audio, expo-speech and expo-haptics.
-  - Full playthroughs of Arcs 2 and 3 (ferry to Champion, voyage to Shogun) have not been run
-    end to end; their maps, story gates and boss balance are covered by the core tests.
-  - The N5 kanji and vocabulary were written by hand (no dictionary data could be downloaded).
+  - Full playthroughs of Arcs 2–4 have not been run end to end; their maps, story gates and
+    boss balance are covered by the core tests.
+  - The N5 and N4 kanji, vocabulary and sentences were written by hand (no dictionary data
+    could be downloaded).
     The tests catch structural mistakes (wrong script, untaught kanji, duplicate meanings) but
-    not a factually wrong reading: a native-speaker review of `kanji.ts` and the vocabulary in
-    `words.ts` is worth doing.
-  - Arcs 4–5 (N4, N3) are not written.
+    not a factually wrong reading or an unnatural sentence: a native-speaker review of
+    `kanji.ts`, the vocabulary in `words.ts` and `sentences.ts` is worth doing.
+  - Arc 5 (N3) is not written.
 
 ## Validation baseline
 
@@ -240,7 +244,7 @@ the backend to any other user or public network.
 | `cd mobile && npx tsc --noEmit` | Passes |
 | `./backend/venv/bin/python -m compileall -q backend/app` | Passes |
 | `cd mobile && npm run lint` | Passes (0 errors, 0 warnings) as of 2026-07-23 |
-| Automated tests | SystemOS: none. `npm run test --workspace @kotodama/core`: 103 passing |
+| Automated tests | SystemOS: none. `npm run test --workspace @kotodama/core`: 126 passing |
 
 ## Recommended implementation order
 
