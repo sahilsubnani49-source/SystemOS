@@ -205,8 +205,9 @@ the backend to any other user or public network.
 - **Priority:** P2
 - **Area:** `games/kotodama/`, `mobile/src/presentation/screens/KotodamaScreen.tsx`
 - **State (2026-11-01):** Arc 1 (hiragana), Arc 2 (katakana + 60 loanwords), Arc 3 (106 N5
-  kanji + 102 N5 words) and Arc 4 (133 N4 kanji + 105 N4 words + 30 sentences) are playable
-  in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
+  kanji + 102 N5 words), Arc 4 (133 N4 kanji + 105 N4 words + 30 sentences) and Arc 5 (150 N3
+  kanji + 121 N3 words + 20 reading passages, the ending and the post-game Daily Trial) are
+  playable in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
   battles, purify and recruit, defeat, and save/reload were verified by a Playwright
   playthrough. Arc 2 was verified from seeded saves: ferry → Frost Harbor → Runa → a Mirror
   battle → purifying a Norse spirit, and the Skald's word trial with meaning and spell
@@ -214,8 +215,12 @@ the backend to any other user or public network.
   purifying a spirit by typing a reading of 土, and the Shadow Shogun's mock exam. Arc 4 was
   verified from seeded saves: the Shogun's send-off → the foothills → a battle with sentence
   prompts → purifying a snow woman by typing a reading of 待, and the Tengu King's mock exam.
-  The core has 126 Vitest tests, including a map validator, a boss-pacing simulation over all
-  22 bosses, and data checks on every kanji reading, word and sentence.
+  Arc 5 was verified from seeded saves: the Tengu King's winds → Rune Coast → a battle with
+  reading-passage prompts → purifying a spirit by typing a reading of 個; Jarl Ulfhild's N3
+  exam → the credits → `game_complete`; and a Daily Trial that asked only seeded overdue items
+  and could be fought again. The core has 159 Vitest tests, including a map validator, a
+  boss-pacing simulation over all 29 bosses and the Daily Trial, and data checks on every
+  kanji reading, word, sentence and passage.
 - **Open:**
   - **Art and audio are procedural or absent.** The planned CC0 packs (Ninja Adventure, from
     itch.io / OpenGameArt) were blocked by the build environment's network policy. `expo-audio`
@@ -228,14 +233,17 @@ the backend to any other user or public network.
     `useTaskLogStore.ts`) is implemented; the bridge routes through it.
   - **The SystemOS dev client must be rebuilt** (`npx expo run:android|ios`) for Skia,
     Reanimated/Worklets, expo-audio, expo-speech and expo-haptics.
-  - Full playthroughs of Arcs 2–4 have not been run end to end; their maps, story gates and
+  - Full playthroughs of Arcs 2–5 have not been run end to end; their maps, story gates and
     boss balance are covered by the core tests.
-  - The N5 and N4 kanji, vocabulary and sentences were written by hand (no dictionary data
-    could be downloaded).
+  - The N5, N4 and N3 kanji, vocabulary, sentences and passages were written by hand (no
+    dictionary data was used).
     The tests catch structural mistakes (wrong script, untaught kanji, duplicate meanings) but
     not a factually wrong reading or an unnatural sentence: a native-speaker review of
-    `kanji.ts`, the vocabulary in `words.ts` and `sentences.ts` is worth doing.
-  - Arc 5 (N3) is not written.
+    `kanji.ts`, the vocabulary in `words.ts`, `sentences.ts` and `passages.ts` is worth doing.
+  - Arc 5 covers ~150 core N3 kanji, not the full ~370. More can be added as further `n3…`
+    groups the same way.
+  - The Daily Trial's battle title ("Daily Trial · N due") only shows between turns; the
+    due count is always visible in the menu's Party tab.
 
 ## Validation baseline
 
