@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Kotodama",
+    "slug": "kotodama",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B12",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sahildevhk.kotodama"
+    },
+    "android": {
+      "package": "com.sahildevhk.kotodama",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": ["expo-sqlite", "expo-font", "expo-audio"],
+    "owner": "sahildevhk"
+  }
+}

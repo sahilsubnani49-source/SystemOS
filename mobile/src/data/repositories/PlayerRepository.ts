@@ -62,6 +62,37 @@ export class PlayerRepository implements IPlayerRepository {
     );
   }
 
+  /**
+   * Persist ONLY the progression columns (level / XP / stats). Unlike savePlayer this
+   * never rewrites rank, keys, bio, etc. from a possibly-stale in-memory copy — the
+   * timeline awards keys and rank straight to SQLite, and a full-row REPLACE from the
+   * store would silently roll them back.
+   */
+  async saveProgress(player: Player): Promise<void> {
+    const db = await getDb();
+    await db.runAsync(
+      `UPDATE players SET
+        level = ?, experience = ?, experience_to_next_level = ?,
+        strength = ?, agility = ?, stamina = ?, intelligence = ?, perception = ?,
+        discipline = ?, creativity = ?, mindfulness = ?
+       WHERE id = ?`,
+      [
+        player.level,
+        player.experience,
+        player.experienceToNextLevel,
+        player.stats.strength,
+        player.stats.agility,
+        player.stats.stamina,
+        player.stats.intelligence,
+        player.stats.perception,
+        player.stats.discipline,
+        player.stats.creativity,
+        player.stats.mindfulness,
+        player.id,
+      ],
+    );
+  }
+
   async awardKey(): Promise<number> {
     const db = await getDb();
     await db.runAsync(

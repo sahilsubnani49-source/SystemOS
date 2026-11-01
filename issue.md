@@ -186,6 +186,65 @@ the backend to any other user or public network.
 - **Why it matters:** “Offline-first” can be read as “everything works offline from a fresh install,” which is not currently true.
 - **Suggested resolution:** Decide and document the intended promise: “offline after initial setup,” or provide a local first-run player and deterministic offline campaign generator.
 
+### SYS-018 — Engine correctness sweep
+
+- **Status:** RESOLVED (2026-11-01), except the Hunter Log credit policy (still open, below).
+- **Priority:** P1
+- **Fixed:**
+  - Double-tapping complete on a quest or dungeon paid XP and loot twice. An in-flight id guard in `useQuestStore` now blocks the repeat.
+  - `addExperience` wrote the whole player row from memory (`INSERT OR REPLACE`), which could roll back keys and rank that the timeline had written. It now uses `PlayerRepository.saveProgress()`, which updates only level, XP and stats.
+  - Today's quests were sorted alphabetically by rank (A…E, S). They now sort by the E → S ladder.
+  - Campaigns never left `active`, so a finished campaign held one of the 3 slots forever. `DailyTimelineService.tick()` now marks a campaign `completed` once its end date has passed, and Hunter Rank still counts completed campaigns.
+  - SCRAM left `penalty_notice_date` behind.
+  - Backend: goal-mode reward completions were appended to the server inventory blob, which nothing reads. It grew without limit. An unknown `rarity` also reached the reward prompt unchanged.
+- **Still open:** `computeTaskCredit()` in `useTaskLogStore.ts` gives full XP with no daily cap (it is still a placeholder).
+- **Known, deliberate:** Settings → Daily reset clears today's completions, so the same quests can be completed again for XP and loot again. This is a dev affordance; gate it before release.
+
+### SYS-019 — Kotodama: open items
+
+- **Priority:** P2
+- **Area:** `games/kotodama/`, `mobile/src/presentation/screens/KotodamaScreen.tsx`
+- **State (2026-11-01):** Arc 1 (hiragana), Arc 2 (katakana + 60 loanwords), Arc 3 (106 N5
+  kanji + 102 N5 words), Arc 4 (133 N4 kanji + 105 N4 words + 30 sentences) and Arc 5 (150 N3
+  kanji + 121 N3 words + 20 reading passages, the ending and the post-game Daily Trial) are
+  playable in the standalone web build. Arc 1's title, hero select, overworld, dialogue, encounters,
+  battles, purify and recruit, defeat, and save/reload were verified by a Playwright
+  playthrough. Arc 2 was verified from seeded saves: ferry → Frost Harbor → Runa → a Mirror
+  battle → purifying a Norse spirit, and the Skald's word trial with meaning and spell
+  prompts. Arc 3 was verified from seeded saves: Runa's voyage → Castle Town → a kanji battle →
+  purifying a spirit by typing a reading of 土, and the Shadow Shogun's mock exam. Arc 4 was
+  verified from seeded saves: the Shogun's send-off → the foothills → a battle with sentence
+  prompts → purifying a snow woman by typing a reading of 待, and the Tengu King's mock exam.
+  Arc 5 was verified from seeded saves: the Tengu King's winds → Rune Coast → a battle with
+  reading-passage prompts → purifying a spirit by typing a reading of 個; Jarl Ulfhild's N3
+  exam → the credits → `game_complete`; and a Daily Trial that asked only seeded overdue items
+  and could be fought again. The core has 159 Vitest tests, including a map validator, a
+  boss-pacing simulation over all 29 bosses and the Daily Trial, and data checks on every
+  kanji reading, word, sentence and passage.
+- **Open:**
+  - **Art and audio are procedural or absent.** The planned CC0 packs (Ninja Adventure, from
+    itch.io / OpenGameArt) were blocked by the build environment's network policy. `expo-audio`
+    is installed and configured, but nothing plays yet.
+  - **SystemOS click-through not verified on a device.** Portal → game → Hunter Log
+    type-checks and bundles for Android and iOS, but has only been exercised in code. SystemOS
+    cannot run on web: react-native-web lacks `useAnimatedValue`, and `expo-secure-store` has no
+    web implementation.
+  - **Hunter Log XP from the game is uncapped** until `computeTaskCredit()` (a placeholder in
+    `useTaskLogStore.ts`) is implemented; the bridge routes through it.
+  - **The SystemOS dev client must be rebuilt** (`npx expo run:android|ios`) for Skia,
+    Reanimated/Worklets, expo-audio, expo-speech and expo-haptics.
+  - Full playthroughs of Arcs 2–5 have not been run end to end; their maps, story gates and
+    boss balance are covered by the core tests.
+  - The N5, N4 and N3 kanji, vocabulary, sentences and passages were written by hand (no
+    dictionary data was used).
+    The tests catch structural mistakes (wrong script, untaught kanji, duplicate meanings) but
+    not a factually wrong reading or an unnatural sentence: a native-speaker review of
+    `kanji.ts`, the vocabulary in `words.ts`, `sentences.ts` and `passages.ts` is worth doing.
+  - Arc 5 covers ~150 core N3 kanji, not the full ~370. More can be added as further `n3…`
+    groups the same way.
+  - The Daily Trial's battle title ("Daily Trial · N due") only shows between turns; the
+    due count is always visible in the menu's Party tab.
+
 ## Validation baseline
 
 | Check | Result |
@@ -193,7 +252,7 @@ the backend to any other user or public network.
 | `cd mobile && npx tsc --noEmit` | Passes |
 | `./backend/venv/bin/python -m compileall -q backend/app` | Passes |
 | `cd mobile && npm run lint` | Passes (0 errors, 0 warnings) as of 2026-07-23 |
-| Automated tests | None found |
+| Automated tests | SystemOS: none. `npm run test --workspace @kotodama/core`: 126 passing |
 
 ## Recommended implementation order
 

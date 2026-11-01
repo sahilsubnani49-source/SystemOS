@@ -137,7 +137,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       experience: newExp,
       experienceToNextLevel: newExpRequired,
     };
-    repo.savePlayer(updated);
+    repo.saveProgress(updated).catch(() => set({ error: 'Could not save experience.' }));
     set({ player: updated });
   },
 
@@ -161,7 +161,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     }
 
     const updated = { ...player, level, experience, experienceToNextLevel: toNext, stats };
-    repo.savePlayer(updated);
+    // Progress columns only — a full savePlayer would clobber keys/rank the timeline
+    // wrote directly to SQLite since this in-memory copy was loaded.
+    repo.saveProgress(updated).catch(() => set({ error: 'Could not save experience.' }));
     set({ player: updated });
     return leveledUp;
   },

@@ -193,8 +193,8 @@ QR code with Expo Go fails with `incompatible SDK version`. You build a **develo
 client** once, then reload JS over Metro exactly like Expo Go.
 
 ```bash
+npm install   # from the repo root (npm workspaces)
 cd mobile
-npm install
 ```
 
 #### iOS Simulator

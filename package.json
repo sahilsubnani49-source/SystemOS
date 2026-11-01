@@ -1,0 +1,15 @@
+{
+  "name": "systemos-monorepo",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "games/kotodama/*"
+  ],
+  "scripts": {
+    "test:kotodama": "npm run test --workspace @kotodama/core",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "overrides": {
+    "expo-asset": "~56.0.20"
+  }
+}

@@ -499,7 +499,11 @@ async def complete_quest(
         logger.warning("[Architect] AI generation failed (%s). Using rule-based fallback.", e)
         reward_dict = synthesize_fallback_reward(bio, category, body.rarity)
 
-    inventory_state.append(reward_dict)
+    # Only the legacy mock quest set keeps a server-side inventory. In goal mode the
+    # device stores the coupon in SQLite and never reads it back from here, so
+    # appending would grow this user's state blob by one item per completion forever.
+    if quest:
+        inventory_state.append(reward_dict)
 
     await db.save_user_state(user["id"], player_state, quests_state, inventory_state)
 
