@@ -458,6 +458,7 @@ function revealLine(item: StudyItem, answer: string): string {
     const readings = kanjiReadings(k).filter((r) => r.length > 1 || k.kun.length === 0).slice(0, 3);
     return `${k.char} = ${k.meanings[0]} (${[primaryReading(k), ...readings.filter((r) => r !== primaryReading(k))].slice(0, 3).join(', ')})`;
   }
+  if (item.kind === 'sentence') return item.sentence.text.replace('＿＿', `【${item.sentence.answer}】`);
   const kana = item.kana;
   return answer !== kana.romaji && answer !== kana.char ? `${kana.char} ↔ ${answer}  (${kana.romaji})` : `${kana.char} = ${kana.romaji}`;
 }
