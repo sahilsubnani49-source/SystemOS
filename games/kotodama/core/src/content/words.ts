@@ -9,7 +9,8 @@ import { toRomaji } from '../util/romaji';
 export type WordArea =
   | 'tower' | 'longship' // Arc 2 loanwords
   | 'castle' | 'market' | 'teahouse' | 'gardens' | 'keep' // Arc 3 N5
-  | 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks'; // Arc 4 N4
+  | 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks' // Arc 4 N4
+  | 'coast' | 'glacier' | 'forge' | 'valor' | 'runeforge'; // Arc 5 N3
 
 export interface Word {
   id: string;
@@ -164,6 +165,63 @@ const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship'>, VocabRow[]> = {
     ['有名', 'ゆうめい', 'famous'], ['無理', 'むり', 'impossible; unreasonable'], ['以上', 'いじょう', 'or more; above'],
     ['出発', 'しゅっぱつ', 'departure'], ['開ける', 'あける', 'to open (something)'], ['作る', 'つくる', 'to make'],
     ['大事', 'だいじ', 'important'],
+  ],
+  // ── Arc 5: N3. Same rule: only kanji taught by this area or earlier. ──
+  // + conflict + society
+  coast: [
+    ['戦争', 'せんそう', 'war'], ['戦う', 'たたかう', 'to fight'], ['勝つ', 'かつ', 'to win'],
+    ['負ける', 'まける', 'to lose (a match)'], ['守る', 'まもる', 'to protect'], ['攻める', 'せめる', 'to attack'],
+    ['危ない', 'あぶない', 'dangerous (adj.)'], ['危険', 'きけん', 'danger'], ['破る', 'やぶる', 'to break (a promise); to tear'],
+    ['倒れる', 'たおれる', 'to collapse'], ['軍人', 'ぐんじん', 'soldier (military person)'], ['勝負', 'しょうぶ', 'contest; match'],
+    ['国民', 'こくみん', 'citizens of a nation'], ['女王', 'じょおう', 'queen'], ['王子', 'おうじ', 'prince'],
+    ['政治', 'せいじ', 'politics'], ['政府', 'せいふ', 'the government'], ['治る', 'なおる', 'to recover (from illness)'],
+    ['決める', 'きめる', 'to decide'], ['会議', 'かいぎ', 'a meeting'], ['選ぶ', 'えらぶ', 'to choose'],
+    ['選手', 'せんしゅ', 'athlete'], ['歴史', 'れきし', 'history'], ['自治', 'じち', 'self-government'],
+  ],
+  // + emotion + work
+  glacier: [
+    ['感じる', 'かんじる', 'to feel'], ['感情', 'かんじょう', 'emotions'], ['怒る', 'おこる', 'to get angry'],
+    ['喜ぶ', 'よろこぶ', 'to be glad'], ['悲しい', 'かなしい', 'sad (adj.)'], ['笑う', 'わらう', 'to laugh'],
+    ['泣く', 'なく', 'to cry'], ['恥ずかしい', 'はずかしい', 'embarrassed (adj.)'], ['苦しい', 'くるしい', 'painful (adj.)'],
+    ['苦い', 'にがい', 'bitter (adj.)'], ['幸せ', 'しあわせ', 'happiness'], ['願う', 'ねがう', 'to wish for'],
+    ['疲れる', 'つかれる', 'to get tired'], ['驚く', 'おどろく', 'to be surprised'], ['働く', 'はたらく', 'to work (labour)'],
+    ['給料', 'きゅうりょう', 'salary'], ['費用', 'ひよう', 'cost; expenses'], ['払う', 'はらう', 'to pay'],
+    ['物価', 'ぶっか', 'prices of goods'], ['生産', 'せいさん', 'production'], ['商品', 'しょうひん', 'product (for sale)'],
+    ['商売', 'しょうばい', 'trade; business'], ['経済', 'けいざい', 'the economy'], ['経験', 'けいけん', 'experience'],
+    ['営業', 'えいぎょう', 'sales; business operations'], ['職業', 'しょくぎょう', 'occupation'], ['貯金', 'ちょきん', 'savings'],
+  ],
+  // + weather + action
+  forge: [
+    ['晴れ', 'はれ', 'sunny weather'], ['晴れる', 'はれる', 'to clear up (weather)'], ['寒い', 'さむい', 'cold (adj.)'],
+    ['暑い', 'あつい', 'hot (adj.)'], ['暖かい', 'あたたかい', 'warm (adj.)'], ['冷たい', 'つめたい', 'cold to the touch (adj.)'],
+    ['季節', 'きせつ', 'season of the year'], ['打つ', 'うつ', 'to strike'], ['投げる', 'なげる', 'to throw'],
+    ['押す', 'おす', 'to push'], ['引く', 'ひく', 'to pull'], ['落ちる', 'おちる', 'to fall; to drop'],
+    ['落とす', 'おとす', 'to drop (something)'], ['拾う', 'ひろう', 'to pick up'], ['捨てる', 'すてる', 'to throw away'],
+    ['降る', 'ふる', 'to fall (rain, snow)'], ['降りる', 'おりる', 'to get off (a vehicle)'], ['登る', 'のぼる', 'to climb'],
+    ['泳ぐ', 'およぐ', 'to swim'], ['飛ぶ', 'とぶ', 'to fly'], ['乗る', 'のる', 'to ride'],
+    ['遊ぶ', 'あそぶ', 'to play'], ['寝る', 'ねる', 'to sleep'], ['座る', 'すわる', 'to sit'],
+  ],
+  // + communication + change
+  valor: [
+    ['伝える', 'つたえる', 'to convey'], ['報告', 'ほうこく', 'a report'], ['天気予報', 'てんきよほう', 'weather forecast'],
+    ['相談', 'そうだん', 'consultation'], ['調べる', 'しらべる', 'to look into'], ['日記', 'にっき', 'diary'],
+    ['記事', 'きじ', 'news article'], ['信じる', 'しんじる', 'to believe'], ['友達', 'ともだち', 'friend'],
+    ['返す', 'かえす', 'to give back'], ['連れる', 'つれる', 'to take (someone) along'], ['連絡', 'れんらく', 'contact; getting in touch'],
+    ['紹介', 'しょうかい', 'introduction'], ['相手', 'あいて', 'partner; opponent'], ['変わる', 'かわる', 'to change'],
+    ['化学', 'かがく', 'chemistry'], ['最初', 'さいしょ', 'the very beginning'], ['最後', 'さいご', 'the very end'],
+    ['最近', 'さいきん', 'recently'], ['初めて', 'はじめて', 'for the first time'], ['週末', 'しゅうまつ', 'weekend'],
+    ['未来', 'みらい', 'the future'], ['過去', 'かこ', 'the past'], ['現在', 'げんざい', 'the present'],
+    ['続く', 'つづく', 'to continue'], ['進む', 'すすむ', 'to advance'], ['予定', 'よてい', 'plan; schedule'],
+    ['期間', 'きかん', 'term; period'],
+  ],
+  // + abstract + travel
+  runeforge: [
+    ['理由', 'りゆう', 'reason'], ['結果', 'けっか', 'result'], ['必ず', 'かならず', 'without fail'],
+    ['必要', 'ひつよう', 'necessary'], ['自然', 'しぜん', 'nature'], ['本当', 'ほんとう', 'truth; really'],
+    ['実は', 'じつは', 'actually; to tell the truth'], ['例えば', 'たとえば', 'for example'], ['目的', 'もくてき', 'purpose'],
+    ['旅行', 'りょこう', 'travel; a trip'], ['空港', 'くうこう', 'airport'], ['二階', 'にかい', 'second floor'],
+    ['宿題', 'しゅくだい', 'homework'], ['不便', 'ふべん', 'inconvenient'], ['結局', 'けっきょく', 'after all; in the end'],
+    ['道路', 'どうろ', 'road (for traffic)'], ['区別', 'くべつ', 'distinction'], ['当たる', 'あたる', 'to hit (a target); to win (a prize)'],
   ],
 };
 

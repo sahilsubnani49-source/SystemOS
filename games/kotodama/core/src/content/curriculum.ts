@@ -32,6 +32,17 @@ const N4_ORDER: KanjiGroup[] = [
 ];
 const N4_UP_TO = (n: number) => N4_ORDER.slice(0, n);
 
+/** N3 groups in teaching order, and the word areas each Arc 5 area reviews. */
+const N3_ORDER: KanjiGroup[] = [
+  'n3conflict', 'n3society', 'n3emotion', 'n3work', 'n3weather', 'n3action', 'n3comm', 'n3change', 'n3abstract', 'n3travel',
+];
+const N3_WORDS: WordArea[] = ['coast', 'glacier', 'forge', 'valor', 'runeforge'];
+function n3(id: string, label: string, groups: number, all = false): AreaCurriculum {
+  const step = groups / 2; // 1..5: this area's position in the arc
+  const words = all ? N3_WORDS : N3_WORDS.slice(Math.max(0, step - 2), step);
+  return { id, arc: 5, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji: N3_ORDER.slice(0, groups), words };
+}
+
 const area = (a: Omit<AreaCurriculum, 'script'> & { script?: Script }): AreaCurriculum => ({ script: 'hiragana', ...a });
 
 export const CURRICULUM: Record<string, AreaCurriculum> = {
@@ -69,6 +80,13 @@ export const CURRICULUM: Record<string, AreaCurriculum> = {
     ...kanjiArea('summit', 'N4 mock exam: every N4 kanji, word and sentence', N4_UP_TO(11), ['foothills', 'village', 'monastery', 'forest', 'peaks'], 4),
     sentences: ['foothills', 'village', 'monastery', 'forest', 'peaks'],
   },
+  // ── Arc 5: Northern Runeforge (N3) ──
+  coast: n3('coast', 'N3: conflict + society', 2),
+  glacier: n3('glacier', 'N3: emotion + work', 4),
+  forge: n3('forge', 'N3: weather + action', 6),
+  valor: n3('valor', 'N3: communication + change', 8),
+  runeforge: n3('runeforge', 'N3: reasons + travel', 10),
+  finale: n3('finale', 'N3 mock exam: every N3 kanji, word and passage', 10, true),
 };
 
 function kanjiArea(id: string, label: string, kanji: KanjiGroup[], words: WordArea[], arc: 3 | 4 = 3): AreaCurriculum {
