@@ -379,6 +379,118 @@ const PAINTERS: Record<string, Painter> = {
     if (stage >= 1) { c.rect(3, 2, 3, 2, '#4A7A3A'); c.rect(11, 3, 2, 2, '#4A7A3A'); }
     if (stage === 2) { c.rect(5, 0, 6, 1, '#E8B04B'); c.rect(6, 10, 4, 2, '#E8B04B'); }
   },
+  // ── Arc 4: mountain yokai ───────────────────────────────────────────
+  yamanba(c, stage) {
+    // Mountain hag: wild white hair, tattered robe, a kitchen knife later.
+    c.rect(3, 1, 10, 4, '#E8E8F0'); c.rect(2, 3, 2, 7, '#E8E8F0'); c.rect(12, 3, 2, 7, '#E8E8F0');
+    c.rect(5, 3, 6, 5, '#C8A07A');
+    c.set(6, 5, '#E8574B'); c.set(9, 5, '#E8574B');
+    c.rect(6, 7, 4, 1, '#3A2A1A');
+    c.rect(4, 8, 8, 6, stage === 2 ? '#5A2A3A' : '#6E5A4A');
+    c.rect(5, 14, 2, 2, '#3A2A1A'); c.rect(9, 14, 2, 2, '#3A2A1A');
+    if (stage >= 1) c.line(13, 8, 15, 12, '#C9D2DC');
+  },
+  yukionna(c, stage) {
+    // Snow woman: white kimono, long black hair, icy breath.
+    c.rect(4, 1, 8, 3, '#14141E'); c.rect(3, 3, 2, 10, '#14141E'); c.rect(11, 3, 2, 10, '#14141E');
+    c.rect(5, 3, 6, 5, '#F4F8FF');
+    c.set(6, 5, '#5AB8FF'); c.set(9, 5, '#5AB8FF');
+    c.rect(5, 8, 6, 7, stage === 2 ? '#BEE6F2' : '#F4F1EA');
+    c.rect(5, 10, 6, 1, '#7FC4F2');
+    if (stage >= 1) { c.set(1, 6, '#E8F8FF'); c.set(14, 8, '#E8F8FF'); c.set(2, 11, '#E8F8FF'); }
+  },
+  azukiarai(c, stage) {
+    // Bean-washer: hunched little man with a bowl of beans.
+    c.ellipse(4, 2, 8, 7, '#C89A6A');
+    c.rect(4, 2, 8, 2, '#3A2A1A');
+    c.set(6, 5, '#120C18'); c.set(9, 5, '#120C18');
+    c.rect(4, 9, 8, 5, '#5A4A3A');
+    c.ellipse(3, 11, 10, 4, stage === 2 ? '#E8B04B' : '#8A6A3A'); // the bowl
+    c.rect(5, 11, 6, 1, '#8E1F2F'); // red beans
+    if (stage >= 1) { c.set(2, 9, '#7FC4F2'); c.set(13, 9, '#7FC4F2'); }
+  },
+  nue(c, stage) {
+    // Nue: monkey face, tiger legs, snake tail, black clouds.
+    c.ellipse(1, 0, 14, 5, '#2A2A3A');
+    c.rect(5, 3, 6, 5, '#B8844A');
+    c.set(6, 5, '#FFE14B'); c.set(9, 5, '#FFE14B');
+    c.rect(3, 8, 10, 5, stage === 0 ? '#3A3A4A' : '#E8873A');
+    for (let x = 4; x < 13; x += 3) c.rect(x, 9, 1, 3, '#120C18');
+    c.rect(4, 13, 2, 3, '#E8873A'); c.rect(10, 13, 2, 3, '#E8873A');
+    c.line(13, 10, 15, 6, '#4A8A3A');
+    if (stage === 2) c.rect(1, 0, 14, 1, '#3A6AFF');
+  },
+  hitotsume(c, stage) {
+    // One-eyed temple boy: shaved head, one huge eye, a scroll later.
+    c.ellipse(4, 1, 8, 8, '#F2C9A0');
+    c.ellipse(6, 3, 4, 4, '#FFFFFF'); c.rect(7, 4, 2, 2, '#120C18');
+    c.rect(7, 7, 2, 1, '#E25A6A');
+    c.rect(4, 9, 8, 5, stage === 2 ? '#8E6CEF' : '#5A7A9A');
+    c.rect(5, 14, 2, 2, '#3A2A1A'); c.rect(9, 14, 2, 2, '#3A2A1A');
+    if (stage >= 1) { c.rect(12, 9, 3, 5, '#F4E9D0'); c.rect(12, 9, 3, 1, '#8A5A2B'); }
+  },
+  noppera(c, stage) {
+    // Noppera-bo: a smooth, featureless face under a hood.
+    c.rect(4, 1, 8, 2, stage === 0 ? '#3A3A5A' : '#1E1E2A');
+    c.ellipse(4, 2, 8, 8, '#F4E9D0');
+    c.rect(3, 2, 1, 7, '#3A3A5A'); c.rect(12, 2, 1, 7, '#3A3A5A');
+    c.rect(4, 10, 8, 5, '#3A3A5A');
+    if (stage >= 1) c.rect(6, 5, 4, 1, '#E8E0C8');
+    if (stage === 2) { c.set(7, 4, '#8E6CEF'); c.set(8, 4, '#8E6CEF'); }
+  },
+  kamaitachi(c, stage) {
+    // Sickle weasels: one weasel, then two, then three, with sickle claws.
+    const count = stage + 1;
+    for (let i = 0; i < count; i++) {
+      const ox = i * 4;
+      const oy = 9 - i * 3;
+      c.ellipse(ox, oy, 8, 5, '#C89A5A');
+      c.set(ox + 6, oy + 1, '#120C18');
+      c.line(ox + 1, oy + 4, ox - 1 < 0 ? 0 : ox - 1, oy + 6, '#C9D2DC');
+    }
+    c.line(0, 15, 15, 0, '#D8F0FF');
+  },
+  warashi(c, stage) {
+    // Zashiki-warashi: a bob-haired house child in a red kimono.
+    c.rect(4, 1, 8, 4, '#14141E'); c.rect(3, 3, 1, 4, '#14141E'); c.rect(12, 3, 1, 4, '#14141E');
+    c.rect(5, 4, 6, 4, '#F4D2B4');
+    c.set(6, 5, '#120C18'); c.set(9, 5, '#120C18'); c.set(7, 7, '#E25A6A');
+    c.rect(4, 8, 8, 6, stage === 2 ? '#E8B04B' : '#C0392B');
+    c.rect(4, 10, 8, 1, '#F4F1EA');
+    c.rect(5, 14, 2, 2, '#F4F1EA'); c.rect(9, 14, 2, 2, '#F4F1EA');
+    if (stage >= 1) c.ellipse(12, 10, 3, 3, '#E8B04B'); // a temari ball
+  },
+  inugami(c, stage) {
+    // Dog spirit: white dog with a red bib and a glowing tail.
+    const fur = stage === 2 ? '#F4F1EA' : '#D8C8A8';
+    c.ellipse(2, 4, 9, 7, fur);
+    c.rect(2, 2, 2, 3, fur); c.rect(8, 2, 2, 3, fur);
+    c.set(4, 6, '#120C18'); c.set(8, 6, '#120C18'); c.rect(5, 8, 2, 1, '#120C18');
+    c.rect(3, 10, 6, 2, '#C0392B');
+    c.rect(4, 12, 10, 3, fur);
+    c.line(13, 12, 15, 7, stage >= 1 ? '#FFE14B' : fur);
+    c.rect(4, 15, 2, 1, fur); c.rect(11, 15, 2, 1, fur);
+  },
+  yamabiko(c, stage) {
+    // Echo spirit: a small furry mountain creature mid-shout, sound rings.
+    c.ellipse(4, 4, 8, 9, '#8A7A6A');
+    c.set(6, 7, '#120C18'); c.set(9, 7, '#120C18');
+    c.ellipse(7, 9, 3, 3, '#3A1A1A'); // open mouth
+    c.rect(5, 13, 2, 3, '#6E5A4A'); c.rect(9, 13, 2, 3, '#6E5A4A');
+    const rings = stage + 1;
+    for (let i = 0; i < rings; i++) c.line(12 + i, 5 - i, 12 + i, 12 + i, '#F4E9D0');
+  },
+  baku(c, stage) {
+    // Baku: tapir-like dream-eater with a trunk, eating a dream cloud.
+    const hide = stage === 2 ? '#5A6A9A' : '#7A7A8A';
+    c.ellipse(4, 5, 11, 8, hide);
+    c.rect(1, 8, 4, 2, hide); c.rect(0, 9, 2, 3, hide); // trunk
+    c.set(5, 7, '#120C18');
+    c.rect(6, 12, 2, 3, shade(hide, -0.2)); c.rect(12, 12, 2, 3, shade(hide, -0.2));
+    c.ellipse(0, 0, 7, 5, '#E8E0F8'); // a dream cloud
+    if (stage >= 1) c.set(2, 2, '#FFE14B');
+    if (stage === 2) c.rect(8, 4, 5, 1, '#E8B04B');
+  },
 };
 
 export function drawSpirit(familyId: string, stage: number): PixelCanvas {

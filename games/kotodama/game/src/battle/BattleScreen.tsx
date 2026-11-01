@@ -21,6 +21,12 @@ import { C, hpColor } from '../theme';
 import { PROMPT_TAG } from '../ui/promptLabels';
 
 const SKY: Record<string, [string, string]> = {
+  foothills: ['#2A4A3A', '#C8D8A8'],
+  village: ['#3A4A6A', '#E8C88A'],
+  monastery: ['#3A2A1A', '#C88A4A'],
+  forest: ['#14302A', '#4A8A6A'],
+  peaks: ['#2A2A4A', '#A8B8D8'],
+  summit: ['#1A0A2A', '#8E3A5A'],
   castle: ['#3A2A5A', '#E8A0B8'],
   market: ['#2A3A6A', '#E8C08A'],
   teahouse: ['#2A4A3A', '#A8C88A'],

@@ -5,7 +5,8 @@ import { VOCABULARY } from '../content/words';
 import { CURRICULUM, areaIntroducingGroup, poolForArea } from '../content/curriculum';
 import { buildPrompt, resolveKind } from '../battle/prompts';
 import { SPIRIT_FAMILIES, familyItemIds } from '../content/spirits';
-import { familyStage, foeCombatant } from '../progression';
+import { familyStage, foeCombatant, spiritCombatant } from '../progression';
+import { reduce, startBattle } from '../battle/engine';
 import { MAX_STAGE } from '../srs/schedule';
 import { createRng } from '../util/rng';
 
@@ -59,6 +60,22 @@ describe('N4 context sentences', () => {
     expect(resolveKind('context', 'w-pan')).toBe('meaning');
     expect(resolveKind('context', 'h-ka')).toBe('recognize');
     expect(resolveKind('type', 'c-1')).toBe('context');
+  });
+});
+
+describe('sentence moves', () => {
+  it('always ask a sentence when the area has sentences', () => {
+    const pool = poolForArea('foothills');
+    const yamabiko = spiritCombatant({ uid: 'y', familyId: 'yamabiko', level: 45, xp: 0 }, {});
+    expect(yamabiko.moves).toContain('echoCall');
+    const foe = foeCombatant({ familyId: 'yukionna', level: 45, hpScale: 20 }, 'f', pool, createRng(1));
+    // A harmless foe: this test is about which prompts appear, not about surviving.
+    let s = startBattle({ party: [yamabiko], enemies: [{ ...foe, atk: 1 }], kanaPool: pool, srs: {}, seed: 3 });
+    for (let i = 0; i < 6; i++) {
+      s = reduce(s, { type: 'choose', move: 'echoCall', now: 0 });
+      expect(s.prompt?.kind, `round ${i}: phase ${s.phase}`).toBe('context');
+      s = reduce(s, { type: 'answer', value: s.prompt!.answer, elapsedMs: 500, now: 0 });
+    }
   });
 });
 

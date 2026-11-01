@@ -252,6 +252,34 @@ const P: Record<TileKind, TilePainter> = {
     for (let i = 0; i < 3; i++) c.rect(ox + 2 + i * 4 + sway, oy + 3, 3, 9, '#2A3A8A');
     c.rect(ox + 6 + sway, oy + 6, 4, 3, '#F4F1EA'); // the shop's crest
   },
+  // ── Arc 4: Mountain Temples ─────────────────────────────────────────
+  waterfall(c, ox, oy, tx, ty, frame) {
+    // Falling water: bright vertical streaks that scroll between frames.
+    c.rect(ox, oy, TILE, TILE, '#5AA0D8');
+    for (let x = 0; x < TILE; x += 3) {
+      const start = (x * 5 + frame * 6 + ty * 4) % TILE;
+      c.rect(ox + x, oy + start, 1, 6, '#E8F8FF');
+      c.rect(ox + x + 1, oy + ((start + 8) % TILE), 1, 4, '#9CCDE2');
+    }
+  },
+  stairs(c, ox, oy, tx, ty) {
+    // Worn stone steps with moss in the cracks.
+    c.rect(ox, oy, TILE, TILE, '#9A9AA4');
+    for (let y = 0; y < TILE; y += 4) {
+      c.rect(ox, oy + y, TILE, 1, '#6A6A74');
+      c.rect(ox, oy + y + 1, TILE, 1, '#B4B4BE');
+    }
+    if (hash2(tx, ty) > 0.6) c.rect(ox + 2 + Math.floor(hash2(ty, tx) * 10), oy + 4, 3, 1, '#4A7A3A');
+  },
+  cliff(c, ox, oy, tx, ty) {
+    // Sheer rock face: layered bands and a crack or two.
+    c.rect(ox, oy, TILE, TILE, '#6A5A4A');
+    for (let y = 2; y < TILE; y += 5) c.rect(ox, oy + y, TILE, 2, '#5A4A3A');
+    const x = ox + Math.floor(hash2(tx, ty) * 12) + 2;
+    c.line(x, oy, x - 2, oy + 7, '#3A2E24');
+    c.line(x - 2, oy + 7, x, oy + 15, '#3A2E24');
+    if (hash2(tx + 3, ty) > 0.7) c.rect(ox + 3, oy, 4, 2, '#4A7A3A');
+  },
   void(c, ox, oy) {
     c.rect(ox, oy, TILE, TILE, '#0B0B12');
   },

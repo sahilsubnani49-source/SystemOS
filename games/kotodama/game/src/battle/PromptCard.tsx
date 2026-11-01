@@ -42,7 +42,13 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
   const displayIsJa =
     prompt.kind === 'recognize' || prompt.kind === 'type' || prompt.kind === 'mirror' || prompt.kind === 'meaning' || prompt.kind === 'reading';
   const choicesAreJa =
-    prompt.kind === 'recall' || prompt.kind === 'listen' || prompt.kind === 'mirror' || prompt.kind === 'spell' || prompt.kind === 'reading';
+    prompt.kind === 'recall' ||
+    prompt.kind === 'listen' ||
+    prompt.kind === 'mirror' ||
+    prompt.kind === 'spell' ||
+    prompt.kind === 'reading' ||
+    prompt.kind === 'context';
+  const isSentence = prompt.kind === 'context';
   const isKanji = prompt.itemId.startsWith('j-');
   const choicesAreEnglish = prompt.kind === 'meaning';
   const longest = Math.max(1, ...prompt.choices.map((c) => [...c].length));
@@ -61,6 +67,12 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
           <PText style={styles.listenIcon}>🔊</PText>
           <PText style={styles.listenHint}>tap to hear again</PText>
         </Pressable>
+      ) : isSentence ? (
+        // A sentence wraps at a readable size; its translation sits underneath.
+        <View style={{ gap: 6 }}>
+          <PText ja style={styles.sentence}>{prompt.display}</PText>
+          {prompt.hint ? <PText style={styles.hint}>{prompt.hint}</PText> : null}
+        </View>
       ) : (
         <View style={styles.displayRow}>
           <PText
@@ -162,6 +174,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  sentence: { fontSize: 24, lineHeight: 34, color: C.paper, textAlign: 'center' },
+  hint: { fontSize: 7, lineHeight: 12, color: C.dim, textAlign: 'center' },
   displayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   speaker: { padding: 6, borderRadius: 6, borderWidth: 2, borderColor: C.panelEdge },
   speakerIcon: { fontSize: 18, lineHeight: 24 },

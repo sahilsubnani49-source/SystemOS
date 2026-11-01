@@ -220,6 +220,11 @@ export const CHARACTERS: Record<string, CharacterSpec> = {
   assassin: { skin: '#F2C9A0', hair: '#14141E', hairStyle: 'long', top: '#1E1E2A', trim: '#8E6CEF', bottom: '#14141E', gear: ['katana'], mask: '#1E1E2A' },
   karo: { skin: '#E8B98E', hair: '#3A3A3A', hairStyle: 'topknot', top: '#6A2A5A', trim: '#E8B04B', bottom: '#2A1E3A', gear: ['fan'] },
   shogun: { skin: '#E0B490', hair: '#1A1A24', hairStyle: 'kabuto', top: '#8E1F2F', trim: '#E8B04B', bottom: '#1A1A24', gear: ['katana', 'fan'] },
+  // ── Arc 4: Mountain Temples ───────────────────────────────────────
+  yamabushi: { skin: '#D9A87E', hair: '#2A1E1A', hairStyle: 'bun', top: '#E8E0C8', trim: '#3A6A3A', bottom: '#4A6A4A', gear: ['staff'] },
+  abbot: { skin: '#E8C09A', hair: '#E8C09A', hairStyle: 'bald', top: '#B8641E', trim: '#E8B04B', bottom: '#8A4A1A', gear: ['staff'] },
+  karasu: { skin: '#3A3A4A', hair: '#14141E', hairStyle: 'hood', top: '#1E1E2A', trim: '#B3262E', bottom: '#14141E', gear: ['fan'], eye: '#FFE14B' },
+  tenguking: { skin: '#C83A2A', hair: '#F4F1EA', hairStyle: 'long', top: '#3A2A6A', trim: '#E8B04B', bottom: '#1E1E3A', gear: ['beard', 'fan', 'staff'], eye: '#FFE14B' },
   merchant: { skin: '#EBC29C', hair: '#2A1E14', hairStyle: 'topknot', top: '#3A6A8A', trim: '#E8E0C8', bottom: '#2A3A4A', gear: [] },
 };
 

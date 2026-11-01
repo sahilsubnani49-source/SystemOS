@@ -161,7 +161,10 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       if (!actor || !actor.moves.includes(action.move)) return state;
       const move = getMove(action.move);
       const lastItem = s.answers[s.answers.length - 1]?.itemId;
-      const itemId = pickNextPrompt(s.kanaPool, s.srs, action.now, rng, lastItem);
+      // Sentence moves (Echo Call) draw from the area's sentences when it has any;
+      // otherwise sentences would be ~1 prompt in 10 and the move would rarely be one.
+      const sentences = move.prompt === 'context' ? s.kanaPool.filter((id) => id.startsWith('c-')) : [];
+      const itemId = pickNextPrompt(sentences.length > 0 ? sentences : s.kanaPool, s.srs, action.now, rng, lastItem);
       s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, move.timeLimitMs);
       s.pendingMove = action.move;
       s.phase = 'answer';

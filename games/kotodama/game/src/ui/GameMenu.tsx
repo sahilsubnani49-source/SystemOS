@@ -90,7 +90,7 @@ function PartyTab({ save }: { save: Save }) {
 }
 
 function masteryLabel(fam: SpiritFamily): string {
-  if (fam.kanjiGroup) return `the ${fam.kanjiGroup} kanji`;
+  if (fam.kanjiGroup) return `the ${fam.kanjiGroup.startsWith('n4') ? `N4 ${fam.kanjiGroup.slice(2)}` : `N5 ${fam.kanjiGroup}`} kanji`;
   return `the ${fam.script} ${fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}`;
 }
 
@@ -101,10 +101,10 @@ function KanjiTab({ save }: { save: Save }) {
   }
   return (
     <>
-      <PText style={styles.dim}>{met}/{KANJI.length} N5 kanji met. Colour = mastery. Tap to hear a reading.</PText>
+      <PText style={styles.dim}>{met}/{KANJI.length} kanji met (N5 + N4). Colour = mastery. Tap to hear a reading.</PText>
       {KANJI_GROUPS.map((group) => (
         <View key={group} style={{ gap: 4 }}>
-          <PText style={styles.groupLabel}>{group.toUpperCase()}</PText>
+          <PText style={styles.groupLabel}>{group.startsWith('n4') ? `N4 · ${group.slice(2).toUpperCase()}` : `N5 · ${group.toUpperCase()}`}</PText>
           <View style={styles.kanjiGrid}>
             {KANJI.filter((k) => k.group === group).map((k) => {
               const stage = save.srs[k.id]?.stage ?? -1;
