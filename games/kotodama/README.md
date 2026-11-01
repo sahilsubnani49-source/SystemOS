@@ -9,6 +9,12 @@ live map of what you can read.
 
 It runs inside SystemOS (Stats tab → *Gate of Words*) **and** as its own app.
 
+| Arc | Setting | Teaches | Status |
+|---|---|---|---|
+| 1 | Sakura Valley (8 maps) | All hiragana: basic, voiced, combined | Playable |
+| 2 | Frost Harbor (6 maps, reached by ferry after the Oni) | All katakana; 60 loanwords with ー and ッ; hiragana↔katakana Mirror prompts | Playable |
+| 3–5 | Castle Capital, Mountain Temples, Northern Runeforge | JLPT N5 → N3 kanji and vocabulary | Not written |
+
 ## Packages
 
 ```
@@ -63,10 +69,18 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
 `graded`, `spared`, `purify`, …) as animations, and HP bars drain in step with them.
 
 - Each move maps to a prompt kind: **recognize** (see か → "ka"), **recall** ("ka" → か),
-  **listen** (hear it → か), or **type** (type "ka").
+  **listen** (hear it → か), **type** (type "ka"), **mirror** (か → カ), **meaning**
+  (テレビ → "television") or **spell** ("terebi" → テレビ among near-miss spellings:
+  dropped ー, missing ッ, シ/ツ and ソ/ン swaps).
+- A prompt tests a study item: a kana (`h-ka`, `k-ka`) or a word (`w-terebi`).
+  `resolveKind` maps a move's kind onto one the item supports, so words are never
+  typed and bare kana never asked for a meaning.
 - Wrong answers come from real look-alikes first (ぬ/め/の, シ/ツ/ソ/ン).
 - Right answers build combos. Ninja crits come from answering fast; samurai crits come from streaks.
 - A wrong answer earns an immediate half-power counter. Enemies otherwise act once per round.
+- **Boss pacing is tested.** `balance.test.ts` simulates every story boss against a party of
+  the expected level answering perfectly, for both heroes, and requires 8–20 answers and a
+  win. Change a boss's `hpScale` or a move's power and the test shows the new counts.
 - The first lethal blow on a recruitable wild spirit leaves it at 1 HP, so the
   purify choice is always offered. Bosses never flee or recruit.
 - Every answer updates the SRS table **during** the battle, so a missed kana comes back
@@ -77,12 +91,14 @@ The renderer never computes rules. It plays back `state.events` (`fx`, `damage`,
 - **Maps:** `core/src/world/maps/*.ts`, as ASCII rows (legend in `world/types.ts`), plus
   warps, NPCs (dialogue, gifts, story battles, flags) and encounter tables.
   `core/src/__tests__/maps.test.ts` checks every warp, NPC and story gate is reachable.
-  Run it after every map edit; it caught five authoring bugs in Arc 1.
+  Run it after every map edit; it caught five authoring bugs in Arc 1. It follows ferries
+  (`travelsTo`) and checks each arc's story gates open in order.
 - **Curriculum:** `core/src/content/curriculum.ts` decides which kana each area tests.
 - **Spirits / moves / heroes:** `core/src/content/`.
-- **Next arcs:** katakana (Frost Harbor) adds `script: 'katakana'` areas; the N5–N3 arcs
-  need a kanji/vocab content module. JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an
-  in-game credits screen with them.
+- **Words:** `core/src/content/words.ts` (loanwords, by area). Ids are `w-<romaji>`.
+- **Next arcs:** the N5–N3 arcs need a kanji/vocab content module, which can follow the
+  same pattern as words. JMdict and KANJIDIC2 are CC BY-SA 4.0, so ship an in-game
+  credits screen with them.
 
 ## Art
 
@@ -101,7 +117,7 @@ to the procedural art. No screen code needs to change.
 
 - Real art and music. The CC0 hosts were blocked from the build environment, and
   `expo-audio` is installed for music and SFX but nothing plays yet.
-- Arc 2–5 content (katakana, N5–N3 kanji and vocabulary).
+- Arcs 3–5 (N5–N3 kanji and vocabulary).
 - Inside SystemOS, the portal → game → Hunter Log path type-checks and bundles for
   Android and iOS but has not been clicked through on a device. SystemOS itself does
   not run on web (no `useAnimatedValue` in react-native-web, no web `expo-secure-store`).
