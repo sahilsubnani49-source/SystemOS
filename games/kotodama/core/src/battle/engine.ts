@@ -284,9 +284,11 @@ function applyMove(
     return;
   }
   // Timed prompts crit when answered in the first third of the window; untimed
-  // ones crit on a 3+ streak. Either way, crits reward fluency, not luck.
+  // ones crit on every THIRD correct answer in a row (3, 6, 9...). Either way,
+  // crits reward fluency, not luck. (A permanent crit after a 3-streak made the
+  // samurai end every boss fight in ~7 answers.)
   const crit =
-    prompt.timeLimitMs !== null ? elapsedMs <= prompt.timeLimitMs / 3 : s.combo >= 3;
+    prompt.timeLimitMs !== null ? elapsedMs <= prompt.timeLimitMs / 3 : s.combo >= 3 && s.combo % 3 === 0;
   hit(s, actor, target, move.power, move.element, move.fx, crit, s.combo - 1, rng);
 }
 

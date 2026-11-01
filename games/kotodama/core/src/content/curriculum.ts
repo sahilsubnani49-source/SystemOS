@@ -35,8 +35,9 @@ export const CURRICULUM: Record<string, AreaCurriculum> = {
   harbor: area({ id: 'harbor', arc: 2, script: 'katakana', label: 'Katakana: ア and カ rows', newRows: ['a', 'k'], rows: ['a', 'k'], kinds: ['basic'] }),
   docks: area({ id: 'docks', arc: 2, script: 'katakana', label: 'Katakana: サ and タ rows', newRows: ['s', 't'], rows: ['a', 'k', 's', 't'], kinds: ['basic'] }),
   shore: area({ id: 'shore', arc: 2, script: 'katakana', label: 'Katakana: ナ, ハ, マ rows', newRows: ['n', 'h', 'm'], rows: ['a', 'k', 's', 't', 'n', 'h', 'm'], kinds: ['basic'] }),
-  caves: area({ id: 'caves', arc: 2, script: 'katakana', label: 'Katakana: ヤ, ラ, ワ, ン + voiced', newRows: ['y', 'r', 'w', 'nn'], rows: BASIC_ALL, kinds: ['basic', 'dakuten'] }),
-  tower: area({ id: 'tower', arc: 2, script: 'katakana', label: 'Loanwords (ー and ッ)', newRows: [], rows: BASIC_ALL, kinds: ['basic', 'dakuten', 'yoon'], words: ['tower'] }),
+  caves: area({ id: 'caves', arc: 2, script: 'katakana', label: 'Katakana: ヤ, ラ, ワ, ン, voiced + combined', newRows: ['y', 'r', 'w', 'nn'], rows: BASIC_ALL, kinds: ['basic', 'dakuten', 'yoon'] }),
+  // The Skald's trial is a WORD trial: no bare kana, or 30 words drown in ~100 kana.
+  tower: area({ id: 'tower', arc: 2, script: 'katakana', label: 'Loanwords (ー and ッ)', newRows: [], rows: [], kinds: [], words: ['tower'] }),
   longship: area({ id: 'longship', arc: 2, script: 'katakana', label: 'All katakana + loanwords', newRows: [], rows: BASIC_ALL, kinds: ['basic', 'dakuten', 'yoon'], words: ['tower', 'longship'] }),
 };
 

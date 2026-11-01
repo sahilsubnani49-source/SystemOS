@@ -4,6 +4,8 @@ import { computeDamage, MAX_COMBO_MULTIPLIER, comboMultiplier } from '../battle/
 import { battleXp, canPurify, reduce, startBattle, type BattleEvent, type BattleState, type Combatant } from '../battle/engine';
 import { getKana, KANA } from '../content/kana';
 import { elementMultiplier } from '../content/elements';
+import { getFamily, statsAt } from '../content/spirits';
+import { HEROES } from '../content/heroes';
 import { kanaPoolForArea } from '../content/curriculum';
 import { foeCombatant, heroCombatant } from '../progression';
 import { newGame } from '../save/schema';
@@ -57,6 +59,17 @@ describe('damage', () => {
     expect(elementMultiplier('fire', 'steel')).toBe(1);
     expect(elementMultiplier('steel', 'fire')).toBe(1);
     expect(elementMultiplier('thunder', 'steel')).toBe(1.5);
+  });
+  it('keeps the number of hits to defeat a same-level foe roughly constant across levels', () => {
+    // Regression: a (1 + level/20) factor on top of level-scaled atk made late fights trivial.
+    const hitsToKill = (level: number) => {
+      const atk = statsAt(HEROES.samurai.base, level, 0).atk;
+      const foe = statsAt(getFamily('kobi').base, level, 0);
+      const dmg = computeDamage({ ...base, atk, def: foe.def, level, attackElement: 'steel', defendElement: 'fire' });
+      return foe.hp / dmg;
+    };
+    expect(hitsToKill(30) / hitsToKill(3)).toBeGreaterThan(0.75);
+    expect(hitsToKill(30) / hitsToKill(3)).toBeLessThan(1.33);
   });
   it('never deals less than 1 and caps combo', () => {
     expect(computeDamage({ ...base, atk: 1, def: 999 })).toBe(1);

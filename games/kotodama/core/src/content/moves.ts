@@ -37,8 +37,8 @@ export const MOVES = {
   kesa: m({ id: 'kesa', name: 'Kesa Cut', nameJa: '袈裟斬り', prompt: 'recognize', power: 1.0, element: 'steel', fx: 'slash', timeLimitMs: null, description: 'A diagonal cut. Read the kana.' }),
   stance: m({ id: 'stance', name: 'Mountain Stance', nameJa: '山の構え', prompt: 'recognize', power: 0, element: 'earth', fx: 'guard', timeLimitMs: null, self: 'guard', description: 'Brace: the next blow against you is halved.' }),
   // ── Ninja ─────────────────────────────────────────────────────────
-  shuriken: m({ id: 'shuriken', name: 'Shuriken Storm', nameJa: '手裏剣', prompt: 'recognize', power: 0.9, element: 'wind', fx: 'shuriken', timeLimitMs: 4000, description: 'Fast hands win. Answer quickly to crit.' }),
-  kunai: m({ id: 'kunai', name: 'Echo Kunai', nameJa: '苦無', prompt: 'listen', power: 1.15, element: 'shadow', fx: 'kunai', timeLimitMs: 6000, description: 'Strike the shape you hear.' }),
+  shuriken: m({ id: 'shuriken', name: 'Shuriken Storm', nameJa: '手裏剣', prompt: 'recognize', power: 1.15, element: 'wind', fx: 'shuriken', timeLimitMs: 4000, description: 'Fast hands win. Answer quickly to crit.' }),
+  kunai: m({ id: 'kunai', name: 'Echo Kunai', nameJa: '苦無', prompt: 'listen', power: 1.3, element: 'shadow', fx: 'kunai', timeLimitMs: 6000, description: 'Strike the shape you hear.' }),
   smoke: m({ id: 'smoke', name: 'Smoke Veil', nameJa: '煙玉', prompt: 'recognize', power: 0, element: 'shadow', fx: 'smoke', timeLimitMs: 5000, self: 'evade', description: 'Vanish: dodge the next attack.' }),
   // ── Spirit moves ──────────────────────────────────────────────────
   ember: m({ id: 'ember', name: 'Lantern Ember', nameJa: '灯火', prompt: 'recognize', power: 1.0, element: 'fire', fx: 'fire', timeLimitMs: null, description: 'A flick of lantern flame.' }),

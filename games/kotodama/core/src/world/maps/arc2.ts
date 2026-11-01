@@ -82,7 +82,7 @@ const longship_docks: MapDef = {
     { id: 'sigrun', name: 'Shieldmaiden Sigrun', x: 17, y: 1, sprite: 'shieldmaiden', facing: 'down', hideIf: 'beat_sigrun',
       dialogue: [{ speaker: 'Sigrun', ja: 'シールド', text: 'Shiirudo: that is how your people say "shield". Even your words bend to us. Read mine, if you can!' }],
       battle: { winFlag: 'beat_sigrun', isBoss: true, foes: [
-        { familyId: 'kobold', level: 21, name: 'Shieldmaiden Sigrun', nameJa: 'シグルン', sprite: 'shieldmaiden', recruitable: false, hpScale: 2 },
+        { familyId: 'kobold', level: 21, name: 'Shieldmaiden Sigrun', nameJa: 'シグルン', sprite: 'shieldmaiden', recruitable: false, hpScale: 3 },
       ] } },
     { id: 'sigrun_after', name: 'Shieldmaiden Sigrun', x: 17, y: 2, sprite: 'shieldmaiden', facing: 'down', showIf: 'beat_sigrun',
       dialogue: [{ speaker: 'Sigrun', text: 'Your blade reads true. Berserker Ulf waits on the pine shore. He does not stop when he should.' }] },
@@ -121,7 +121,7 @@ const pine_shore: MapDef = {
     { id: 'ulf', name: 'Berserker Ulf', x: 17, y: 8, sprite: 'berserker', facing: 'up', hideIf: 'beat_ulf',
       dialogue: [{ speaker: 'Ulf', ja: 'バーサーカー', text: 'BAASAAKAA! Even your scribes had to borrow a word for me. RAAAH!' }],
       battle: { winFlag: 'beat_ulf', isBoss: true, foes: [
-        { familyId: 'muspel', level: 24, name: 'Berserker Ulf', nameJa: 'ウルフ', sprite: 'berserker', recruitable: false, hpScale: 2.2 },
+        { familyId: 'muspel', level: 24, name: 'Berserker Ulf', nameJa: 'ウルフ', sprite: 'berserker', recruitable: false, hpScale: 6.6 },
       ] } },
     { id: 'ulf_after', name: 'Berserker Ulf', x: 16, y: 8, sprite: 'berserker', facing: 'right', showIf: 'beat_ulf',
       dialogue: [{ speaker: 'Ulf', text: 'Ugh. My head clears. The Draugr Warden in the fjord caves never sleeps. Beware the ン and ソ runes there.' }] },
@@ -159,7 +159,7 @@ const fjord_caves: MapDef = {
     { id: 'warden', name: 'Draugr Warden', x: 18, y: 8, sprite: 'draugr', facing: 'left', hideIf: 'beat_warden',
       dialogue: [{ speaker: 'Draugr Warden', ja: 'ガード', text: 'Gaado... I GUARD. None pass to the tower. Your voiced sounds will fail you: ガ, ザ, ダ, バ, パ.' }],
       battle: { winFlag: 'beat_warden', isBoss: true, foes: [
-        { familyId: 'hrafn', level: 27, name: 'Draugr Warden', nameJa: 'ドラウグル', sprite: 'draugr', recruitable: false, hpScale: 2.4 },
+        { familyId: 'hrafn', level: 27, name: 'Draugr Warden', nameJa: 'ドラウグル', sprite: 'draugr', recruitable: false, hpScale: 10.6 },
       ] } },
     { id: 'lost_scribe', name: 'Lost Scribe', x: 3, y: 5, sprite: 'merchant', facing: 'right',
       dialogue: [{ speaker: 'Lost Scribe', text: 'Katakana voiced sounds work just like hiragana: カ→ガ, ハ→バ→パ. Yule cats, squirrels and sea wyrms hide in these drifts.' }] },
@@ -199,7 +199,7 @@ const rune_watchtower: MapDef = {
         { speaker: 'Skald Eirik', text: 'A skald fights with words. Read mine: their meaning and their spelling. Win, and the gangway is yours.' },
       ],
       battle: { winFlag: 'skald_trial', isBoss: true, pool: 'tower', foes: [
-        { familyId: 'sleip', level: 28, name: 'Skald Eirik', nameJa: 'エイリーク', sprite: 'skald', recruitable: false, hpScale: 2.4 },
+        { familyId: 'sleip', level: 28, name: 'Skald Eirik', nameJa: 'エイリーク', sprite: 'skald', recruitable: false, hpScale: 7.2 },
       ] } },
     { id: 'skald_after', name: 'Skald Eirik', x: 6, y: 3, sprite: 'skald', facing: 'down', showIf: 'skald_trial', heals: true,
       dialogue: [{ speaker: 'Skald Eirik', text: 'A fine verse. The Jarl\'s Champion waits on the longship. He will throw every word you know at you.' }] },

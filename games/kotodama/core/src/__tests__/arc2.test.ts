@@ -70,9 +70,11 @@ describe('katakana curriculum', () => {
   it('teaches katakana in Arc 2 and adds words only from the tower on', () => {
     expect(kanaPoolForArea('harbor').every((id) => id.startsWith('k-'))).toBe(true);
     expect(poolForArea('harbor').some((id) => id.startsWith('w-'))).toBe(false);
-    expect(poolForArea('tower').some((id) => id.startsWith('w-'))).toBe(true);
     expect(poolForArea('longship').filter((id) => id.startsWith('w-'))).toHaveLength(WORDS.length);
     expect(kanaPoolForArea('caves')).toContain('k-ga');
+    expect(kanaPoolForArea('caves')).toContain('k-kya');
+    // The Skald's trial tests words only.
+    expect(poolForArea('tower').every((id) => id.startsWith('w-'))).toBe(true);
     for (const a of Object.values(CURRICULUM)) for (const id of poolForArea(a.id)) expect(() => getItem(id)).not.toThrow();
   });
 });

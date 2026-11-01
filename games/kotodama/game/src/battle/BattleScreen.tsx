@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOutUp, ZoomIn, useSharedValue, withSequence, withTiming, useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { BlendColor, Canvas, Circle, Group, Image, LinearGradient, Oval, Rect, useClock, vec } from '@shopify/react-native-skia';
 import {
-  canPurify, getKana, getMap, getMove,
+  canPurify, getItem, getKana, getMap, getMove, itemText,
   type BattleEvent, type BattleState, type Combatant,
 } from '@kotodama/core';
 import { spriteImage } from '../art/atlas';
@@ -20,6 +20,12 @@ import { C, hpColor } from '../theme';
 import { PROMPT_TAG } from '../ui/promptLabels';
 
 const SKY: Record<string, [string, string]> = {
+  harbor: ['#1A2A4A', '#8AA8C8'],
+  docks: ['#14243A', '#6A88A8'],
+  shore: ['#2A3A5A', '#C8D8E8'],
+  caves: ['#0A1018', '#1E3A44'],
+  tower: ['#1A1A2A', '#4A3A5A'],
+  longship: ['#0E1A2E', '#3A5A7A'],
   dojo: ['#2A3A6A', '#C8848A'],
   bamboo: ['#1E3A2A', '#5A8A4A'],
   river: ['#1E3A6A', '#5AA0C8'],
@@ -106,15 +112,18 @@ export function BattleScreen() {
             setVerdict(null);
             break;
           case 'graded': {
-            const kana = getKana(ev.itemId);
+            const item = getItem(ev.itemId);
             const ok = ev.grade === 'correct';
-            speakJa(kana.char);
+            speakJa(itemText(ev.itemId));
             bump(ok ? 'success' : 'error');
-            setVerdict({
-              ok,
-              text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED',
-              sub: ok ? `${kana.char} = ${kana.romaji}` : `${kana.char} is "${kana.romaji}"`,
-            });
+            // Words reveal their meaning; mirror prompts reveal both twins.
+            const sub =
+              item.kind === 'word'
+                ? `${item.word.text} = ${item.word.meaning}`
+                : ev.answer !== item.kana.romaji && ev.answer !== item.kana.char
+                  ? `${item.kana.char} ↔ ${ev.answer}  (${item.kana.romaji})`
+                  : `${item.kana.char} = ${item.kana.romaji}`;
+            setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub });
             await sleep(ok ? 650 : 1500);
             setVerdict(null);
             break;

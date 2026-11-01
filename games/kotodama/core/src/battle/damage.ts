@@ -24,7 +24,9 @@ export function comboMultiplier(combo: number, step: number): number {
 /** Always at least 1 for a damaging move, so no fight is ever unwinnable. */
 export function computeDamage(d: DamageInput): number {
   if (d.power <= 0) return 0;
-  const raw = (d.atk * d.power * (1 + d.level / 20) * 2 - d.def) * 0.9;
+  // No extra level multiplier: atk already grows with level (statsAt), and HP only
+  // grows linearly, so a second level factor made late-game fights end in 2-3 answers.
+  const raw = (d.atk * d.power * 2 - d.def) * 0.9;
   const scaled =
     Math.max(1, raw) *
     elementMultiplier(d.attackElement, d.defendElement) *

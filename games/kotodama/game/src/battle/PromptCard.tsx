@@ -38,7 +38,11 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
   }, [prompt]);
 
   const barStyle = useAnimatedStyle(() => ({ width: `${bar.value * 100}%`, backgroundColor: bar.value < 0.33 ? C.hpLow : C.gold }));
-  const bigIsKana = prompt.kind === 'recognize' || prompt.kind === 'type';
+  // What the big text is, and what the choices are, for each prompt kind.
+  const displayIsJa = prompt.kind === 'recognize' || prompt.kind === 'type' || prompt.kind === 'mirror' || prompt.kind === 'meaning';
+  const choicesAreJa = prompt.kind === 'recall' || prompt.kind === 'listen' || prompt.kind === 'mirror' || prompt.kind === 'spell';
+  const choicesAreEnglish = prompt.kind === 'meaning';
+  const longest = Math.max(1, ...prompt.choices.map((c) => [...c].length));
 
   return (
     <View style={styles.card} testID="prompt">
@@ -55,7 +59,19 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
           <PText style={styles.listenHint}>tap to hear again</PText>
         </Pressable>
       ) : (
-        <PText ja={bigIsKana} style={bigIsKana ? styles.bigKana : styles.bigRomaji}>{prompt.display}</PText>
+        <View style={styles.displayRow}>
+          <PText
+            ja={displayIsJa}
+            style={displayIsJa ? [styles.bigKana, { fontSize: jaSize(prompt.display, 64), lineHeight: jaSize(prompt.display, 64) * 1.2 }] : styles.bigRomaji}
+          >
+            {prompt.display}
+          </PText>
+          {prompt.kind === 'spell' ? (
+            <Pressable onPress={() => speakJa(prompt.speak)} accessibilityLabel="hear the word" style={styles.speaker}>
+              <PText style={styles.speakerIcon}>🔊</PText>
+            </Pressable>
+          ) : null}
+        </View>
       )}
 
       {prompt.kind === 'type' ? (
@@ -86,13 +102,36 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
               onPress={() => submit(c)}
               style={({ pressed }) => [styles.choice, pressed && { backgroundColor: '#2E2A44' }]}
             >
-              <PText ja={!bigIsKana} style={bigIsKana ? styles.choiceRomaji : styles.choiceKana}>{c}</PText>
+              <PText
+                ja={choicesAreJa}
+                style={
+                  choicesAreJa
+                    ? [styles.choiceKana, { fontSize: jaSize(c, 32, longest), lineHeight: jaSize(c, 32, longest) * 1.25 }]
+                    : choicesAreEnglish
+                      ? styles.choiceEnglish
+                      : styles.choiceRomaji
+                }
+              >
+                {c}
+              </PText>
             </Pressable>
           ))}
         </View>
       )}
     </View>
   );
+}
+
+/**
+ * Font size that keeps a Japanese string on one line: single kana stay huge,
+ * インターネット shrinks. `longest` keeps all four choices the same size.
+ */
+function jaSize(text: string, max: number, longest = [...text].length): number {
+  const n = Math.max([...text].length, longest);
+  if (n <= 2) return max;
+  if (n <= 4) return Math.round(max * 0.7);
+  if (n <= 6) return Math.round(max * 0.5);
+  return Math.round(max * 0.4);
 }
 
 const styles = StyleSheet.create({
@@ -116,6 +155,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  displayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  speaker: { padding: 6, borderRadius: 6, borderWidth: 2, borderColor: C.panelEdge },
+  speakerIcon: { fontSize: 18, lineHeight: 24 },
+  choiceEnglish: { fontSize: 9, lineHeight: 14, color: C.paper, textAlign: 'center', paddingHorizontal: 6 },
   choiceRomaji: { fontSize: 16, lineHeight: 22, color: C.paper },
   choiceKana: { fontSize: 32, lineHeight: 40, color: C.paper },
   input: {

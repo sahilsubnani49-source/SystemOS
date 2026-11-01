@@ -119,7 +119,7 @@ const bamboo_grove: MapDef = {
         { speaker: 'Ronin Goro', text: 'A dojo brat? I took this grove and the warhorse the raiders left behind. Read my blade, if you can.' },
       ],
       battle: { winFlag: 'beat_goro', isBoss: true, foes: [
-        { familyId: 'kobi', level: 6, name: 'Ronin Goro', nameJa: 'ごろう', sprite: 'ronin', recruitable: false, hpScale: 1.6 },
+        { familyId: 'kobi', level: 6, name: 'Ronin Goro', nameJa: 'ごろう', sprite: 'ronin', recruitable: false, hpScale: 6.2 },
       ] } },
     { id: 'goro_after', name: 'Ronin Goro', x: 9, y: 3, sprite: 'ronin', facing: 'down', showIf: 'beat_goro',
       setsFlag: 'got_horse', givesHorse: true,
@@ -168,7 +168,7 @@ const river_crossing: MapDef = {
         { speaker: 'Bjorn the Scout', text: 'Ha! The Jarl says your little letters bend to our runes now. Show me, island boy!' },
       ],
       battle: { winFlag: 'beat_bjorn', isBoss: true, foes: [
-        { familyId: 'riki', level: 10, name: 'Bjorn the Scout', nameJa: 'ビョルン', sprite: 'viking', recruitable: false, hpScale: 1.7 },
+        { familyId: 'riki', level: 10, name: 'Bjorn the Scout', nameJa: 'ビョルン', sprite: 'viking', recruitable: false, hpScale: 3.2 },
       ] } },
     { id: 'river_ferry', name: 'Ferryman Gen', x: 16, y: 6, sprite: 'ferryman', facing: 'left', showIf: 'beat_oni',
       travelsTo: { map: 'frost_harbor', x: 9, y: 12 },
@@ -219,7 +219,7 @@ const ninja_hideout: MapDef = {
         { speaker: 'Kunoichi Shizuka', text: 'You found the hideout. The Jarl pays well for scrolls. Let us see if your eyes are as quick as mine.' },
       ],
       battle: { winFlag: 'beat_shizuka', isBoss: true, foes: [
-        { familyId: 'mimi', level: 13, name: 'Kunoichi Shizuka', nameJa: 'しずか', sprite: 'kunoichi', recruitable: false, hpScale: 1.8 },
+        { familyId: 'mimi', level: 13, name: 'Kunoichi Shizuka', nameJa: 'しずか', sprite: 'kunoichi', recruitable: false, hpScale: 8 },
       ] } },
     { id: 'shizuka_after', name: 'Kunoichi Shizuka', x: 10, y: 7, sprite: 'kunoichi', facing: 'down', showIf: 'beat_shizuka',
       dialogue: [{ speaker: 'Kunoichi Shizuka', text: 'I was wrong to sell to the northmen. The lock in the southeast corner is open. The Moon Shrine lies beyond the pass.' }] },
@@ -304,7 +304,7 @@ const moon_shrine: MapDef = {
         { speaker: 'Ayame', text: 'The guardian of this shrine will test you on every voiced sound. Win, and the gate path opens.' },
       ],
       battle: { winFlag: 'shrine_trial', isBoss: true, pool: 'shrine', foes: [
-        { familyId: 'riki', level: 15, name: 'Shrine Guardian', nameJa: 'こまいぬ', sprite: 'riki1', recruitable: false, hpScale: 2 },
+        { familyId: 'riki', level: 15, name: 'Shrine Guardian', nameJa: 'こまいぬ', sprite: 'riki1', recruitable: false, hpScale: 3.4 },
       ] } },
     { id: 'miko_after', name: 'Shrine Maiden Ayame', x: 9, y: 6, sprite: 'miko', facing: 'down', showIf: 'shrine_trial', heals: true,
       dialogue: [{ speaker: 'Ayame', text: 'The Oni at the Broken Gate tests everything, even the combined sounds like きゃ and しょ. I have healed your party. Go.' }] },
@@ -337,7 +337,7 @@ const broken_gate: MapDef = {
         { speaker: 'Oni', ja: 'よめるか？', text: 'Yomeru ka? Can you READ, little scribe? The Jarl promised me every letter of these isles.' },
       ],
       battle: { winFlag: 'beat_oni', isBoss: true, foes: [
-        { familyId: 'tanu', level: 18, name: 'Oni of the Broken Gate', nameJa: 'おに', sprite: 'oni', recruitable: false, hpScale: 3.2 },
+        { familyId: 'tanu', level: 18, name: 'Oni of the Broken Gate', nameJa: 'おに', sprite: 'oni', recruitable: false, hpScale: 5.5 },
       ] } },
     { id: 'ending', name: 'Master Kaito', x: 8, y: 4, sprite: 'master', facing: 'down', showIf: 'beat_oni',
       dialogue: [

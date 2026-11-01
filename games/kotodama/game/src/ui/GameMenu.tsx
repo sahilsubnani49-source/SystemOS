@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
-  CURRICULUM, MAX_STAGE, SPIRIT_FAMILIES, familyStage, getFamily, horseSpeed, kanaWhere, xpToNext,
-  type KanaRow, type Save,
+  MAX_STAGE, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, xpToNext,
+  type KanaRow, type Save, type Script,
 } from '@kotodama/core';
 import { characterImage, spiritImage } from '../art/atlas';
 import { SpriteView } from './Sprite';
@@ -10,7 +10,7 @@ import { PButton, PText, Panel } from './Pixel';
 import { speakJa } from '../audio/speak';
 import { C } from '../theme';
 
-type Tab = 'party' | 'kana' | 'dex' | 'system';
+type Tab = 'party' | 'kana' | 'words' | 'dex' | 'system';
 
 const STAGE_COLORS = ['#2A2740', '#5A3A4E', '#8E4A5A', '#C8784A', '#D8B04A', '#4CD07D'];
 const ROWS: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
@@ -27,7 +27,7 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
     <View style={styles.overlay}>
       <Panel style={styles.sheet}>
         <View style={styles.tabs}>
-          {(['party', 'kana', 'dex', 'system'] as Tab[]).map((t) => (
+          {(['party', 'kana', 'words', 'dex', 'system'] as Tab[]).map((t) => (
             <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]}>
               <PText style={[styles.tabText, tab === t && { color: C.ink }]}>{t.toUpperCase()}</PText>
             </Pressable>
@@ -36,6 +36,7 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
         <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
           {tab === 'party' && <PartyTab save={save} />}
           {tab === 'kana' && <KanaTab save={save} />}
+          {tab === 'words' && <WordsTab save={save} />}
           {tab === 'dex' && <DexTab save={save} />}
           {tab === 'system' && (
             <View style={{ gap: 10 }}>
@@ -77,7 +78,9 @@ function PartyTab({ save }: { save: Save }) {
               </PText>
               <PText ja style={styles.ja}>{form.nameJa}</PText>
               <PText style={styles.dim}>Lv {sp.level} · {fam.element} · stage {stage + 1}/3</PText>
-              <PText style={styles.dim}>Evolves as you master the {fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}.</PText>
+              <PText style={styles.dim}>
+                Evolves as you master the {fam.script} {fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}.
+              </PText>
             </View>
           </View>
         );
@@ -88,12 +91,23 @@ function PartyTab({ save }: { save: Save }) {
 }
 
 function KanaTab({ save }: { save: Save }) {
+  // Default to katakana once the player has started learning it.
+  const [script, setScript] = useState<Script>(() =>
+    Object.keys(save.srs).some((id) => id.startsWith('k-')) ? 'katakana' : 'hiragana',
+  );
   return (
     <>
+      <View style={styles.tabs}>
+        {(['hiragana', 'katakana'] as Script[]).map((sc) => (
+          <Pressable key={sc} testID={`script-${sc}`} onPress={() => setScript(sc)} style={[styles.tab, script === sc && styles.tabOn]}>
+            <PText ja style={[styles.scriptLabel, script === sc && { color: C.ink }]}>{sc === 'hiragana' ? 'ひらがな' : 'カタカナ'}</PText>
+          </Pressable>
+        ))}
+      </View>
       <PText style={styles.dim}>Colour = mastery. Tap to hear it.</PText>
       {ROWS.map((row) => (
         <View key={row} style={styles.kanaRow}>
-          {kanaWhere({ script: 'hiragana', row, kind: 'basic' }).map((k) => {
+          {kanaWhere({ script, row, kind: 'basic' }).map((k) => {
             const stage = save.srs[k.id]?.stage ?? -1;
             return (
               <Pressable
@@ -109,8 +123,34 @@ function KanaTab({ save }: { save: Save }) {
         </View>
       ))}
       <PText style={styles.dim}>
-        Voiced sounds (が, ぱ) are taught at the {CURRICULUM.shrine?.label ? 'Moon Shrine' : 'shrine'}.
+        {script === 'hiragana'
+          ? 'Voiced sounds (が, ぱ) are taught at the Moon Shrine.'
+          : 'Voiced katakana (ガ, パ) are taught in the Fjord Caves.'}
       </PText>
+    </>
+  );
+}
+
+function WordsTab({ save }: { save: Save }) {
+  const seen = WORDS.filter((w) => save.srs[w.id]);
+  if (seen.length === 0) {
+    return <PText style={styles.dim}>Loanwords are taught in the Rune Watchtower of Frost Harbor (Arc 2).</PText>;
+  }
+  return (
+    <>
+      <PText style={styles.dim}>{seen.length}/{WORDS.length} loanwords met. Colour = mastery. Tap to hear it.</PText>
+      {seen.map((w) => {
+        const stage = save.srs[w.id]?.stage ?? 0;
+        return (
+          <Pressable key={w.id} onPress={() => speakJa(w.text)} style={[styles.wordRow, { borderLeftColor: STAGE_COLORS[stage] }]}>
+            <PText ja style={styles.wordJa}>{w.text}</PText>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <PText style={styles.wordMeaning}>{w.meaning}</PText>
+              <PText style={styles.dim}>{w.romaji} · from {w.from}{stage >= MAX_STAGE ? ' · ★' : ''}</PText>
+            </View>
+          </Pressable>
+        );
+      })}
     </>
   );
 }
@@ -150,6 +190,10 @@ const styles = StyleSheet.create({
   kanaCell: { width: 52, height: 48, borderRadius: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#2E2A44' },
   kanaChar: { fontSize: 20, lineHeight: 24 },
   kanaRomaji: { fontSize: 6, color: C.paperDim },
+  scriptLabel: { fontSize: 13, lineHeight: 18 },
+  wordRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#15131F', padding: 8, borderRadius: 4, borderLeftWidth: 5 },
+  wordJa: { fontSize: 18, lineHeight: 24, color: C.paper },
+  wordMeaning: { fontSize: 8, color: C.gold },
   dexGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   dexCell: { width: '30%', alignItems: 'center', backgroundColor: '#15131F', paddingVertical: 8, borderRadius: 4, gap: 2 },
   dexName: { fontSize: 6, textAlign: 'center' },
