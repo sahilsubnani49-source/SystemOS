@@ -265,6 +265,120 @@ const PAINTERS: Record<string, Painter> = {
     c.rect(0, 12, 16, 2, '#3A86C8');
     for (let x = 0; x < 16; x += 4) c.set(x + 1, 11, '#BEE6F2');
   },
+  // ── Arc 3: castle-town spirits (tsukumogami and guardians) ──────────
+  soroban(c, stage) {
+    // Abacus-bead spirit: a frame of beads with eyes; more rods as it evolves.
+    const frame = '#6E4A2A';
+    c.rect(1, 3, 14, 1, frame); c.rect(1, 12, 14, 1, frame); c.rect(1, 3, 1, 10, frame); c.rect(14, 3, 1, 10, frame);
+    c.rect(2, 6, 12, 1, frame);
+    const rods = stage === 0 ? 3 : stage === 1 ? 4 : 5;
+    for (let i = 0; i < rods; i++) {
+      const x = 3 + i * Math.floor(10 / rods);
+      c.rect(x, 4, 2, 2, '#B3262E');
+      c.rect(x, 8 + (i % 2), 2, 2, stage === 2 ? '#E8B04B' : '#C87A3A');
+    }
+    c.set(5, 1, '#120C18'); c.set(10, 1, '#120C18'); c.rect(4, 0, 8, 1, frame);
+    c.rect(4, 13, 2, 3, frame); c.rect(10, 13, 2, 3, frame);
+  },
+  koyomi(c, stage) {
+    // Almanac scroll spirit with a sun (日) or moon (月) disc on it.
+    c.rect(3, 2, 10, 12, '#F4E9D0');
+    c.rect(2, 1, 12, 2, '#8A5A2B'); c.rect(2, 13, 12, 2, '#8A5A2B');
+    c.ellipse(5, 4, 6, 6, stage === 1 ? '#E8E0C8' : stage === 2 ? '#E8B04B' : '#E8574B');
+    c.set(6, 10, '#120C18'); c.set(9, 10, '#120C18');
+    c.rect(7, 11, 2, 1, '#B3262E');
+    if (stage >= 1) { c.rect(0, 5, 2, 2, '#FFB347'); c.rect(14, 5, 2, 2, '#FFB347'); }
+  },
+  hansho(c, stage) {
+    // Fire-watch bell: a bronze bell with a face, hanging from a beam.
+    const bronze = stage === 2 ? '#C89A3A' : '#8A6A3A';
+    c.rect(2, 0, 12, 2, '#5A3A22');
+    c.rect(7, 2, 2, 2, '#3A2A1A');
+    c.ellipse(3, 3, 10, 10, bronze);
+    c.rect(3, 11, 10, 2, shade(bronze, -0.15));
+    c.set(6, 7, '#120C18'); c.set(9, 7, '#120C18');
+    c.rect(7, 9, 2, 1, '#120C18');
+    c.rect(7, 13, 2, 2, '#3A2A1A');
+    if (stage >= 1) { c.line(0, 4, 2, 7, '#FFE14B'); c.line(15, 4, 13, 7, '#FFE14B'); }
+  },
+  hina(c, stage) {
+    // Hina doll: white face, black hair, layered court robes.
+    const robe = stage === 0 ? '#E8A0B8' : stage === 1 ? '#B3262E' : '#3A2A6A';
+    c.rect(5, 1, 6, 3, '#14141E');
+    c.rect(6, 3, 4, 4, '#F4F1EA');
+    c.set(7, 5, '#120C18'); c.set(9, 5, '#120C18'); c.set(8, 6, '#E25A6A');
+    c.rect(3, 7, 10, 7, robe);
+    c.rect(4, 8, 8, 1, '#E8B04B'); c.rect(4, 10, 8, 1, shade(robe, 0.15));
+    c.rect(7, 7, 2, 7, '#F4F1EA');
+    if (stage === 2) { c.rect(5, 0, 6, 1, '#E8B04B'); c.rect(1, 9, 2, 2, '#E8B04B'); }
+  },
+  ashigaru(c, stage) {
+    // Karakuri foot-soldier: wooden clockwork body, jingasa hat, spear later.
+    const wood = '#B8844A';
+    c.rect(4, 1, 8, 2, '#2A2A3A'); c.rect(3, 3, 10, 1, '#2A2A3A');
+    c.rect(5, 4, 6, 4, wood);
+    c.set(6, 5, '#120C18'); c.set(9, 5, '#120C18');
+    c.rect(4, 8, 8, 4, stage === 0 ? wood : '#3A3A5A');
+    c.ellipse(6, 9, 4, 3, '#E8B04B'); // the winding key
+    c.rect(5, 12, 2, 4, wood); c.rect(9, 12, 2, 4, wood);
+    if (stage >= 1) c.line(13, 1, 13, 14, '#8A6A3A');
+    if (stage === 2) c.rect(12, 0, 3, 2, '#C9D2DC');
+  },
+  kazamuki(c, stage) {
+    // Weathervane spirit: a crowing rooster on a cross of directions.
+    c.rect(7, 6, 2, 10, '#5A5A66');
+    c.rect(2, 12, 12, 1, '#5A5A66');
+    c.ellipse(4, 2, 9, 6, stage === 2 ? '#E8B04B' : '#C87A3A');
+    c.rect(11, 0, 3, 3, '#B3262E'); // comb
+    c.set(11, 3, '#120C18');
+    c.rect(13, 4, 2, 1, '#E8B04B');
+    c.rect(2, 3, 3, 3, stage >= 1 ? '#5AA0C8' : '#8A5A2B'); // tail
+    if (stage >= 1) { c.line(0, 8, 3, 8, '#D8F0FF'); c.line(12, 9, 15, 9, '#D8F0FF'); }
+  },
+  karakasa(c, stage) {
+    // Kasa-obake: a one-eyed paper umbrella hopping on a single leg.
+    const paper = stage === 0 ? '#B3262E' : stage === 1 ? '#E8A0B8' : '#2A3A8A';
+    c.rect(7, 0, 2, 1, '#3A2A1A');
+    c.ellipse(1, 1, 14, 9, paper);
+    for (let x = 3; x < 14; x += 3) c.line(8, 1, x, 9, shade(paper, -0.2));
+    c.ellipse(6, 3, 4, 4, '#FFFFFF'); c.rect(7, 4, 2, 2, '#120C18');
+    c.rect(9, 7, 3, 2, '#E25A6A'); // the long tongue
+    c.rect(7, 10, 2, 4, '#8A5A2B');
+    c.rect(6, 14, 4, 2, '#F4E9D0');
+    if (stage >= 1) { c.set(2, 12, '#7FC4F2'); c.set(13, 11, '#7FC4F2'); }
+  },
+  zori(c, stage) {
+    // Bake-zori: a straw sandal with eyes, arms and legs, always running.
+    c.ellipse(2, 3, 12, 10, '#D8B87A');
+    for (let y = 5; y < 12; y += 2) c.rect(4, y, 8, 1, '#B8984A');
+    c.rect(7, 2, 2, 4, stage === 2 ? '#B3262E' : '#3A2A6A'); // the thong strap
+    c.set(5, 7, '#120C18'); c.set(10, 7, '#120C18');
+    c.rect(6, 9, 4, 1, '#120C18');
+    c.line(1, 8, 0, 12, '#8A5A2B'); c.line(14, 8, 15, 12, '#8A5A2B');
+    c.rect(4, 13, 1, 3, '#8A5A2B'); c.rect(11, 12, 1, 3, '#8A5A2B');
+    if (stage >= 1) { c.rect(0, 13, 2, 1, '#FFB347'); }
+  },
+  kagami(c, stage) {
+    // Ungaikyo: a round bronze mirror on a stand, with a face in the glass.
+    const rim = stage === 2 ? '#E8B04B' : '#8A6A3A';
+    c.ellipse(2, 0, 12, 12, rim);
+    c.ellipse(3, 1, 10, 10, stage === 0 ? '#C8D8E8' : '#E8F4FF');
+    c.set(6, 5, '#120C18'); c.set(9, 5, '#120C18');
+    c.rect(7, 7, 2, 1, '#8E6CEF');
+    c.rect(7, 12, 2, 2, rim); c.rect(4, 14, 8, 2, rim);
+    if (stage >= 1) { c.set(5, 3, '#FFFFFF'); c.set(4, 4, '#FFFFFF'); }
+  },
+  dosojin(c, stage) {
+    // Dosojin: a mossy roadside stone guardian in a red bib.
+    const stone = '#8A8A94';
+    c.ellipse(3, 1, 10, 14, stone);
+    c.rect(5, 5, 2, 1, '#120C18'); c.rect(9, 5, 2, 1, '#120C18');
+    c.rect(7, 7, 2, 1, '#5A5A64');
+    c.rect(4, 9, 8, 4, '#B3262E'); // bib
+    c.rect(3, 14, 10, 2, '#5A5A64');
+    if (stage >= 1) { c.rect(3, 2, 3, 2, '#4A7A3A'); c.rect(11, 3, 2, 2, '#4A7A3A'); }
+    if (stage === 2) { c.rect(5, 0, 6, 1, '#E8B04B'); c.rect(6, 10, 4, 2, '#E8B04B'); }
+  },
 };
 
 export function drawSpirit(familyId: string, stage: number): PixelCanvas {

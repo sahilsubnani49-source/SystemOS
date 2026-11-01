@@ -21,6 +21,12 @@ import { C, hpColor } from '../theme';
 import { PROMPT_TAG } from '../ui/promptLabels';
 
 const SKY: Record<string, [string, string]> = {
+  castle: ['#3A2A5A', '#E8A0B8'],
+  market: ['#2A3A6A', '#E8C08A'],
+  teahouse: ['#2A4A3A', '#A8C88A'],
+  gardens: ['#3A2A4A', '#F4B4CA'],
+  keep: ['#1A1A2A', '#5A4A3A'],
+  hall: ['#14080E', '#6A1E2E'],
   harbor: ['#1A2A4A', '#8AA8C8'],
   docks: ['#14243A', '#6A88A8'],
   shore: ['#2A3A5A', '#C8D8E8'],

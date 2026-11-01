@@ -1,7 +1,7 @@
 import { PixelCanvas, shade } from './pixel';
 
 export type Facing = 'up' | 'down' | 'left' | 'right';
-export type HairStyle = 'topknot' | 'hood' | 'long' | 'bald' | 'kasa' | 'helmet' | 'oniHorns' | 'bun';
+export type HairStyle = 'topknot' | 'hood' | 'long' | 'bald' | 'kasa' | 'helmet' | 'oniHorns' | 'bun' | 'kabuto';
 export type Gear = 'katana' | 'scarf' | 'beard' | 'club' | 'staff' | 'axe' | 'fan' | 'shield' | 'none';
 
 export interface CharacterSpec {
@@ -136,6 +136,16 @@ function drawHair(c: PixelCanvas, s: CharacterSpec, hy: number, side: boolean, b
     case 'bald':
       c.set(7, hy, shade(s.skin, 0.12));
       break;
+    case 'kabuto': // samurai helmet: dark bowl, flared neck guard, golden crest
+      c.rect(4, hy - 1, 8, 3, h);
+      c.rect(3, hy + 2, 2, 3, h);
+      c.rect(11, hy + 2, 2, 3, h);
+      if (back) c.rect(4, hy, 8, 5, h);
+      else {
+        c.line(5, hy - 3, 7, hy - 1, '#E8B04B');
+        c.line(10, hy - 3, 8, hy - 1, '#E8B04B');
+      }
+      break;
   }
 }
 
@@ -203,6 +213,13 @@ export const CHARACTERS: Record<string, CharacterSpec> = {
   skald: { skin: '#F0C8A2', hair: '#C8B89A', hairStyle: 'long', top: '#5A2A6A', trim: '#E8B04B', bottom: '#3A2A4A', gear: ['beard', 'staff'] },
   draugr: { skin: '#7A9A8A', hair: '#5A6A64', hairStyle: 'helmet', top: '#3A4A44', trim: '#5A6A64', bottom: '#2A3430', gear: ['axe'], eye: '#7FFFD4' },
   champion: { skin: '#F0C2A0', hair: '#C9D2DC', hairStyle: 'helmet', top: '#8A1E2E', trim: '#E8B04B', bottom: '#2A2A3A', gear: ['beard', 'shield', 'axe'] },
+  // ── Arc 3: Castle Capital ─────────────────────────────────────────
+  gatecaptain: { skin: '#E8B98E', hair: '#2A2A3A', hairStyle: 'kabuto', top: '#3A3A5A', trim: '#E8B04B', bottom: '#1E1E2E', gear: ['katana'] },
+  rogueninja: { skin: '#E8C09A', hair: '#3A1A1A', hairStyle: 'hood', top: '#4A1E1E', trim: '#8A2A2A', bottom: '#2A1414', gear: ['scarf'], mask: '#2A1414' },
+  teamaster: { skin: '#F4D2B4', hair: '#2A1E2A', hairStyle: 'bun', top: '#5A7A5A', trim: '#F4E9D0', bottom: '#3A4A3A', gear: ['fan'] },
+  assassin: { skin: '#F2C9A0', hair: '#14141E', hairStyle: 'long', top: '#1E1E2A', trim: '#8E6CEF', bottom: '#14141E', gear: ['katana'], mask: '#1E1E2A' },
+  karo: { skin: '#E8B98E', hair: '#3A3A3A', hairStyle: 'topknot', top: '#6A2A5A', trim: '#E8B04B', bottom: '#2A1E3A', gear: ['fan'] },
+  shogun: { skin: '#E0B490', hair: '#1A1A24', hairStyle: 'kabuto', top: '#8E1F2F', trim: '#E8B04B', bottom: '#1A1A24', gear: ['katana', 'fan'] },
   merchant: { skin: '#EBC29C', hair: '#2A1E14', hairStyle: 'topknot', top: '#3A6A8A', trim: '#E8E0C8', bottom: '#2A3A4A', gear: [] },
 };
 

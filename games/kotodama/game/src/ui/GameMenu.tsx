@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
-  MAX_STAGE, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, xpToNext,
-  type KanaRow, type Save, type Script,
+  KANJI, KANJI_GROUPS, MAX_STAGE, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
+  type KanaRow, type Save, type Script, type SpiritFamily,
 } from '@kotodama/core';
 import { characterImage, spiritImage } from '../art/atlas';
 import { SpriteView } from './Sprite';
@@ -10,7 +10,7 @@ import { PButton, PText, Panel } from './Pixel';
 import { speakJa } from '../audio/speak';
 import { C } from '../theme';
 
-type Tab = 'party' | 'kana' | 'words' | 'dex' | 'system';
+type Tab = 'party' | 'kana' | 'kanji' | 'words' | 'dex' | 'system';
 
 const STAGE_COLORS = ['#2A2740', '#5A3A4E', '#8E4A5A', '#C8784A', '#D8B04A', '#4CD07D'];
 const ROWS: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
@@ -27,7 +27,7 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
     <View style={styles.overlay}>
       <Panel style={styles.sheet}>
         <View style={styles.tabs}>
-          {(['party', 'kana', 'words', 'dex', 'system'] as Tab[]).map((t) => (
+          {(['party', 'kana', 'kanji', 'words', 'dex', 'system'] as Tab[]).map((t) => (
             <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]}>
               <PText style={[styles.tabText, tab === t && { color: C.ink }]}>{t.toUpperCase()}</PText>
             </Pressable>
@@ -36,6 +36,7 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
         <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
           {tab === 'party' && <PartyTab save={save} />}
           {tab === 'kana' && <KanaTab save={save} />}
+          {tab === 'kanji' && <KanjiTab save={save} />}
           {tab === 'words' && <WordsTab save={save} />}
           {tab === 'dex' && <DexTab save={save} />}
           {tab === 'system' && (
@@ -78,14 +79,49 @@ function PartyTab({ save }: { save: Save }) {
               </PText>
               <PText ja style={styles.ja}>{form.nameJa}</PText>
               <PText style={styles.dim}>Lv {sp.level} · {fam.element} · stage {stage + 1}/3</PText>
-              <PText style={styles.dim}>
-                Evolves as you master the {fam.script} {fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}.
-              </PText>
+              <PText style={styles.dim}>Evolves as you master {masteryLabel(fam)}.</PText>
             </View>
           </View>
         );
       })}
       {save.party.length === 0 ? <PText style={styles.dim}>No spirits yet. Visit Master Kaito in the dojo.</PText> : null}
+    </>
+  );
+}
+
+function masteryLabel(fam: SpiritFamily): string {
+  if (fam.kanjiGroup) return `the ${fam.kanjiGroup} kanji`;
+  return `the ${fam.script} ${fam.row === 'w' ? 'w-row & ん' : `${fam.row}-row`}`;
+}
+
+function KanjiTab({ save }: { save: Save }) {
+  const met = KANJI.filter((k) => save.srs[k.id]).length;
+  if (met === 0) {
+    return <PText style={styles.dim}>Kanji are taught in the Castle Capital (Arc 3), reached from Frost Harbor.</PText>;
+  }
+  return (
+    <>
+      <PText style={styles.dim}>{met}/{KANJI.length} N5 kanji met. Colour = mastery. Tap to hear a reading.</PText>
+      {KANJI_GROUPS.map((group) => (
+        <View key={group} style={{ gap: 4 }}>
+          <PText style={styles.groupLabel}>{group.toUpperCase()}</PText>
+          <View style={styles.kanjiGrid}>
+            {KANJI.filter((k) => k.group === group).map((k) => {
+              const stage = save.srs[k.id]?.stage ?? -1;
+              return (
+                <Pressable
+                  key={k.id}
+                  onPress={() => speakJa(primaryReading(k))}
+                  style={[styles.kanjiCell, { backgroundColor: stage < 0 ? '#14121E' : STAGE_COLORS[stage] }]}
+                >
+                  <PText ja style={styles.kanjiChar}>{k.char}</PText>
+                  <PText style={styles.kanjiMeaning}>{stage >= MAX_STAGE ? '★' : stage < 0 ? '?' : k.meanings[0]}</PText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
     </>
   );
 }
@@ -133,20 +169,26 @@ function KanaTab({ save }: { save: Save }) {
 
 function WordsTab({ save }: { save: Save }) {
   const seen = WORDS.filter((w) => save.srs[w.id]);
+  const vocab = seen.filter((w) => w.kind === 'vocab').length;
   if (seen.length === 0) {
     return <PText style={styles.dim}>Loanwords are taught in the Rune Watchtower of Frost Harbor (Arc 2).</PText>;
   }
   return (
     <>
-      <PText style={styles.dim}>{seen.length}/{WORDS.length} loanwords met. Colour = mastery. Tap to hear it.</PText>
+      <PText style={styles.dim}>
+        {seen.length}/{WORDS.length} words met ({vocab} kanji words). Colour = mastery. Tap to hear it.
+      </PText>
       {seen.map((w) => {
         const stage = save.srs[w.id]?.stage ?? 0;
         return (
           <Pressable key={w.id} onPress={() => speakJa(w.text)} style={[styles.wordRow, { borderLeftColor: STAGE_COLORS[stage] }]}>
-            <PText ja style={styles.wordJa}>{w.text}</PText>
+            <View>
+              <PText ja style={styles.wordJa}>{w.text}</PText>
+              {w.kind === 'vocab' ? <PText ja style={styles.wordReading}>{w.reading}</PText> : null}
+            </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <PText style={styles.wordMeaning}>{w.meaning}</PText>
-              <PText style={styles.dim}>{w.romaji} · from {w.from}{stage >= MAX_STAGE ? ' · ★' : ''}</PText>
+              <PText style={styles.dim}>{w.romaji}{w.kind === 'loanword' ? ` · from ${w.from}` : ''}{stage >= MAX_STAGE ? ' · ★' : ''}</PText>
             </View>
           </Pressable>
         );
@@ -191,6 +233,12 @@ const styles = StyleSheet.create({
   kanaChar: { fontSize: 20, lineHeight: 24 },
   kanaRomaji: { fontSize: 6, color: C.paperDim },
   scriptLabel: { fontSize: 13, lineHeight: 18 },
+  groupLabel: { fontSize: 7, color: C.gold, marginTop: 6 },
+  kanjiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  kanjiCell: { width: 52, height: 54, borderRadius: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#2E2A44' },
+  kanjiChar: { fontSize: 22, lineHeight: 28 },
+  kanjiMeaning: { fontSize: 5, color: C.paperDim, textAlign: 'center' },
+  wordReading: { fontSize: 11, lineHeight: 14, color: C.sakura },
   wordRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#15131F', padding: 8, borderRadius: 4, borderLeftWidth: 5 },
   wordJa: { fontSize: 18, lineHeight: 24, color: C.paper },
   wordMeaning: { fontSize: 8, color: C.gold },

@@ -39,14 +39,17 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
 
   const barStyle = useAnimatedStyle(() => ({ width: `${bar.value * 100}%`, backgroundColor: bar.value < 0.33 ? C.hpLow : C.gold }));
   // What the big text is, and what the choices are, for each prompt kind.
-  const displayIsJa = prompt.kind === 'recognize' || prompt.kind === 'type' || prompt.kind === 'mirror' || prompt.kind === 'meaning';
-  const choicesAreJa = prompt.kind === 'recall' || prompt.kind === 'listen' || prompt.kind === 'mirror' || prompt.kind === 'spell';
+  const displayIsJa =
+    prompt.kind === 'recognize' || prompt.kind === 'type' || prompt.kind === 'mirror' || prompt.kind === 'meaning' || prompt.kind === 'reading';
+  const choicesAreJa =
+    prompt.kind === 'recall' || prompt.kind === 'listen' || prompt.kind === 'mirror' || prompt.kind === 'spell' || prompt.kind === 'reading';
+  const isKanji = prompt.itemId.startsWith('j-');
   const choicesAreEnglish = prompt.kind === 'meaning';
   const longest = Math.max(1, ...prompt.choices.map((c) => [...c].length));
 
   return (
     <View style={styles.card} testID="prompt">
-      <PText style={[styles.kind, purify && { color: C.violet }]}>{purify ? 'PURIFY: TYPE ITS TRUE NAME' : PROMPT_HEADING[prompt.kind]}</PText>
+      <PText style={[styles.kind, purify && { color: C.violet }]}>{purify ? 'PURIFY: TYPE ITS TRUE NAME' : isKanji && prompt.kind === 'recall' ? 'FIND THE KANJI' : PROMPT_HEADING[prompt.kind]}</PText>
       {prompt.timeLimitMs !== null ? (
         <View style={styles.track}>
           <Animated.View style={[styles.fill, barStyle]} />
@@ -62,7 +65,11 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
         <View style={styles.displayRow}>
           <PText
             ja={displayIsJa}
-            style={displayIsJa ? [styles.bigKana, { fontSize: jaSize(prompt.display, 64), lineHeight: jaSize(prompt.display, 64) * 1.2 }] : styles.bigRomaji}
+            style={
+              displayIsJa
+                ? [styles.bigKana, { fontSize: jaSize(prompt.display, 64), lineHeight: jaSize(prompt.display, 64) * 1.2 }]
+                : [styles.bigRomaji, prompt.display.length > 9 && { fontSize: 16, lineHeight: 26 }]
+            }
           >
             {prompt.display}
           </PText>
@@ -84,7 +91,7 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
             autoFocus
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="romaji, e.g. ka"
+            placeholder={isKanji ? 'a reading: mizu, sui...' : 'romaji, e.g. ka'}
             placeholderTextColor={C.dim}
             style={styles.input}
             returnKeyType="done"

@@ -225,6 +225,33 @@ const P: Record<TileKind, TilePainter> = {
       c.ellipse(ox + 7, oy + 7, 3, 3, '#C9D2DC');
     }
   },
+  // ── Arc 3: Castle Capital ───────────────────────────────────────────
+  stoneWall(c, ox, oy, tx, ty) {
+    // Dry-laid castle stonework: staggered blocks with dark mortar.
+    c.rect(ox, oy, TILE, TILE, '#4A4A54');
+    for (let row = 0; row < 4; row++) {
+      const shift = (row + ty) % 2 ? 4 : 0;
+      for (let col = -1; col < 3; col++) {
+        const x = ox + col * 8 + shift;
+        const shade = hash2(tx * 4 + col, ty * 4 + row) > 0.5 ? '#8A8A94' : '#7A7A84';
+        c.rect(Math.max(ox, x + 1), oy + row * 4 + 1, Math.min(7, ox + TILE - (x + 1)), 3, shade);
+      }
+    }
+  },
+  gravel(c, ox, oy, tx, ty) {
+    // Raked zen gravel: pale with combed ripples.
+    c.rect(ox, oy, TILE, TILE, '#D8D0BC');
+    for (let y = 2; y < TILE; y += 4) c.rect(ox, oy + y, TILE, 1, '#BEB49C');
+    if (hash2(tx, ty) > 0.8) c.ellipse(ox + 5, oy + 5, 6, 5, '#8A8A94');
+  },
+  noren(c, ox, oy, tx, ty, frame) {
+    // Shop front: dark wood frame with an indigo noren curtain that sways.
+    c.rect(ox, oy, TILE, TILE, '#5A3A22');
+    c.rect(ox + 1, oy + 1, 14, 2, '#3A2414');
+    const sway = frame ? 1 : 0;
+    for (let i = 0; i < 3; i++) c.rect(ox + 2 + i * 4 + sway, oy + 3, 3, 9, '#2A3A8A');
+    c.rect(ox + 6 + sway, oy + 6, 4, 3, '#F4F1EA'); // the shop's crest
+  },
   void(c, ox, oy) {
     c.rect(ox, oy, TILE, TILE, '#0B0B12');
   },

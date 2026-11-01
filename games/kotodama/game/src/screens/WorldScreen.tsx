@@ -71,7 +71,7 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
           <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(400)} style={styles.banner} pointerEvents="none">
             <PText ja style={styles.bannerJa}>{banner.nameJa}</PText>
             <PText style={styles.bannerName}>{banner.name.toUpperCase()}</PText>
-            {area ? <PText style={styles.bannerArea}>Kana: {area.label}</PText> : null}
+            {area ? <PText style={styles.bannerArea}>Learn: {area.label}</PText> : null}
           </Animated.View>
         ) : null}
         {toast ? (
