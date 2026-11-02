@@ -7,7 +7,7 @@ and type a weakened spirit's true kana to **purify** it into your party. A spiri
 **evolves from your mastery of its kana row**, not from XP, so your collection is a
 live map of what you can read.
 
-It runs inside SystemOS (Stats tab → *Gate of Words*) **and** as its own app.
+It runs inside SystemOS (Apps tab → *Gate of Words*) **and** as its own app.
 
 | Arc | Setting | Teaches | Status |
 |---|---|---|---|

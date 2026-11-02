@@ -72,15 +72,23 @@ export function DashboardScreen() {
           </View>
         </View>
 
-        {/* Level card */}
+        {/* Level board: tap to open the Hunter's stats */}
         {player && (
-          <XPBar
-            level={player.level}
-            experience={player.experience}
-            experienceToNextLevel={player.experienceToNextLevel}
-            streakDays={streakDays}
-            footerRight={dailyQuestLabel}
-          />
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => navigation.navigate('Stats')}
+            accessibilityRole="button"
+            accessibilityLabel="Hunter stats"
+          >
+            <XPBar
+              level={player.level}
+              experience={player.experience}
+              experienceToNextLevel={player.experienceToNextLevel}
+              streakDays={streakDays}
+              footerRight={dailyQuestLabel}
+            />
+            <Text style={styles.statsHint}>STATS ›</Text>
+          </Pressable>
         )}
         {playerLoading && !player && <ActivityIndicator color={Colors.primary} />}
 
@@ -298,5 +306,12 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  statsHint: {
+    color: Colors.textSecondary,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xs,
+    textAlign: 'right',
+    marginTop: Spacing.xs,
   },
 });

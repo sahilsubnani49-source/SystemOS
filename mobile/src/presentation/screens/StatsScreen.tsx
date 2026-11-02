@@ -1,21 +1,8 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  Colors,
-  FontSize,
-  Fonts,
-  Radius,
-  Spacing,
-  Shadow,
-  Typography,
-  withAlpha,
-} from '../../core/theme';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Colors, FontSize, Fonts, Radius, Spacing, Shadow, withAlpha } from '../../core/theme';
 import { usePlayerStore } from '../stores/usePlayerStore';
-import { GatePortal } from '../components/GatePortal';
-import type { RootStackParamList } from '../../core/navigation';
 import { STAT_KEYS, StatKey } from '../../core/constants';
 
 const STAT_ICONS: Record<StatKey, string> = {
@@ -89,15 +76,14 @@ const barStyles = StyleSheet.create({
   },
 });
 
+/** Hunter stats, pushed from the Dashboard's level board (the stack header shows STATS). */
 export function StatsScreen() {
   const { player, loading } = usePlayerStore();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <SafeAreaView style={styles.safe}>
+    // The stack header already sits under the status bar; only the bottom needs insetting.
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Hunter Stats</Text>
-
         {loading && <ActivityIndicator color={Colors.primary} />}
 
         {player && (
@@ -126,9 +112,6 @@ export function StatsScreen() {
               {player.bio && <Text style={styles.bio}>{player.bio}</Text>}
             </View>
 
-            {/* Portal to the Kotodama Japanese-learning game (games/kotodama). */}
-            <GatePortal onPress={() => navigation.navigate('Kotodama')} />
-
             {/* Stats */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Attributes</Text>
@@ -151,12 +134,6 @@ const styles = StyleSheet.create({
   container: {
     padding: Spacing.lg,
     gap: Spacing.md,
-  },
-  title: {
-    ...Typography.title,
-    // Keep-out gutter so the title never grows into the top-right corner where
-    // the on-device overlay hovers (matches the Dashboard header).
-    paddingRight: 52,
   },
   card: {
     backgroundColor: Colors.surface,

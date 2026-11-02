@@ -13,7 +13,7 @@ coupons. Device-side SQLite is the source of truth for gameplay state.
 replaceable.
 
 The repo also contains **Kotodama** (`games/kotodama/`), a Japanese-learning RPG that
-SystemOS opens from the Stats tab and that also ships as its own app. See
+SystemOS opens from the Apps tab and that also ships as its own app. See
 [`games/kotodama/README.md`](games/kotodama/README.md).
 
 **Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
@@ -28,7 +28,7 @@ deliberately unfinished.
   Expo SDK 56 configures Metro for workspaces automatically: no `metro.config.js`.
 - **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
 - **Graphics**: `@shopify/react-native-skia` + `react-native-reanimated` (Kotodama and the
-  Stats-tab portal). These are native modules, so the dev client must be rebuilt after pulling them.
+  Apps-tab portal). These are native modules, so the dev client must be rebuilt after pulling them.
 - **Backend**: FastAPI (Python 3.12+) — `backend/`
 - **Device DB**: SQLite via `expo-sqlite` (WAL, singleton connection)
 - **Backend DB**: SQLAlchemy Core (no ORM) — SQLite at `backend/systemos.db` locally,
@@ -124,8 +124,9 @@ Data          (expo-sqlite repositories + axios datasource + services)
 
 ### Navigation
 
-Six bottom tabs: Dashboard, Campaign, Quests, Stats, Army (training), Settings.
-Inventory and TaskDetail push over them as stack screens. `AppNavigator` is a
+Six bottom tabs: Dashboard, Campaign, Quests, Apps, Army (training), Settings.
+Inventory, TaskDetail and Stats push over them as stack screens; Stats opens from the
+Dashboard's level board, and the Apps tab holds the Kotodama portal. `AppNavigator` is a
 **declarative auth gate** — it swaps which screens are registered based on
 `useAuthStore.status`, so login/logout never calls `navigate()` imperatively.
 

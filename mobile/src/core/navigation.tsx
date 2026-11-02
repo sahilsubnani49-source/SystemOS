@@ -10,6 +10,7 @@ import { QuestsScreen } from '../presentation/screens/QuestsScreen';
 import { InventoryScreen } from '../presentation/screens/InventoryScreen';
 import { TaskDetailScreen } from '../presentation/screens/TaskDetailScreen';
 import { StatsScreen } from '../presentation/screens/StatsScreen';
+import { AppsScreen } from '../presentation/screens/AppsScreen';
 import { TrainingScreen } from '../presentation/screens/TrainingScreen';
 import { SettingsScreen } from '../presentation/screens/SettingsScreen';
 import { KotodamaScreen } from '../presentation/screens/KotodamaScreen';
@@ -23,7 +24,9 @@ export type RootStackParamList = {
   Main: undefined;
   Inventory: undefined;
   TaskDetail: { categoryId: string };
-  /** The Kotodama game, opened from the Stats-tab portal. */
+  /** Hunter stats, opened by tapping the level board on the Dashboard. */
+  Stats: undefined;
+  /** The Kotodama game, opened from the Apps-tab portal. */
   Kotodama: undefined;
 };
 
@@ -31,7 +34,7 @@ export type BottomTabParamList = {
   Dashboard: undefined;
   Campaign: undefined;
   Quests: undefined;
-  Stats: undefined;
+  Apps: undefined;
   Army: undefined;
   Settings: undefined;
 };
@@ -43,7 +46,7 @@ const TAB_ICONS: Record<string, string> = {
   Dashboard: '🏠',
   Campaign: '🎯',
   Quests: '⚔️',
-  Stats: '📊',
+  Apps: '🧩',
   Army: '🏋️',
   Settings: '⚙️',
 };
@@ -73,14 +76,14 @@ function MainTabs() {
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Campaign" component={CampaignScreen} options={{ title: 'Camp' }} />
       <Tab.Screen name="Quests" component={QuestsScreen} options={{ title: 'Quests' }} />
-      <Tab.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
+      <Tab.Screen name="Apps" component={AppsScreen} options={{ title: 'Apps' }} />
       <Tab.Screen name="Army" component={TrainingScreen} options={{ title: 'Army' }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'System' }} />
     </Tab.Navigator>
   );
 }
 
-// Shared header for stack screens pushed over the tabs (Inventory, TaskDetail).
+// Shared header for stack screens pushed over the tabs (Inventory, TaskDetail, Stats).
 const detailHeader = {
   headerShown: true,
   headerStyle: { backgroundColor: Colors.surface },
@@ -131,6 +134,11 @@ export function AppNavigator() {
               name="TaskDetail"
               component={TaskDetailScreen}
               options={{ ...detailHeader, title: 'TASK' }}
+            />
+            <Stack.Screen
+              name="Stats"
+              component={StatsScreen}
+              options={{ ...detailHeader, title: 'STATS' }}
             />
             <Stack.Screen
               name="Kotodama"
