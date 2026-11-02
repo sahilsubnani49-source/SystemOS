@@ -7,6 +7,10 @@ import { registerRootComponent } from 'expo';
 // Must be imported at module level so TaskManager.defineTask runs before any component mounts
 import './src/core/backgroundTasks';
 
+// System Monitor: installs the uncaught-error recorder on import (it only writes while
+// a recording window is open). Before App, so errors during App's import are caught too.
+import './src/core/crashReporting';
+
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

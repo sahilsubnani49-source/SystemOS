@@ -28,6 +28,7 @@ import { useTaskLogStore } from '../stores/useTaskLogStore';
 import { useGoalStore } from '../stores/useGoalStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSystemDialog } from '../components/SystemDialog';
+import { SystemMonitorCard } from '../components/SystemMonitorCard';
 import { ENV } from '../../core/env';
 import { DiagnosticsService } from '../../data/services/DiagnosticsService';
 
@@ -294,6 +295,9 @@ export function SettingsScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* System Monitor: technical logs for a window the Hunter allows */}
+        <SystemMonitorCard />
 
         {/* Account */}
         <View style={styles.section}>

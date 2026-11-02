@@ -2,6 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ENV } from '../../core/env';
 import { TokenStorage } from '../services/TokenStorage';
 import { AuthService } from '../services/AuthService';
+import { Monitor } from '../services/MonitorService';
 import {
   ApiPlayer,
   ApiQuest,
@@ -20,7 +21,14 @@ import {
 
 // Marker flag on a request config so a 401-triggered retry is attempted at most
 // once — prevents an infinite refresh→retry→401 loop.
-type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean; _startedAt?: number };
+
+/** What the System Monitor records about a request: route and method, never headers or bodies. */
+function route(config: RetryableConfig | undefined) {
+  return { method: config?.method?.toUpperCase() ?? '?', path: config?.url ?? '?' };
+}
+const elapsed = (config: RetryableConfig | undefined) =>
+  config?._startedAt ? Date.now() - config._startedAt : undefined;
 
 // eslint-disable-next-line import/no-named-as-default-member -- axios.create on the default export is the canonical axios API
 const api = axios.create({
@@ -40,6 +48,7 @@ const LLM_HEALTH_TIMEOUT_MS = 45_000; // one-word LLM ping; local Ollama may col
 // --- Interceptors ---
 
 api.interceptors.request.use(async (config) => {
+  (config as RetryableConfig)._startedAt = Date.now();
   // Attach the current access token so every /api/* call is authenticated.
   const accessToken = await TokenStorage.getAccessToken();
   if (accessToken) {
@@ -56,6 +65,16 @@ api.interceptors.response.use(
     if (ENV.IS_DEV) {
       console.log(`[API] ✓ ${response.status} ${response.config.url}`);
     }
+    const config = response.config as RetryableConfig;
+    const { method, path } = route(config);
+    // `ai_generated: false` means the backend answered with its rule-based fallback:
+    // the request "worked", but the AI provider didn't. Worth a warning.
+    const body = response.data as { ai_generated?: unknown } | undefined;
+    const fellBack = typeof body === 'object' && body !== null && body.ai_generated === false;
+    Monitor.log(fellBack ? 'warn' : 'info', 'api', `${method} ${path} ${response.status}`, {
+      ms: elapsed(config),
+      ...(fellBack ? { ai_generated: false } : {}),
+    });
     return response;
   },
   async (error: AxiosError) => {
@@ -67,6 +86,7 @@ api.interceptors.response.use(
     // never loop, and a refresh failure falls through to session-expiry below.
     if (status === 401 && originalConfig && !originalConfig._retry) {
       originalConfig._retry = true;
+      Monitor.log('info', 'api', `${route(originalConfig).path} 401: refreshing token`);
       try {
         const newAccessToken = await AuthService.refreshTokens();
         originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -75,6 +95,7 @@ api.interceptors.response.use(
         // Refresh gave up — tell the presentation layer to log the Hunter out,
         // then fall through to the existing error-mapping so the caller still
         // receives a rejected promise.
+        Monitor.log('warn', 'api', 'Token refresh failed: session expired');
         AuthService.notifySessionExpired();
       }
     }
@@ -93,6 +114,12 @@ api.interceptors.response.use(
     if (ENV.IS_DEV) {
       console.warn(`[API] ✗ ${message}`);
     }
+    const { method, path } = route(originalConfig);
+    const kind = error.code === 'ECONNABORTED' ? 'timeout' : status ? `${status}` : 'network';
+    Monitor.log('error', 'api', `${method} ${path} ${kind}`, {
+      ms: elapsed(originalConfig),
+      ...(error.code === 'ECONNABORTED' ? { timeoutMs: effectiveTimeoutMs } : {}),
+    });
 
     return Promise.reject(new Error(message));
   },

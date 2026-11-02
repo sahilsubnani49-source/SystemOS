@@ -244,6 +244,7 @@ Device tables are in `mobile/src/data/database/schema.ts`, opened via `db.ts`.
 | `task_sessions` | Hand-entered time against a category |
 | `app_meta` | Key-value app state — created lazily by `AppMeta.ts` |
 | `mutation_queue` | Offline replay queue — created lazily, **currently unused** (SYS-008) |
+| `diagnostic_logs` | System Monitor events — written **only** during a recording window (SYS-022) |
 | `shadow_soldiers` | **Dead schema** — no repository, store, model, or UI |
 
 Backend tables (`backend/app/db.py`): `users`, `user_state` (JSON TEXT blobs).
@@ -282,6 +283,12 @@ See [`docs/DATABASE_ARCHITECTURE.md`](docs/DATABASE_ARCHITECTURE.md) for columns
 - **`MAX_DESCRIPTION_CHARS = 80`** in `task_describer.py` must stay in sync with
   `CampaignTaskService.ts`. Press Start 2P is a very wide pixel face; keep generated
   text ASCII (an em-dash risks tofu).
+- **System Monitor** (`MonitorService.ts`): log technical events with
+  `Monitor.log(level, category, message, data?)` or `Monitor.error(category, message, err)`.
+  It is a no-op outside a recording window the Hunter opens in Settings, so it is safe to
+  call anywhere and must never be awaited. Never put tokens, request bodies or the Hunter's
+  own text (bio, quest titles, notes) in `message`; `data` keys like `token`, `bio`,
+  `title`, `note` are stripped by `redact()`, but the message is not.
 - **Tab labels** must stay ≤6 chars at 7pt — Press Start 2P glyphs are ~1em wide and
   longer labels truncate.
 

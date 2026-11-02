@@ -8,7 +8,7 @@ import {
 } from '@kotodama/core';
 import type { SaveStore } from '../storage/saveStore';
 import { SessionTracker } from '../session/tracker';
-import type { StudySessionReport } from '../types';
+import type { GameDiagnostic, StudySessionReport } from '../types';
 
 export type Screen = 'boot' | 'title' | 'heroSelect' | 'world' | 'battle';
 
@@ -61,6 +61,7 @@ export interface GameState {
 export interface GameDeps {
   storage: SaveStore;
   onStudySession?: (r: StudySessionReport) => void;
+  onDiagnostic?: (e: GameDiagnostic) => void;
   now?: () => number;
 }
 
@@ -149,8 +150,15 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       toast: null,
 
       async boot() {
-        const save = await deps.storage.load();
-        set({ save, hasSave: !!save, screen: 'title' });
+        try {
+          const save = await deps.storage.load();
+          set({ save, hasSave: !!save, screen: 'title' });
+        } catch (e) {
+          // The save file couldn't be opened. Without this the game sat on its blank
+          // boot screen forever; show the title (no Continue) and report it.
+          deps.onDiagnostic?.({ level: 'error', message: 'Save load failed', data: errorData(e) });
+          set({ save: null, hasSave: false, screen: 'title' });
+        }
       },
 
       openHeroSelect: () => set({ screen: 'heroSelect' }),
@@ -352,7 +360,12 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         const save = get().save;
         if (!save) return;
         stepsSinceSave = 0;
-        await deps.storage.save(save);
+        try {
+          await deps.storage.save(save);
+        } catch (e) {
+          // Callers fire-and-forget persist(); a failure used to be an unhandled rejection.
+          deps.onDiagnostic?.({ level: 'error', message: 'Save write failed', data: errorData(e) });
+        }
       },
 
       flushSession() {
@@ -363,6 +376,10 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
     };
   });
+}
+
+function errorData(e: unknown): Record<string, unknown> {
+  return e instanceof Error ? { name: e.name, error: e.message } : { error: String(e) };
 }
 
 /** Team first, then the box; the Kotodex records every recruit. */

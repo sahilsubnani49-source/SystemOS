@@ -11,6 +11,7 @@ import { useAuthStore } from '../presentation/stores/useAuthStore';
 import { onConnectivityChange } from './network';
 import { NotificationService } from './NotificationService';
 import { DailyTimelineService } from '../data/services/DailyTimelineService';
+import { Monitor } from '../data/services/MonitorService';
 import { registerBackgroundTasks } from './backgroundTasks';
 import { ENV } from './env';
 
@@ -34,7 +35,14 @@ export function useAppBootstrap() {
     // Advance the campaign timeline (evaluate elapsed days → keys/dungeons/rank),
     // then refresh the views that depend on it.
     async function advanceTimeline() {
-      await DailyTimelineService.tick();
+      const t0 = Date.now();
+      const result = await DailyTimelineService.tick();
+      if (result.daysEvaluated > 0 || result.penaltyApplied) {
+        Monitor.log(result.penaltyApplied ? 'warn' : 'info', 'timeline', 'Timeline advanced', {
+          ...result,
+          ms: Date.now() - t0,
+        });
+      }
       // Inventory included: a tick can enforce the penalty, which wipes rewards.
       await Promise.all([
         usePlayerStore.getState().refreshFromLocal(),
@@ -50,6 +58,7 @@ export function useAppBootstrap() {
     async function loadData() {
       if (dataLoaded) return;
       dataLoaded = true;
+      const t0 = Date.now();
       // Load all stores in parallel, then advance the timeline for elapsed days.
       await Promise.all([
         usePlayerStore.getState().load(),
@@ -62,13 +71,23 @@ export function useAppBootstrap() {
         // Seeds the default Hunter Log categories on first launch.
         useTaskLogStore.getState().load(),
       ]);
+      Monitor.log('info', 'perf', 'Stores loaded', { ms: Date.now() - t0 });
       await advanceTimeline();
     }
 
     async function boot() {
+      const t0 = Date.now();
       try {
+        // Re-open a System Monitor window left running when the app was last closed.
+        await Monitor.hydrate().catch(() => {});
+        Monitor.log('info', 'lifecycle', 'App launched');
+
         // 0. Resolve the session first — everything below depends on logged-in state.
         await useAuthStore.getState().initialize();
+        Monitor.log('info', 'lifecycle', 'Session resolved', {
+          status: useAuthStore.getState().status,
+          ms: Date.now() - t0,
+        });
 
         // 1. Request notification permissions
         await NotificationService.requestPermissions();
@@ -85,10 +104,12 @@ export function useAppBootstrap() {
         if (useAuthStore.getState().status === 'loggedIn') {
           await loadData();
         }
+        Monitor.log('info', 'perf', 'Boot complete', { ms: Date.now() - t0 });
       } catch (e) {
         if (ENV.IS_DEV) {
           console.error('[Bootstrap] startup failed:', e);
         }
+        Monitor.error('lifecycle', 'Startup failed', e, { ms: Date.now() - t0 });
         setError(e instanceof Error ? e.message : 'The System failed to initialize.');
       } finally {
         // Always leave the loading screen — a failed boot shows the error state
@@ -102,9 +123,13 @@ export function useAppBootstrap() {
     // First login within a running session: seed this device's data once status
     // flips to loggedIn. (Bootstrap already handles the launch-time logged-in case.)
     const unsubAuth = useAuthStore.subscribe((state, prev) => {
+      if (state.status !== prev.status) {
+        Monitor.log('info', 'lifecycle', `Auth: ${prev.status} → ${state.status}`);
+      }
       if (state.status === 'loggedIn' && prev.status !== 'loggedIn') {
         loadData().catch((e) => {
           if (ENV.IS_DEV) console.error('[Bootstrap] loadData failed:', e);
+          Monitor.error('lifecycle', 'Loading data after login failed', e);
         });
       }
       // A logout ends the session — allow a future login to reseed.
@@ -114,7 +139,14 @@ export function useAppBootstrap() {
     });
 
     // Re-sync when the device comes back online — only while logged in.
+    let wasOnline: boolean | null = null;
     const unsubNet = onConnectivityChange((online) => {
+      if (online !== wasOnline) {
+        // The first callback is the initial state, not a change.
+        if (wasOnline !== null)
+          Monitor.log(online ? 'info' : 'warn', 'sync', online ? 'Back online' : 'Went offline');
+        wasOnline = online;
+      }
       if (online && useAuthStore.getState().status === 'loggedIn') {
         useInventoryStore.getState().load();
       }
@@ -123,8 +155,11 @@ export function useAppBootstrap() {
     // Advance the timeline whenever the app returns to the foreground — only while
     // logged in (and after data has been loaded once).
     const unsubApp = AppState.addEventListener('change', (state: AppStateStatus) => {
+      Monitor.log('debug', 'lifecycle', `App ${state}`);
+      // Leaving the foreground may be the last chance to write: the OS can kill us.
+      if (state !== 'active') void Monitor.flush();
       if (state === 'active' && useAuthStore.getState().status === 'loggedIn' && dataLoaded) {
-        advanceTimeline().catch(() => {});
+        advanceTimeline().catch((e) => Monitor.error('timeline', 'Timeline tick failed', e));
         // A timer left running past the session ceiling is auto-closed here.
         useTimeLogStore
           .getState()

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Monitor } from '../../data/services/MonitorService';
 import { v4 as uuidv4 } from 'uuid';
 import {
   TaskCategory,
@@ -200,6 +201,7 @@ export const useTaskLogStore = create<TaskLogState>((set, get) => ({
       );
       set({ ...(await refreshSummary()), loading: false });
     } catch (e) {
+      Monitor.error('error', 'useTaskLogStore.load failed', e);
       set({
         loading: false,
         error: e instanceof Error ? e.message : 'Could not load the Hunter Log.',
@@ -289,6 +291,7 @@ export const useTaskLogStore = create<TaskLogState>((set, get) => ({
 
       return { xp, leveledUp, creditedMinutes, capped };
     } catch (e) {
+      Monitor.error('error', 'useTaskLogStore.logSession failed', e);
       set({
         logging: false,
         error: e instanceof Error ? e.message : 'Could not log the session.',

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Monitor } from '../../data/services/MonitorService';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeLog, DescriptionSource } from '../../domain/models/TimeLog';
 import { TimeLogRepository } from '../../data/repositories/TimeLogRepository';
@@ -192,6 +193,11 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
 
       await repo.startLog(log);
       set({ running: log, starting: false });
+      Monitor.log('info', 'timer', 'Timer started', {
+        logId: log.id,
+        campaign: !!input.goalId,
+        source,
+      });
 
       const goalTitle = input.goalId ? (await goalRepo.getGoal(input.goalId))?.title : null;
       NotificationService.send(
@@ -203,6 +209,7 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
       // between "tap START" and "the timer runs" is the worst latency in the app.
       if (source === 'campaign') void upgradeDescriptionWithAi(log, set, get);
     } catch (e) {
+      Monitor.error('timer', 'useTimeLogStore.startTimer failed', e);
       set({
         starting: false,
         deriving: false,
@@ -224,6 +231,10 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
       );
 
       if (raw < MIN_LOGGABLE_SECONDS && !opts?.recovered) {
+        Monitor.log('info', 'timer', 'Timer discarded (under the floor)', {
+          logId: running.id,
+          seconds: raw,
+        });
         await repo.deleteLog(running.id);
         set({ running: null, stopping: false });
         return { ...NO_OP_STOP, seconds: raw };
@@ -244,6 +255,18 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
       await repo.finishLog(running.id, endedAt, raw, creditedSeconds, xp);
       const leveledUp = xp > 0 ? usePlayerStore.getState().addExperience(xp) : false;
 
+      Monitor.log(
+        capped ? 'warn' : 'info',
+        'timer',
+        opts?.recovered ? 'Timer recovered' : 'Timer stopped',
+        {
+          logId: running.id,
+          seconds: raw,
+          creditedSeconds,
+          xp,
+          capped,
+        },
+      );
       const todayLogs = await repo.getLogsForDate(todayDateStr());
       set({
         running: null,
@@ -268,6 +291,7 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
 
       return { xp, leveledUp, seconds: raw, creditedSeconds, capped, discarded: false };
     } catch (e) {
+      Monitor.error('timer', 'useTimeLogStore.stopTimer failed', e);
       set({
         stopping: false,
         error: e instanceof Error ? e.message : 'Could not log the session.',
@@ -279,6 +303,7 @@ export const useTimeLogStore = create<TimeLogState>((set, get) => ({
   cancelTimer: async () => {
     const running = get().running;
     if (!running) return;
+    Monitor.log('info', 'timer', 'Timer cancelled', { logId: running.id });
     await repo.deleteLog(running.id);
     set({ running: null });
   },

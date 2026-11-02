@@ -38,6 +38,7 @@ games/kotodama/
 <KotodamaGame
   onExit={() => …}                 // host closes the game
   onStudySession={(report) => …}   // { activeMinutes, promptsAnswered, correct, itemsMastered, … }
+  onDiagnostic={(event) => …}      // optional: save/load failures and caught render errors
   databaseName="kotodama.db"       // the game's OWN SQLite file
 />
 ```
