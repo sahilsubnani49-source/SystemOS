@@ -344,6 +344,8 @@ function DailyTraining({
           style={styles.cardBtn}
           onPress={() => {
             setGymNote(null);
+            // The screen may have stayed open past midnight: show today's real budget.
+            void useTrainingStore.getState().refreshTodayGym();
             setGymModalOpen(true);
           }}
           activeOpacity={0.8}

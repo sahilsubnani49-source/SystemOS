@@ -245,6 +245,25 @@ the backend to any other user or public network.
   - The Daily Trial's battle title ("Daily Trial · N due") only shows between turns; the
     due count is always visible in the menu's Party tab.
 
+### SYS-020 — Second correctness sweep (races and stale day state)
+
+- **Priority:** P1
+- **Status:** RESOLVED (2026-11-02)
+- **Fixed:**
+  - `POST /api/quests/{id}/complete` saved the state it read *before* the multi-second
+    LLM call, even in goal mode where it changed nothing, so a profile update made
+    meanwhile was reverted. It now writes only in the legacy mock-quest path.
+    Reproduced with a stub reward generator that updates the bio mid-call.
+  - Campaign drafting/forging set its busy flag only after `await isOnline()`, so a
+    double-tap could forge two campaigns (two LLM runs, duplicated quests).
+  - Exercise completion had no in-flight guard (unlike quests): a double-tap paid XP
+    and counted a training day twice.
+  - Gym hours used the in-memory total for today; with the app left open past midnight
+    it applied yesterday's hours to today's 4h cap. The total is now read from SQLite,
+    and the gym sheet re-reads it when opened.
+  - The focus timer's AI description upgrade wrote the running timer back after an
+    await, so stopping the timer during that write brought it back on screen.
+
 ## Validation baseline
 
 | Check | Result |

@@ -27,6 +27,13 @@ const META_NUTRITION_LAST = 'nutrition_last_result';
 const XP_PER_GYM_HOUR = 30;
 export const DAILY_GYM_HOURS_CAP = 4;
 
+/**
+ * Exercise ids (and 'gym') whose completion is mid-flight. Same guard as quests:
+ * "already done today" is only visible in state after two SQLite awaits, so a fast
+ * double-tap used to pay XP (and count a training day) twice.
+ */
+const inFlight = new Set<string>();
+
 interface TrainingState {
   exercises: TrainingExercise[];
   weightKg: number | null;
@@ -45,6 +52,8 @@ interface TrainingState {
   ) => Promise<void>;
   /** Complete today's set for an exercise. Returns the XP gained and whether it caused a level-up. */
   completeExercise: (id: string) => Promise<{ leveledUp: boolean; xp: number }>;
+  /** Re-read today's gym hours from SQLite (the day may have changed since load). */
+  refreshTodayGym: () => Promise<void>;
   /** Log gym-attendance hours for today (capped at 4h/day). */
   logGymHours: (hours: number) => Promise<{ xp: number; leveledUp: boolean; grantedHours: number }>;
   /** Persist the player's body metrics (weight + height) to meta + state. */
@@ -53,6 +62,91 @@ interface TrainingState {
   calculateProtein: (weightKg: number, heightCm: number) => Promise<NutritionResult | null>;
   /** Wipe all training data and setup flags (SCRAM). */
   resetTraining: () => Promise<void>;
+}
+
+type SetTraining = (
+  partial: Partial<TrainingState> | ((state: TrainingState) => Partial<TrainingState>),
+) => void;
+
+async function completeExerciseOnce(
+  id: string,
+  today: string,
+  set: SetTraining,
+  get: () => TrainingState,
+): Promise<{ leveledUp: boolean; xp: number }> {
+  // Persist the completion (daysTrained++, lastCompletedDate=today, target unchanged).
+  const updated = await trainingRepo.completeExercise(id, today);
+
+  // XP is based on the target they just completed (pre-progression).
+  const xp =
+    updated.mode === 'reps' ? updated.currentTarget : Math.round(updated.currentTarget / 2);
+
+  // Progression check — may raise the target and fire [Training Intensified.] internally.
+  const prog = onExerciseCompleted(updated);
+  let finalRow = updated;
+  if (prog.increased) {
+    finalRow = await trainingRepo.applyProgression(id, prog.newTarget, prog.newStepIndex);
+  }
+
+  set((state) => ({
+    exercises: state.exercises.map((e) => (e.id === id ? finalRow : e)),
+  }));
+
+  // Grant per-exercise XP.
+  let leveledUp = usePlayerStore.getState().addExperience(xp);
+
+  // All-done bonus: if every exercise is now done today, add +50 XP and notify.
+  // (Gym hours are intentionally excluded — they are not exercises.)
+  const all = get().exercises;
+  const allDone = all.length > 0 && all.every((e) => e.lastCompletedDate === today);
+  if (allDone) {
+    if (usePlayerStore.getState().addExperience(50)) leveledUp = true;
+    NotificationService.send(
+      '[Daily Training Complete.]',
+      'Your body grows stronger. The Shadow Army acknowledges you.',
+    ).catch(() => {});
+  }
+
+  return { leveledUp, xp };
+}
+
+async function logGymHoursOnce(
+  hours: number,
+  set: SetTraining,
+): Promise<{ xp: number; leveledUp: boolean; grantedHours: number }> {
+  const today = todayDateStr();
+  // Today's total comes from SQLite, not from memory: state loaded before midnight
+  // still holds YESTERDAY's hours, which used to eat today's whole cap.
+  const existing = await trainingRepo.getGymSession(today);
+  const already = existing?.hours ?? 0;
+  const remaining = DAILY_GYM_HOURS_CAP - already;
+  const grantedHours = Math.max(0, Math.min(hours, remaining));
+
+  if (grantedHours <= 0) {
+    set({ todayGymHours: already });
+    return { xp: 0, leveledUp: false, grantedHours: 0 };
+  }
+
+  const xp = Math.round(XP_PER_GYM_HOUR * grantedHours);
+
+  // Accumulate onto today's row (hours + xp), leaving other metrics untouched.
+  const session: GymSession = {
+    date: today,
+    hours: (existing?.hours ?? 0) + grantedHours,
+    xpAwarded: (existing?.xpAwarded ?? 0) + xp,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  };
+  await trainingRepo.upsertGymSession(session);
+
+  const leveledUp = usePlayerStore.getState().addExperience(xp);
+  set({ todayGymHours: session.hours });
+
+  NotificationService.send(
+    '[Gym Session Logged.]',
+    `+${xp} XP for ${grantedHours}h of iron discipline.`,
+  ).catch(() => {});
+
+  return { xp, leveledUp, grantedHours };
 }
 
 export const useTrainingStore = create<TrainingState>((set, get) => ({
@@ -131,73 +225,29 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   completeExercise: async (id) => {
     const today = todayDateStr();
     const ex = get().exercises.find((e) => e.id === id);
-    if (!ex || ex.lastCompletedDate === today) return { leveledUp: false, xp: 0 };
-
-    // Persist the completion (daysTrained++, lastCompletedDate=today, target unchanged).
-    const updated = await trainingRepo.completeExercise(id, today);
-
-    // XP is based on the target they just completed (pre-progression).
-    const xp =
-      updated.mode === 'reps' ? updated.currentTarget : Math.round(updated.currentTarget / 2);
-
-    // Progression check — may raise the target and fire [Training Intensified.] internally.
-    const prog = onExerciseCompleted(updated);
-    let finalRow = updated;
-    if (prog.increased) {
-      finalRow = await trainingRepo.applyProgression(id, prog.newTarget, prog.newStepIndex);
+    if (!ex || ex.lastCompletedDate === today || inFlight.has(id))
+      return { leveledUp: false, xp: 0 };
+    inFlight.add(id);
+    try {
+      return await completeExerciseOnce(id, today, set, get);
+    } finally {
+      inFlight.delete(id);
     }
+  },
 
-    set((state) => ({
-      exercises: state.exercises.map((e) => (e.id === id ? finalRow : e)),
-    }));
-
-    // Grant per-exercise XP.
-    let leveledUp = usePlayerStore.getState().addExperience(xp);
-
-    // All-done bonus: if every exercise is now done today, add +50 XP and notify.
-    // (Gym hours are intentionally excluded — they are not exercises.)
-    const all = get().exercises;
-    const allDone = all.length > 0 && all.every((e) => e.lastCompletedDate === today);
-    if (allDone) {
-      if (usePlayerStore.getState().addExperience(50)) leveledUp = true;
-      NotificationService.send(
-        '[Daily Training Complete.]',
-        'Your body grows stronger. The Shadow Army acknowledges you.',
-      ).catch(() => {});
-    }
-
-    return { leveledUp, xp };
+  refreshTodayGym: async () => {
+    const gym = await trainingRepo.getGymSession(todayDateStr());
+    set({ todayGymHours: gym?.hours ?? 0 });
   },
 
   logGymHours: async (hours) => {
-    const today = todayDateStr();
-    const already = get().todayGymHours;
-    const remaining = DAILY_GYM_HOURS_CAP - already;
-    const grantedHours = Math.max(0, Math.min(hours, remaining));
-
-    if (grantedHours <= 0) return { xp: 0, leveledUp: false, grantedHours: 0 };
-
-    const xp = Math.round(XP_PER_GYM_HOUR * grantedHours);
-
-    // Accumulate onto today's row (hours + xp), leaving other metrics untouched.
-    const existing = await trainingRepo.getGymSession(today);
-    const session: GymSession = {
-      date: today,
-      hours: (existing?.hours ?? 0) + grantedHours,
-      xpAwarded: (existing?.xpAwarded ?? 0) + xp,
-      createdAt: existing?.createdAt ?? new Date().toISOString(),
-    };
-    await trainingRepo.upsertGymSession(session);
-
-    const leveledUp = usePlayerStore.getState().addExperience(xp);
-    set({ todayGymHours: session.hours });
-
-    NotificationService.send(
-      '[Gym Session Logged.]',
-      `+${xp} XP for ${grantedHours}h of iron discipline.`,
-    ).catch(() => {});
-
-    return { xp, leveledUp, grantedHours };
+    if (inFlight.has('gym')) return { xp: 0, leveledUp: false, grantedHours: 0 };
+    inFlight.add('gym');
+    try {
+      return await logGymHoursOnce(hours, set);
+    } finally {
+      inFlight.delete('gym');
+    }
   },
 
   updateBodyMetrics: async (weightKg, heightCm) => {
