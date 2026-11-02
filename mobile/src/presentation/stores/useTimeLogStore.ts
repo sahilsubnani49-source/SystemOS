@@ -347,7 +347,11 @@ async function upgradeDescriptionWithAi(
 
     const description = text.slice(0, MAX_DESCRIPTION_CHARS);
     await repo.updateDescription(log.id, description, 'ai');
-    set({ running: { ...current, description, descriptionSource: 'ai' } });
+    // Check again: a Stop during that write would otherwise be undone here, putting
+    // the finished session back on screen as a running timer.
+    const latest = get().running;
+    if (!latest || latest.id !== log.id) return;
+    set({ running: { ...latest, description, descriptionSource: 'ai' } });
   } catch {
     // Keep the local line — this path is decoration, never a failure the Hunter sees.
   }

@@ -356,7 +356,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
 
       flushSession() {
-        if (!tracker.hasActivity) return null;
+        if (!tracker.hasReportableTime) return null;
         const report = tracker.flush();
         deps.onStudySession?.(report);
         return report;

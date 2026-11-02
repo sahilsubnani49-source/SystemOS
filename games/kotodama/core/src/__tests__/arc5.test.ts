@@ -49,6 +49,23 @@ describe('passage prompts', () => {
   });
 });
 
+describe('dedicated draws never repeat the last item', () => {
+  it('falls back to the rest of the pool when the only passage was just asked', () => {
+    const pool = ['p-1', 'h-ka', 'h-ki', 'h-ku'];
+    const volva = spiritCombatant({ uid: 'v', familyId: 'volva', level: 60, xp: 0 }, {});
+    const foe = foeCombatant({ familyId: 'einherjar', level: 60, hpScale: 30 }, 'f', pool, createRng(1));
+    let s = startBattle({ party: [volva], enemies: [{ ...foe, atk: 1 }], kanaPool: pool, srs: {}, seed: 5 });
+    const asked: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      s = reduce(s, { type: 'choose', move: 'runeScroll', now: 0 });
+      asked.push(s.prompt!.itemId);
+      s = reduce(s, { type: 'answer', value: s.prompt!.answer, elapsedMs: 500, now: 0 });
+    }
+    for (let i = 1; i < asked.length; i++) expect(asked[i], asked.join(' ')).not.toBe(asked[i - 1]);
+    expect(asked.filter((id) => id === 'p-1').length).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe('Norse rune spirits', () => {
   const n3 = SPIRIT_FAMILIES.filter((f) => f.kanjiGroup?.startsWith('n3'));
 

@@ -144,6 +144,9 @@ interface GoalState {
   advanceTimeline: () => Promise<TimelineTickResult>;
 }
 
+/** A campaign request is already in flight: drafting, revising or forging. */
+const isBusy = (s: GoalState) => s.creating || s.planning;
+
 export const useGoalStore = create<GoalState>((set, get) => ({
   activeGoals: [],
   creating: false,
@@ -157,14 +160,19 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   },
 
   createGoal: async (input: CreateGoalInput) => {
-    const online = await isOnline();
-    if (!online) throw new Error('No connection — go online to forge a campaign.');
+    // Claim the flag before any await: the button only disables on the next render,
+    // so a double-tap used to forge two campaigns (two LLM runs, doubled quests).
+    if (isBusy(get())) return;
+    set({ creating: true, error: null });
+    if (!(await isOnline())) {
+      set({ creating: false });
+      throw new Error('No connection — go online to forge a campaign.');
+    }
 
     const player = usePlayerStore.getState().player;
     const level = player?.level ?? 1;
     const modelPreference = player?.modelPreference ?? 'cloud';
 
-    set({ creating: true, error: null });
     try {
       const activeCount = await goalRepo.countActiveGoals();
       if (activeCount >= 3) {
@@ -193,14 +201,17 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   },
 
   generateDraftPlan: async (input: CreateGoalInput) => {
-    const online = await isOnline();
-    if (!online) throw new Error('No connection — go online to forge a campaign.');
+    if (isBusy(get())) return;
+    set({ planning: true, error: null });
+    if (!(await isOnline())) {
+      set({ planning: false });
+      throw new Error('No connection — go online to forge a campaign.');
+    }
 
     const player = usePlayerStore.getState().player;
     const level = player?.level ?? 1;
     const modelPreference = player?.modelPreference ?? 'cloud';
 
-    set({ planning: true, error: null });
     try {
       const activeCount = await goalRepo.countActiveGoals();
       if (activeCount >= 3) {
@@ -242,6 +253,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   regenerateDraftPlan: async (feedback: string) => {
     const draft = get().draftPlan;
     if (!draft) throw new Error('No strategy to revise, Hunter.');
+    if (isBusy(get())) return;
 
     const player = usePlayerStore.getState().player;
     const level = player?.level ?? 1;
@@ -287,6 +299,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   approveDraftPlan: async () => {
     const draft = get().draftPlan;
     if (!draft) throw new Error('No strategy to forge, Hunter.');
+    if (isBusy(get())) return;
 
     const player = usePlayerStore.getState().player;
     const level = player?.level ?? 1;
