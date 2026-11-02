@@ -1,34 +1,20 @@
-import {
-  addDays,
-  addMinutes,
-  addUnits,
-  isValidDate,
-  isValidTime,
-  minutesBetween,
-  toMinutes,
-  wall,
-  wallDate,
-  weekday,
-} from './dates';
-import { hashText } from './text';
-import type { DraftItem, DraftPeriod, Plan, PlanDraft, PlanItem, Rejection, Unit, WallTime } from './types';
+import { addDays, addMinutes, addMonths, addUnits, minutesBetween, toDays, toMinutes, wall, weekday } from './dates';
+import { WEEKDAYS, type PlanSpec, type Repeat, type TaskRange, type TaskSpec } from './planJson';
+import type { Issue, Plan, PlanItem, Unit, WallTime } from './types';
 
-/** The planner states no time limit. Yotei never invents one. */
-export class NoTimeLimitError extends Error {
-  constructor() {
-    super('This planner has no time limit. Add one (for example "12-week plan" or "by 2026-12-31") and import it again.');
-    this.name = 'NoTimeLimitError';
-  }
-}
+// Turn a validated PlanSpec into dated items. All date arithmetic happens here, in code,
+// from the plan's start: an LLM only ever says "week 3, wednesday", never a computed date.
+
+/** A plan this big is almost certainly a mistake (and would bog down the device). */
+export const MAX_ITEMS = 5000;
 
 export interface ResolveOptions {
-  /** YYYY-MM-DD the plan starts, chosen by the user (ignored if the planner states a start date). */
+  /** YYYY-MM-DD the plan starts, chosen by the user (ignored if the JSON states "start"). */
   startDate: string;
-  /** HH:mm when "Hour 1" begins. Used ONLY by hour-based plans; others start at 00:00. */
-  startTime?: string;
   /** IANA zone at import, recorded on the plan. */
   timezone: string;
-  sourceMd: string;
+  /** The JSON as imported, kept so the user can always see and copy it. */
+  source: string;
   makeId: () => string;
   nowIso: string;
 }
@@ -36,150 +22,158 @@ export interface ResolveOptions {
 export interface ResolvedPlan {
   plan: Plan;
   items: PlanItem[];
-  /** Items whose stated timing can't be placed inside the plan. Shown, never guessed. */
-  problems: Rejection[];
+  /** Tasks that fall outside the plan, shown to the user, never moved. */
+  skipped: Issue[];
 }
 
-const isPositiveInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1;
-
-/** Turn a verified draft into dated items. Every date comes from the planner's own words. */
-export function resolvePlan(draft: PlanDraft, opts: ResolveOptions): ResolvedPlan {
-  if (!draft.boundaryQuote?.trim()) throw new NoTimeLimitError();
-
-  const startDate = isValidDate(draft.startDate) ? draft.startDate : opts.startDate;
-  if (!isValidDate(startDate)) throw new Error(`Invalid start date: ${startDate}`);
-  // A start time only means something for a plan counted in hours. Applying it to a
-  // week plan would start "Week 1" mid-morning and push its own items out of bounds.
-  const hourPlan = draft.horizon?.unit === 'hour';
-  const startTime = hourPlan && isValidTime(opts.startTime) ? opts.startTime : '00:00';
-  const planStart = wall(startDate, startTime);
-
-  let planEnd: WallTime;
-  if (isValidDate(draft.endDate)) {
-    planEnd = wall(addDays(draft.endDate, 1));
-  } else if (draft.horizon && isPositiveInt(draft.horizon.length)) {
-    const { unit, length } = draft.horizon;
-    planEnd = unit === 'hour' ? addMinutes(planStart, 60 * length) : wall(addUnits(startDate, unit, length), startTime);
-  } else {
-    throw new NoTimeLimitError();
-  }
-  if (planEnd <= planStart) throw new Error('The planner ends before it starts.');
+export function resolvePlan(spec: PlanSpec, opts: ResolveOptions): ResolvedPlan {
+  const startDate = spec.start ?? opts.startDate;
+  const planStart = wall(startDate);
+  const endDate = spec.end ? addDays(spec.end, 1) : addUnits(startDate, spec.duration!.unit, spec.duration!.count);
+  const planEnd = wall(endDate);
+  if (planEnd <= planStart) throw new Error('The plan ends before it starts.');
 
   const plan: Plan = {
     id: opts.makeId(),
-    title: draft.title.trim() || 'Untitled plan',
-    sourceMd: opts.sourceMd,
-    sourceHash: hashText(opts.sourceMd),
+    title: spec.title,
+    source: opts.source,
+    sourceHash: hashText(opts.source),
     timezone: opts.timezone,
-    unit: draft.horizon?.unit ?? dominantUnit(draft.items),
+    unit: spec.duration?.unit ?? 'day',
     start: planStart,
     end: planEnd,
-    boundaryQuote: draft.boundaryQuote,
+    limit: spec.duration
+      ? `${spec.duration.count} ${spec.duration.unit}${spec.duration.count === 1 ? '' : 's'}`
+      : `until ${spec.end}`,
     createdAt: opts.nowIso,
     archived: false,
   };
 
   const items: PlanItem[] = [];
-  const problems: Rejection[] = [];
-  draft.items.forEach((item, order) => {
-    const span = resolveSpan(item.period, startDate, planStart);
-    if ('problem' in span) {
-      problems.push({ quote: item.quote, reason: span.problem });
-      return;
+  const skipped: Issue[] = [];
+  let order = 0;
+  for (const task of spec.tasks) {
+    const spans = taskSpans(task, startDate, endDate);
+    if (typeof spans === 'string') {
+      skipped.push({ path: task.path, message: `"${task.task}": ${spans}` });
+      continue;
     }
-    if (span.start < planStart || span.start >= planEnd) {
-      problems.push({ quote: item.quote, reason: `"${item.periodQuote}" is outside the plan's time limit` });
-      return;
+    const timing = timingLabel(task.range, task.repeat);
+    for (const s of spans) {
+      items.push({
+        id: '',
+        planId: plan.id,
+        text: task.task,
+        timing,
+        notes: task.notes,
+        phase: task.phase,
+        unit: itemUnit(task.range),
+        start: s.start,
+        end: s.end,
+        timed: s.timed,
+        sort: order++,
+        doneAt: null,
+      });
     }
-    items.push({
-      id: opts.makeId(),
-      planId: plan.id,
-      text: item.quote,
-      periodQuote: item.periodQuote,
-      unit: item.period.unit,
-      start: span.start,
-      // Code-computed spans ("Year 2") are trimmed to the plan's stated end. A clock slot
-      // the planner wrote ("22:00-01:00") is kept exactly as written, even if it runs past.
-      end: !span.timed && span.end > planEnd ? planEnd : span.end,
-      timed: span.timed,
-      sort: order,
-      doneAt: null,
-    });
-  });
+    if (items.length > MAX_ITEMS) {
+      throw new Error(`This plan makes more than ${MAX_ITEMS.toLocaleString()} dated tasks. Shorten it, or repeat less often.`);
+    }
+  }
+
   items.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.sort - b.sort));
-  items.forEach((it, i) => (it.sort = i));
-  return { plan, items, problems };
+  items.forEach((it, i) => {
+    it.id = opts.makeId();
+    it.sort = i;
+  });
+  return { plan, items, skipped };
 }
 
-type Span = { start: WallTime; end: WallTime; timed: boolean } | { problem: string };
+type Span = { start: WallTime; end: WallTime; timed: boolean };
 
-function resolveSpan(p: DraftPeriod, startDate: string, planStart: WallTime): Span {
-  if (p.timeStart != null && !isValidTime(p.timeStart)) return { problem: `Unreadable time "${p.timeStart}"` };
-  if (p.timeEnd != null && !isValidTime(p.timeEnd)) return { problem: `Unreadable time "${p.timeEnd}"` };
+/** Every dated occurrence of a task, or why it has none. Dates are YYYY-MM-DD; ends exclusive. */
+function taskSpans(task: TaskSpec, planStart: string, planEnd: string): Span[] | string {
+  const r = rangeDates(task.range, planStart, planEnd);
 
-  // Absolute: the planner wrote a calendar date.
-  if (p.date != null) {
-    if (!isValidDate(p.date)) return { problem: `Unreadable date "${p.date}"` };
-    if (p.endDate != null && (!isValidDate(p.endDate) || p.endDate < p.date)) {
-      return { problem: `Unreadable end date "${p.endDate}"` };
-    }
-    return daySpan(p.date, p, p.endDate ?? p.date);
+  if (!task.repeat) {
+    if (r.start < planStart || r.start >= planEnd) return 'its timing falls outside the plan';
+    const single = r.end === addDays(r.start, 1);
+    if (single && task.time) return [slot(r.start, task.time, task.endTime)];
+    // A computed span ("weeks 2-4") is trimmed to the plan's end; it never runs past it.
+    return [{ start: wall(r.start), end: wall(r.end < planEnd ? r.end : planEnd), timed: false }];
   }
 
-  // Relative: "Week 3", "Day 12", "Hour 2".
-  if (!isPositiveInt(p.index)) return { problem: 'The planner gives no date or position for this item' };
-  const i = p.index;
-  switch (p.unit) {
-    case 'hour': {
-      const start = addMinutes(planStart, 60 * (i - 1));
-      return { start, end: addMinutes(start, 60), timed: true };
+  // Repeats fill the task's range, clipped to the plan.
+  const from = r.start > planStart ? r.start : planStart;
+  const to = r.end < planEnd ? r.end : planEnd;
+  if (from >= to) return 'its range falls outside the plan';
+
+  const spans: Span[] = [];
+  if (task.repeat === 'weekly' || task.repeat === 'monthly') {
+    // One span per plan week / plan month, counted from the plan's own start.
+    for (let k = 0; ; k++) {
+      const ps = task.repeat === 'weekly' ? addDays(planStart, 7 * k) : addMonths(planStart, k);
+      const pe = task.repeat === 'weekly' ? addDays(planStart, 7 * (k + 1)) : addMonths(planStart, k + 1);
+      if (ps >= to) break;
+      if (pe <= from) continue;
+      spans.push({ start: wall(ps > from ? ps : from), end: wall(pe < to ? pe : to), timed: false });
     }
-    case 'day':
-      return daySpan(addDays(startDate, i - 1), p);
-    case 'week': {
-      const base = addDays(startDate, 7 * (i - 1));
-      if (p.weekday != null) {
-        if (!Number.isInteger(p.weekday) || p.weekday < 1 || p.weekday > 7) return { problem: 'Unreadable weekday' };
-        // The day with that weekday inside this plan week.
-        for (let d = 0; d < 7; d++) {
-          const date = addDays(base, d);
-          if (weekday(date) === p.weekday) return daySpan(date, p);
-        }
-      }
-      return { start: wall(base), end: wall(addDays(base, 7)), timed: false };
-    }
-    case 'month':
-    case 'year': {
-      const unit = p.unit as Exclude<Unit, 'hour'>;
-      return { start: wall(addUnits(startDate, unit, i - 1)), end: wall(addUnits(startDate, unit, i)), timed: false };
+  } else {
+    const days = repeatDays(task.repeat);
+    for (let d = from; d < to; d = addDays(d, 1)) {
+      if (!days.has(weekday(d))) continue;
+      spans.push(task.time ? slot(d, task.time, task.endTime) : { start: wall(d), end: wall(addDays(d, 1)), timed: false });
     }
   }
+  return spans.length > 0 ? spans : 'none of its repeat days fall inside the plan';
 }
 
-/** One calendar day (or a run of days), narrowed to a clock slot when times are given. */
-function daySpan(date: string, p: DraftPeriod, lastDate: string = date): Span {
-  if (p.timeStart) {
-    const start = wall(date, p.timeStart);
-    let end: WallTime;
-    if (p.timeEnd) {
-      end = wall(date, p.timeEnd);
-      // "22:00-01:00" crosses midnight.
-      if (toMinutes(p.timeEnd) <= toMinutes(p.timeStart)) end = wall(addDays(date, 1), p.timeEnd);
-    } else {
-      end = addMinutes(start, 60); // a start time alone marks a one-hour slot
-    }
-    return { start, end, timed: true };
+/** The calendar days a range covers, [start, end). */
+function rangeDates(r: TaskRange, planStart: string, planEnd: string): { start: string; end: string } {
+  if (r.kind === 'date') return { start: r.start, end: addDays(r.end, 1) };
+  if (r.kind === 'plan') return { start: planStart, end: planEnd };
+  if (r.unit === 'week' && r.weekday !== null) {
+    // That weekday inside plan week `from` (a plan week starts on the plan's start day).
+    const base = addDays(planStart, 7 * (r.from - 1));
+    const offset = (r.weekday - weekday(base) + 7) % 7;
+    const day = addDays(base, offset);
+    return { start: day, end: addDays(day, 1) };
   }
-  return { start: wall(date), end: wall(addDays(lastDate, 1)), timed: false };
+  if (r.unit === 'day') return { start: addDays(planStart, r.from - 1), end: addDays(planStart, r.to) };
+  return { start: addUnits(planStart, r.unit, r.from - 1), end: addUnits(planStart, r.unit, r.to) };
 }
 
-function dominantUnit(items: DraftItem[]): Unit {
-  const counts = new Map<Unit, number>();
-  for (const it of items) counts.set(it.period.unit, (counts.get(it.period.unit) ?? 0) + 1);
-  let best: Unit = 'day';
-  let max = -1;
-  for (const [u, n] of counts) if (n > max) [best, max] = [u, n];
-  return best;
+/** A clock slot on one day. A start time alone marks a one-hour slot; "22:00-01:00" crosses midnight. */
+function slot(date: string, time: string, endTime: string | null): Span {
+  const start = wall(date, time);
+  if (!endTime) return { start, end: addMinutes(start, 60), timed: true };
+  const nextDay = toMinutes(endTime) <= toMinutes(time);
+  return { start, end: wall(nextDay ? addDays(date, 1) : date, endTime), timed: true };
+}
+
+function repeatDays(repeat: Exclude<Repeat, 'weekly' | 'monthly'>): Set<number> {
+  if (repeat === 'daily') return new Set([1, 2, 3, 4, 5, 6, 7]);
+  if (repeat === 'weekdays') return new Set([1, 2, 3, 4, 5]);
+  if (repeat === 'weekends') return new Set([6, 7]);
+  return new Set(repeat.map((d) => WEEKDAYS.indexOf(d) + 1));
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Where the plan put a task, in its own terms: "Week 3 · Wed", "Weeks 2-5 · Mon, Thu", "Daily". */
+export function timingLabel(r: TaskRange, repeat: Repeat | null): string {
+  const parts: string[] = [];
+  if (r.kind === 'index') {
+    const name = cap(r.unit);
+    parts.push(r.from === r.to ? `${name} ${r.from}` : `${name}s ${r.from}-${r.to}`);
+    if (r.weekday !== null) parts.push(cap(WEEKDAYS[r.weekday - 1] as string));
+  }
+  if (repeat) parts.push(Array.isArray(repeat) ? repeat.map(cap).join(', ') : cap(repeat));
+  return parts.join(' · ');
+}
+
+function itemUnit(r: TaskRange): Unit {
+  if (r.kind === 'index') return r.weekday !== null ? 'day' : r.unit;
+  return 'day';
 }
 
 /** Human length of a span, e.g. "2h", "3 days". */
@@ -191,4 +185,15 @@ export function spanLabel(start: WallTime, end: WallTime): string {
   return `${days} day${days === 1 ? '' : 's'}`;
 }
 
-export { wallDate };
+/** Whole days from a to b (b - a). */
+export const daysBetween = (a: string, b: string): number => toDays(b) - toDays(a);
+
+/** FNV-1a 32-bit: a stable fingerprint of the imported source (not security). */
+export function hashText(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}

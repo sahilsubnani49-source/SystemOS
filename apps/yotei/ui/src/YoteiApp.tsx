@@ -4,21 +4,20 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { createYoteiState, type Screen } from './state/yoteiStore';
 import { YoteiStoreProvider, useYotei, useYoteiApi } from './state/context';
 import { createYoteiStore } from './storage/store';
-import { NowScreen } from './screens/NowScreen';
-import { ImportScreen } from './screens/ImportScreen';
-import { ReviewScreen } from './screens/ReviewScreen';
+import { TodayScreen } from './screens/TodayScreen';
+import { WeekScreen } from './screens/WeekScreen';
+import { YearScreen } from './screens/YearScreen';
+import { AddScreen } from './screens/AddScreen';
 import { PlansScreen, SourceScreen } from './screens/PlansScreen';
 import { C, S } from './theme';
 import type { YoteiAppProps, YoteiDiagnostic } from './types';
 
-/** How often "now" is re-read: the view rolls over at hour/day/week boundaries by itself. */
+/** How often "now" is re-read: the views roll over at hour/day/week boundaries by themselves. */
 const TICK_MS = 30_000;
 
-export function YoteiApp({ parsePlan, onExit, onDiagnostic, databaseName = 'yotei.db' }: YoteiAppProps) {
-  // Host callbacks may change identity every render: read them through refs so the
+export function YoteiApp({ onExit, onDiagnostic, databaseName = 'yotei.db' }: YoteiAppProps) {
+  // Host callbacks may change identity every render: read them through a ref so the
   // store is created exactly once per database.
-  const parseRef = useRef(parsePlan);
-  parseRef.current = parsePlan;
   const diagRef = useRef(onDiagnostic);
   diagRef.current = onDiagnostic;
 
@@ -26,7 +25,6 @@ export function YoteiApp({ parsePlan, onExit, onDiagnostic, databaseName = 'yote
     () =>
       createYoteiState({
         store: createYoteiStore(databaseName),
-        parsePlan: (md) => parseRef.current(md),
         report: (e: YoteiDiagnostic) => diagRef.current?.(e),
       }),
     [databaseName],
@@ -62,7 +60,9 @@ function Shell({ onExit }: { onExit?: () => void }) {
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.top}>
-        <Text style={styles.brand}>予定 Yotei</Text>
+        <Text style={styles.brand}>
+          <Text style={{ color: C.accent }}>予定</Text> Yotei
+        </Text>
         {onExit ? (
           <Pressable onPress={onExit} accessibilityRole="button" hitSlop={12} testID="yotei-exit">
             <Text style={styles.exit}>Close</Text>
@@ -87,28 +87,32 @@ function Body({ screen }: { screen: Screen }) {
   switch (screen) {
     case 'loading':
       return null;
-    case 'now':
-      return <NowScreen />;
-    case 'import':
-      return <ImportScreen />;
-    case 'review':
-      return <ReviewScreen />;
+    case 'today':
+      return <TodayScreen />;
+    case 'week':
+      return <WeekScreen />;
+    case 'year':
+      return <YearScreen />;
     case 'plans':
       return <PlansScreen />;
     case 'source':
       return <SourceScreen />;
+    case 'add':
+      return <AddScreen />;
   }
 }
 
-const TABS: { key: Screen; label: string }[] = [
-  { key: 'now', label: 'Now' },
-  { key: 'plans', label: 'Plans' },
-  { key: 'import', label: '+ Import' },
+const TABS: { key: Screen; label: string; glyph: string }[] = [
+  { key: 'today', label: 'Today', glyph: '◉' },
+  { key: 'week', label: 'Week', glyph: '▤' },
+  { key: 'year', label: 'Year', glyph: '▦' },
+  { key: 'plans', label: 'Plans', glyph: '☰' },
+  { key: 'add', label: 'Add', glyph: '＋' },
 ];
 
 function Nav({ screen }: { screen: Screen }) {
   const api = useYoteiApi();
-  if (screen === 'review' || screen === 'loading') return null;
+  if (screen === 'loading') return null;
   return (
     <SafeAreaView edges={['bottom']} style={styles.nav}>
       {TABS.map((t) => {
@@ -118,10 +122,12 @@ function Nav({ screen }: { screen: Screen }) {
             key={t.key}
             testID={`tab-${t.key}`}
             accessibilityRole="tab"
+            accessibilityLabel={t.label}
             accessibilityState={{ selected: on }}
             onPress={() => api.getState().go(t.key)}
             style={styles.tab}
           >
+            <Text style={[styles.glyph, on && { color: C.accent }]}>{t.glyph}</Text>
             <Text style={[styles.tabText, on && { color: C.accent }]}>{t.label}</Text>
           </Pressable>
         );
@@ -150,6 +156,7 @@ const styles = StyleSheet.create({
     borderTopColor: C.line,
     backgroundColor: C.surface,
   },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 14 },
-  tabText: { color: C.dim, fontSize: 14, fontWeight: '600' },
+  tab: { flex: 1, alignItems: 'center', paddingTop: 10, paddingBottom: 8, gap: 2 },
+  glyph: { color: C.dim, fontSize: 16 },
+  tabText: { color: C.dim, fontSize: 12, fontWeight: '600' },
 });

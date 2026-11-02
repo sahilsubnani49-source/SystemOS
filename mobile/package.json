@@ -17,6 +17,7 @@
     "expo-asset": "~56.0.20",
     "expo-audio": "~56.0.12",
     "expo-background-fetch": "~56.0.22",
+    "expo-clipboard": "~56.0.4",
     "expo-dev-client": "~56.0.23",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.11",

@@ -13,6 +13,7 @@
     "zustand": "^5.0.14"
   },
   "peerDependencies": {
+    "expo-clipboard": "~56.0.4",
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.11",
     "expo-sqlite": "~56.0.5",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "expo-clipboard": "~56.0.4",
     "expo-document-picker": "~56.0.4",
     "typescript": "~6.0.3"
   }

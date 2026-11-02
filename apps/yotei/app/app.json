@@ -9,13 +9,18 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sahildevhk.yotei",
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.sahildevhk.yotei",
       "predictiveBackGestureEnabled": false
     },
-    "plugins": ["expo-sqlite", "expo-secure-store", "expo-document-picker"],
+    "plugins": [
+      "expo-sqlite",
+      "expo-document-picker"
+    ],
     "owner": "sahildevhk"
   }
 }

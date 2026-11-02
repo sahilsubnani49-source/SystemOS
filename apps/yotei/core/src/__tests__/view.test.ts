@@ -1,56 +1,69 @@
 import { describe, expect, it } from 'vitest';
+import { parsePlanJson } from '../planJson';
 import { resolvePlan } from '../resolve';
-import { currentView } from '../view';
-import type { DraftItem, PlanDraft } from '../types';
+import { dayAgenda, missed, weekAgenda, yearAgenda } from '../view';
 
-let n = 0;
-const items: DraftItem[] = [
-  { quote: 'W1 read', periodQuote: 'Week 1', period: { unit: 'week', index: 1 } },
-  { quote: 'W1 Fri gym 18:00', periodQuote: 'Fri', period: { unit: 'week', index: 1, weekday: 5, timeStart: '18:00', timeEnd: '19:00' } },
-  { quote: 'W2 write', periodQuote: 'Week 2', period: { unit: 'week', index: 2 } },
-  { quote: 'W3 ship', periodQuote: 'Week 3', period: { unit: 'week', index: 3 } },
-];
-const draft: PlanDraft = {
-  title: '3-week sprint', boundaryQuote: '3-week sprint', horizon: { unit: 'week', length: 3 },
-  startDate: null, endDate: null, items, rejected: [], unscheduled: [], unassignedLines: [],
-};
-const { plan, items: planItems } = resolvePlan(draft, {
-  startDate: '2026-11-02', timezone: 'UTC', sourceMd: '', makeId: () => `i${++n}`, nowIso: '',
+// Starts Monday 2026-11-02.
+const json = JSON.stringify({
+  title: 'T',
+  duration: { weeks: 8 },
+  tasks: [
+    { task: 'flashcards', repeat: 'daily', time: '21:00', end_time: '21:15' },
+    { task: 'read chapter', week: 1 },
+    { task: 'gym', week: 1, weekday: 'wed', time: '18:00' },
+    { task: 'essay', day: 2 },
+    { task: 'month goal', month: 2 },
+  ],
 });
-const byText = (list: { text: string }[]) => list.map((i) => i.text);
+let n = 0;
+const { items } = resolvePlan(parsePlanJson(json).spec!, {
+  startDate: '2026-11-02', timezone: 'UTC', source: json, makeId: () => `i${++n}`, nowIso: '',
+});
+const texts = (list: { text: string }[]) => list.map((i) => i.text);
 
-describe('currentView', () => {
-  it('shows week 1 before and at the start, with the time-boxed slot current only during it', () => {
-    expect(currentView(plan, planItems, '2026-10-30T12:00').phase).toBe('before');
-    const mon = currentView(plan, planItems, '2026-11-02T08:00');
-    expect(mon.window).toMatchObject({ kind: 'week', index: 1, total: 3, start: '2026-11-02T00:00' });
-    expect(byText(mon.current)).toEqual(['W1 read']);
-    expect(byText(mon.later)).toEqual(['W1 Fri gym 18:00']);
-    expect(byText(mon.upNext)).toEqual(['W2 write', 'W3 ship']);
-    expect(mon.nextChange).toBe('2026-11-06T18:00'); // the gym slot starts
-    const fri = currentView(plan, planItems, '2026-11-06T18:30');
-    expect(byText(fri.current)).toEqual(['W1 read', 'W1 Fri gym 18:00']);
+describe('dayAgenda', () => {
+  it('splits a day into slots, single-day tasks and ongoing spans', () => {
+    const tue = dayAgenda(items, '2026-11-03');
+    expect(texts(tue.timed)).toEqual(['flashcards']);
+    expect(texts(tue.tasks)).toEqual(['essay']);
+    expect(texts(tue.ongoing)).toEqual(['read chapter']);
+    expect(texts(dayAgenda(items, '2026-11-04').timed)).toEqual(['gym', 'flashcards']);
   });
+});
 
-  it('rolls over to the next week at local midnight and keeps undone work as overdue', () => {
-    const sun = currentView(plan, planItems, '2026-11-08T23:59');
-    expect(sun.window.index).toBe(1);
-    const mon = currentView(plan, planItems, '2026-11-09T00:00');
-    expect(mon.window).toMatchObject({ index: 2, start: '2026-11-09T00:00' });
-    expect(byText(mon.current)).toEqual(['W2 write']);
-    expect(byText(mon.overdue)).toEqual(['W1 read', 'W1 Fri gym 18:00']);
+describe('weekAgenda', () => {
+  it('shows seven days from today and lists multi-day tasks once', () => {
+    const w = weekAgenda(items, '2026-11-05');
+    expect(w.days.map((d) => d.date)).toEqual([
+      '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11',
+    ]);
+    expect(w.days.every((d) => d.ongoing.length === 0)).toBe(true);
+    expect(texts(w.ongoing)).toEqual(['read chapter']);
   });
+});
 
-  it('keeps done items in their week and out of overdue', () => {
-    const done = planItems.map((i) => (i.text === 'W1 read' ? { ...i, doneAt: '2026-11-03T10:00:00Z' } : i));
-    const mon2 = currentView(plan, done, '2026-11-09T09:00');
-    expect(byText(mon2.overdue)).toEqual(['W1 Fri gym 18:00']);
+describe('yearAgenda', () => {
+  it('groups a month by task, counting repeats, from the current month', () => {
+    const months = yearAgenda(items, '2026-11-15');
+    expect(months).toHaveLength(12);
+    expect(months[0]?.month).toBe('2026-11');
+    expect(months[11]?.month).toBe('2027-10');
+    const nov = months[0]!;
+    expect(nov.groups.find((g) => g.text === 'flashcards')?.count).toBe(29); // 2 Nov to 30 Nov
+    // Plan month 2 starts 2 Dec and is trimmed to the plan's end (28 Dec): December only.
+    expect(texts(nov.groups)).not.toContain('month goal');
+    expect(texts(months[1]!.groups)).toContain('month goal');
+    expect(months[2]?.total).toBe(0);
   });
+});
 
-  it('shows the final week, and everything left undone, after the plan ends', () => {
-    const after = currentView(plan, planItems, '2026-12-01T10:00');
-    expect(after.phase).toBe('finished');
-    expect(after.window.index).toBe(3);
-    expect(byText(after.overdue)).toEqual(['W1 read', 'W1 Fri gym 18:00', 'W2 write', 'W3 ship']);
+describe('missed', () => {
+  it('groups ended, unticked items so a missed habit is one line', () => {
+    const done = items.map((it) => (it.text === 'essay' ? { ...it, doneAt: '2026-11-03T10:00:00Z' } : it));
+    const m = missed(done, '2026-11-05T12:00');
+    const cards = m.find((g) => g.text === 'flashcards');
+    expect(cards?.count).toBe(3); // Mon, Tue, Wed evenings
+    expect(texts(m)).not.toContain('essay');
+    expect(texts(m)).not.toContain('read chapter'); // week 1 hasn't ended
   });
 });

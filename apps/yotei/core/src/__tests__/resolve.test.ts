@@ -1,114 +1,87 @@
 import { describe, expect, it } from 'vitest';
-import { NoTimeLimitError, resolvePlan, type ResolveOptions } from '../resolve';
-import type { DraftItem, PlanDraft } from '../types';
+import { parsePlanJson } from '../planJson';
+import { resolvePlan } from '../resolve';
+import { EXAMPLE_PLAN } from '../prompt';
 
-let n = 0;
-const opts = (over: Partial<ResolveOptions> = {}): ResolveOptions => ({
-  startDate: '2026-11-04', // a Wednesday
-  timezone: 'Asia/Kolkata',
-  sourceMd: '# plan',
-  makeId: () => `id${++n}`,
-  nowIso: '2026-11-04T00:00:00Z',
-  ...over,
-});
-const draft = (over: Partial<PlanDraft>, items: DraftItem[]): PlanDraft => ({
-  title: 'Plan',
-  boundaryQuote: '12-week plan',
-  horizon: { unit: 'week', length: 12 },
-  startDate: null,
-  endDate: null,
-  items,
-  rejected: [],
-  unscheduled: [],
-  unassignedLines: [],
-  ...over,
-});
-const it_ = (quote: string, period: DraftItem['period']): DraftItem => ({ quote, periodQuote: 'x', period });
+// 2026-11-02 is a Monday.
+function resolve(json: string, startDate = '2026-11-02') {
+  const parsed = parsePlanJson(json);
+  if (!parsed.spec) throw new Error(JSON.stringify(parsed.errors));
+  let n = 0;
+  return resolvePlan(parsed.spec, { startDate, timezone: 'UTC', source: json, makeId: () => `id${++n}`, nowIso: '' });
+}
+const plan = (tasks: unknown[], extra: Record<string, unknown> = {}) =>
+  JSON.stringify({ title: 'T', duration: { weeks: 4 }, tasks, ...extra });
 
 describe('resolvePlan', () => {
-  it('refuses a planner with no time limit instead of inventing one', () => {
-    expect(() => resolvePlan(draft({ boundaryQuote: '' }, []), opts())).toThrow(NoTimeLimitError);
-    expect(() => resolvePlan(draft({ horizon: null }, []), opts())).toThrow(NoTimeLimitError);
+  it('bounds the plan by its duration or its inclusive end date', () => {
+    const a = resolve(plan([{ task: 'x', day: 1 }]));
+    expect(a.plan).toMatchObject({ start: '2026-11-02T00:00', end: '2026-11-30T00:00', limit: '4 weeks', unit: 'week' });
+    const b = resolve(JSON.stringify({ title: 'T', start: '2026-12-01', end: '2026-12-31', tasks: [{ task: 'x', day: 1 }] }));
+    expect(b.plan).toMatchObject({ start: '2026-12-01T00:00', end: '2027-01-01T00:00', limit: 'until 2026-12-31' });
   });
 
-  it('places relative weeks from the chosen start date, and a weekday inside its plan week', () => {
-    const { plan, items } = resolvePlan(
-      draft({}, [
-        it_('Week 1 task', { unit: 'week', index: 1 }),
-        it_('Week 3 task', { unit: 'week', index: 3 }),
-        it_('Week 2 Monday', { unit: 'week', index: 2, weekday: 1, timeStart: '09:00', timeEnd: '11:00' }),
+  it('places relative tasks from the plan start, not the calendar week', () => {
+    // A Wednesday start: plan week 2 is Wed 11 Nov to Tue 17 Nov.
+    const { items } = resolve(
+      plan([
+        { task: 'week', week: 2 },
+        { task: 'mon of week 2', week: 2, weekday: 'mon', time: '09:00', end_time: '10:30' },
+        { task: 'day 3', day: 3 },
+        { task: 'month 1', month: 1 },
       ]),
-      opts(),
+      '2026-11-04',
     );
-    expect(plan.start).toBe('2026-11-04T00:00');
-    expect(plan.end).toBe('2027-01-27T00:00'); // 12 weeks later
-    const byText = Object.fromEntries(items.map((i) => [i.text, i]));
-    expect(byText['Week 1 task']).toMatchObject({ start: '2026-11-04T00:00', end: '2026-11-11T00:00', timed: false });
-    expect(byText['Week 3 task']!.start).toBe('2026-11-18T00:00');
-    // Plan week 2 = Wed 11 Nov .. Tue 17 Nov; its Monday is 16 Nov.
-    expect(byText['Week 2 Monday']).toMatchObject({ start: '2026-11-16T09:00', end: '2026-11-16T11:00', timed: true });
+    const at = (t: string) => items.find((i) => i.text === t)!;
+    expect(at('week')).toMatchObject({ start: '2026-11-11T00:00', end: '2026-11-18T00:00', timed: false, timing: 'Week 2' });
+    expect(at('mon of week 2')).toMatchObject({ start: '2026-11-16T09:00', end: '2026-11-16T10:30', timed: true, timing: 'Week 2 · Mon' });
+    expect(at('day 3')).toMatchObject({ start: '2026-11-06T00:00', end: '2026-11-07T00:00' });
+    expect(at('month 1')).toMatchObject({ start: '2026-11-04T00:00', end: '2026-12-02T00:00' }); // trimmed to the plan end
   });
 
-  it('handles days with clock slots, slots crossing midnight, and hour plans', () => {
-    const { items } = resolvePlan(
-      draft({ horizon: { unit: 'day', length: 3 } }, [
-        it_('Day 2 focus', { unit: 'day', index: 2, timeStart: '14:00', timeEnd: '16:00' }),
-        it_('Night shift', { unit: 'day', index: 3, timeStart: '22:00', timeEnd: '01:00' }),
+  it('expands repeats inside their range and clips them to the plan', () => {
+    const { items } = resolve(
+      plan([
+        { task: 'daily', repeat: 'daily', time: '21:00', end_time: '21:15' },
+        { task: 'tue thu', week: [2, 3], repeat: ['tue', 'thu'] },
+        { task: 'weekly', repeat: 'weekly' },
+        { task: 'weekends', week: [4, 9], repeat: 'weekends' },
       ]),
-      opts(),
     );
-    expect(items.map((i) => [i.start, i.end])).toEqual([
-      ['2026-11-05T14:00', '2026-11-05T16:00'],
-      ['2026-11-06T22:00', '2026-11-07T01:00'],
+    const of = (t: string) => items.filter((i) => i.text === t);
+    expect(of('daily')).toHaveLength(28);
+    expect(of('daily')[0]).toMatchObject({ start: '2026-11-02T21:00', end: '2026-11-02T21:15', timing: 'Daily' });
+    expect(of('tue thu').map((i) => i.start)).toEqual(['2026-11-10T00:00', '2026-11-12T00:00', '2026-11-17T00:00', '2026-11-19T00:00']);
+    expect(of('tue thu')[0]?.timing).toBe('Weeks 2-3 · Tue, Thu');
+    expect(of('weekly').map((i) => [i.start, i.end])).toEqual([
+      ['2026-11-02T00:00', '2026-11-09T00:00'],
+      ['2026-11-09T00:00', '2026-11-16T00:00'],
+      ['2026-11-16T00:00', '2026-11-23T00:00'],
+      ['2026-11-23T00:00', '2026-11-30T00:00'],
     ]);
-    const hours = resolvePlan(
-      draft({ horizon: { unit: 'hour', length: 4 } }, [it_('Hour 2', { unit: 'hour', index: 2 })]),
-      opts({ startTime: '09:00' }),
-    );
-    expect(hours.plan.end).toBe('2026-11-04T13:00');
-    expect(hours.items[0]).toMatchObject({ start: '2026-11-04T10:00', end: '2026-11-04T11:00' });
+    expect(of('weekends')).toHaveLength(2); // only week 4 is inside a 4-week plan
   });
 
-  it('ignores a start time for plans not counted in hours (regression: week 1 rejected)', () => {
-    const { plan, items, problems } = resolvePlan(
-      draft({ horizon: { unit: 'week', length: 3 } }, [it_('Week 1 task', { unit: 'week', index: 1 })]),
-      opts({ startDate: '2026-11-02', startTime: '09:00' }),
-    );
-    expect(problems).toEqual([]);
-    expect(plan.start).toBe('2026-11-02T00:00');
-    expect(plan.end).toBe('2026-11-23T00:00');
-    expect(items[0]!.start).toBe('2026-11-02T00:00');
+  it('lists tasks outside the plan instead of moving them', () => {
+    const { items, skipped } = resolve(plan([{ task: 'in', week: 4 }, { task: 'out', week: 5 }, { task: 'late', date: '2027-01-01' }]));
+    expect(items.map((i) => i.text)).toEqual(['in']);
+    expect(skipped.map((s) => s.path)).toEqual(['tasks[1]', 'tasks[2]']);
   });
 
-  it('uses absolute dates as written, and month/year spans by calendar', () => {
-    const { plan, items } = resolvePlan(
-      draft({ horizon: null, startDate: '2026-01-31', endDate: '2027-12-31', boundaryQuote: 'Jan 2026 - Dec 2027' }, [
-        it_('Month 2', { unit: 'month', index: 2 }),
-        it_('Year 2', { unit: 'year', index: 2 }),
-        it_('Deadline', { unit: 'day', date: '2026-06-30' }),
-      ]),
-      opts(),
-    );
-    expect(plan.start).toBe('2026-01-31T00:00'); // the planner's own start date wins
-    expect(plan.end).toBe('2028-01-01T00:00');
-    const byText = Object.fromEntries(items.map((i) => [i.text, i]));
-    expect(byText['Month 2']).toMatchObject({ start: '2026-02-28T00:00', end: '2026-03-31T00:00' });
-    expect(byText['Year 2']).toMatchObject({ start: '2027-01-31T00:00', end: '2028-01-01T00:00' }); // clamped to plan end
-    expect(byText['Deadline']).toMatchObject({ start: '2026-06-30T00:00', end: '2026-07-01T00:00' });
+  it('keeps a slot that crosses midnight exactly as written', () => {
+    const { items } = resolve(plan([{ task: 'night', day: 1, time: '22:00', end_time: '01:00' }]));
+    expect(items[0]).toMatchObject({ start: '2026-11-02T22:00', end: '2026-11-03T01:00' });
   });
 
-  it('reports items it cannot place instead of guessing', () => {
-    const { items, problems } = resolvePlan(
-      draft({}, [
-        it_('Week 14 task', { unit: 'week', index: 14 }),
-        it_('Someday', { unit: 'week' }),
-        it_('Bad time', { unit: 'day', index: 1, timeStart: '25:00' }),
-        it_('Bad date', { unit: 'day', date: '2026-02-30' }),
-      ]),
-      opts(),
-    );
-    expect(items).toHaveLength(0);
-    expect(problems.map((p) => p.quote)).toEqual(['Week 14 task', 'Someday', 'Bad time', 'Bad date']);
-    expect(problems[0]!.reason).toContain("outside the plan's time limit");
+  it('sorts items by start and gives each an id', () => {
+    const { items } = resolve(EXAMPLE_PLAN);
+    expect(items.every((it, i) => i === 0 || items[i - 1]!.start <= it.start)).toBe(true);
+    expect(new Set(items.map((i) => i.id)).size).toBe(items.length);
+    expect(items.map((i) => i.sort)).toEqual(items.map((_, i) => i));
+  });
+
+  it('refuses a plan that expands into too many items', () => {
+    const tasks = Array.from({ length: 20 }, (_, i) => ({ task: `habit ${i}`, repeat: 'daily' }));
+    expect(() => resolve(JSON.stringify({ title: 'T', duration: { years: 1 }, tasks }))).toThrow(/more than 5,000/);
   });
 });
