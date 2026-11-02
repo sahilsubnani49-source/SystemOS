@@ -88,8 +88,9 @@ cd backend && ./venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 
 `10.0.2.2` (Android emulator), or the machine's LAN IP (physical device). Setting
 `EXPO_PUBLIC_API_URL` overrides that in any build. Release builds read it from the
 `eas.json` profile: `preview` (Cloud Run APK), `preview-vercel` (Vercel APK),
-`production` (Play Store bundle). Until the backend is deployed these hold
-`REPLACE-WITH-…` placeholders, which `env.ts` rejects at startup (SYS-015).
+`production` (Play Store bundle). All three currently point at the deployed Vercel
+backend (`https://systemos-kappa.vercel.app`); `preview` gets the Cloud Run URL once that
+is deployed (SYS-015). `env.ts` rejects a missing URL or a `REPLACE-WITH-…` placeholder at startup.
 
 ```bash
 cd mobile && eas build -p android --profile preview          # Cloud Run APK
