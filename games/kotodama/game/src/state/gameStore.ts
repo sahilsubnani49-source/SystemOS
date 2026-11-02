@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  applyXp, battleXp, createRng, foeCombatant, getMap, heroCombatant, isWalkable, battlePool, dueCount, REVIEW_AREA,
+  applyXp, battleXp, createRng, familyStage, foeCombatant, getFamily, getMap, heroCombatant, isWalkable, battlePool, dueCount, REVIEW_AREA,
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
@@ -293,7 +293,10 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
             party: next.party.map((p, i) => {
               if (i >= PARTY_SIZE) return p;
               const r = applyXp(p.level, p.xp, xp);
-              if (r.levelsGained) levelUps.push(`A spirit reached Lv ${r.level}!`);
+              if (r.levelsGained) {
+                const form = getFamily(p.familyId).stages[familyStage(p.familyId, next.srs)];
+                levelUps.push(`${form.name} reached Lv ${r.level}!`);
+              }
               return { ...p, level: r.level, xp: r.xp };
             }),
           };
