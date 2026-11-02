@@ -218,7 +218,7 @@ the backend to any other user or public network.
   Arc 5 was verified from seeded saves: the Tengu King's winds → Rune Coast → a battle with
   reading-passage prompts → purifying a spirit by typing a reading of 個; Jarl Ulfhild's N3
   exam → the credits → `game_complete`; and a Daily Trial that asked only seeded overdue items
-  and could be fought again. The core has 159 Vitest tests, including a map validator, a
+  and could be fought again. The core has 160 Vitest tests, including a map validator, a
   boss-pacing simulation over all 29 bosses and the Daily Trial, and data checks on every
   kanji reading, word, sentence and passage.
 - **Open:**

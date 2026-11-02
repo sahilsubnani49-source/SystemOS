@@ -173,7 +173,10 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       // prompt in 10 and the move would rarely be what it says.
       const ownItems = DEDICATED_ITEMS[move.prompt];
       const dedicated = ownItems ? s.kanaPool.filter(ownItems) : [];
-      const itemId = pickNextPrompt(dedicated.length > 0 ? dedicated : s.kanaPool, s.srs, action.now, rng, lastItem);
+      // ...but only if that offers something besides the item just asked: with one
+      // passage in the pool (a Daily Trial), Rune Scroll would ask it every turn.
+      const useDedicated = dedicated.some((id) => id !== lastItem);
+      const itemId = pickNextPrompt(useDedicated ? dedicated : s.kanaPool, s.srs, action.now, rng, lastItem);
       s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, move.timeLimitMs);
       s.pendingMove = action.move;
       s.phase = 'answer';
