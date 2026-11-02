@@ -8,6 +8,7 @@ import { Colors, FontSize, Fonts } from './src/core/theme';
 import { SystemNoticeModal } from './src/presentation/components/SystemNoticeModal';
 import { SpaceBackground } from './src/presentation/components/SpaceBackground';
 import { SystemDialogProvider } from './src/presentation/components/SystemDialog';
+import { SystemErrorBoundary } from './src/presentation/components/SystemErrorBoundary';
 import { useQuestStore } from './src/presentation/stores/useQuestStore';
 import { getMeta, deleteMeta } from './src/data/services/AppMeta';
 import { PENALTY_NOTICE_KEY } from './src/data/services/DailyTimelineService';
@@ -59,7 +60,9 @@ function AppContent() {
 
   return (
     <SystemDialogProvider>
-      <AppNavigator />
+      <SystemErrorBoundary>
+        <AppNavigator />
+      </SystemErrorBoundary>
       <SystemNoticeModal
         visible={notice.show}
         penaltyDate={notice.penaltyDate}

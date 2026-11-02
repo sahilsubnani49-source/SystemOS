@@ -13,7 +13,7 @@ coupons. Device-side SQLite is the source of truth for gameplay state.
 replaceable.
 
 The repo also contains **Kotodama** (`games/kotodama/`), a Japanese-learning RPG that
-SystemOS opens from the Stats tab and that also ships as its own app. See
+SystemOS opens from the Apps tab and that also ships as its own app. See
 [`games/kotodama/README.md`](games/kotodama/README.md).
 
 **Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
@@ -28,7 +28,7 @@ deliberately unfinished.
   Expo SDK 56 configures Metro for workspaces automatically: no `metro.config.js`.
 - **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
 - **Graphics**: `@shopify/react-native-skia` + `react-native-reanimated` (Kotodama and the
-  Stats-tab portal). These are native modules, so the dev client must be rebuilt after pulling them.
+  Apps-tab portal). These are native modules, so the dev client must be rebuilt after pulling them.
 - **Backend**: FastAPI (Python 3.12+) — `backend/`
 - **Device DB**: SQLite via `expo-sqlite` (WAL, singleton connection)
 - **Backend DB**: SQLAlchemy Core (no ORM) — SQLite at `backend/systemos.db` locally,
@@ -124,8 +124,9 @@ Data          (expo-sqlite repositories + axios datasource + services)
 
 ### Navigation
 
-Six bottom tabs: Dashboard, Campaign, Quests, Stats, Army (training), Settings.
-Inventory and TaskDetail push over them as stack screens. `AppNavigator` is a
+Six bottom tabs: Dashboard, Campaign, Quests, Apps, Army (training), Settings.
+Inventory, TaskDetail and Stats push over them as stack screens; Stats opens from the
+Dashboard's level board, and the Apps tab holds the Kotodama portal. `AppNavigator` is a
 **declarative auth gate** — it swaps which screens are registered based on
 `useAuthStore.status`, so login/logout never calls `navigate()` imperatively.
 
@@ -243,6 +244,7 @@ Device tables are in `mobile/src/data/database/schema.ts`, opened via `db.ts`.
 | `task_sessions` | Hand-entered time against a category |
 | `app_meta` | Key-value app state — created lazily by `AppMeta.ts` |
 | `mutation_queue` | Offline replay queue — created lazily, **currently unused** (SYS-008) |
+| `diagnostic_logs` | System Monitor events — written **only** during a recording window (SYS-022) |
 | `shadow_soldiers` | **Dead schema** — no repository, store, model, or UI |
 
 Backend tables (`backend/app/db.py`): `users`, `user_state` (JSON TEXT blobs).
@@ -281,6 +283,12 @@ See [`docs/DATABASE_ARCHITECTURE.md`](docs/DATABASE_ARCHITECTURE.md) for columns
 - **`MAX_DESCRIPTION_CHARS = 80`** in `task_describer.py` must stay in sync with
   `CampaignTaskService.ts`. Press Start 2P is a very wide pixel face; keep generated
   text ASCII (an em-dash risks tofu).
+- **System Monitor** (`MonitorService.ts`): log technical events with
+  `Monitor.log(level, category, message, data?)` or `Monitor.error(category, message, err)`.
+  It is a no-op outside a recording window the Hunter opens in Settings, so it is safe to
+  call anywhere and must never be awaited. Never put tokens, request bodies or the Hunter's
+  own text (bio, quest titles, notes) in `message`; `data` keys like `token`, `bio`,
+  `title`, `note` are stripped by `redact()`, but the message is not.
 - **Tab labels** must stay ≤6 chars at 7pt — Press Start 2P glyphs are ~1em wide and
   longer labels truncate.
 

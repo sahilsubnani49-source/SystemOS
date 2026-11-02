@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Monitor } from '../../data/services/MonitorService';
 import { v4 as uuidv4 } from 'uuid';
 import { Quest, DungeonResult } from '../../domain/models/Quest';
 import { DynamicItem } from '../../domain/models/DynamicItem';
@@ -39,10 +40,19 @@ async function grantReward(category: string, rarity: Rarity): Promise<DynamicIte
         modelPreference: player?.modelPreference ?? 'cloud',
         rarity,
       });
+      // The backend answers with its own rule-based coupon when the AI provider fails.
+      const fellBack = result.ai_generated === false;
+      Monitor.log(fellBack ? 'warn' : 'info', 'api', 'Reward granted', {
+        rarity,
+        path: fellBack ? 'backend-fallback' : 'ai',
+      });
       return apiItemToDomain(result.reward_item);
-    } catch {
+    } catch (e) {
       // fall through to static loot
+      Monitor.error('api', 'Reward request failed: using device loot table', e, { rarity });
     }
+  } else {
+    Monitor.log('info', 'api', 'Reward granted', { rarity, path: 'device-offline' });
   }
   return RewardService.getFallbackReward(category, rarity);
 }
@@ -96,6 +106,13 @@ async function completeQuestOnce(
   const leveledUp = usePlayerStore.getState().addExperience(quest.xpReward);
 
   const rarity = rollRewardRarity(quest.difficulty);
+  Monitor.log('info', 'timeline', 'Quest completed', {
+    questId,
+    difficulty: quest.difficulty,
+    xp: quest.xpReward,
+    drop: rarity ?? 'none',
+    leveledUp,
+  });
   if (rarity) {
     const reward = await grantReward(quest.category, rarity);
     await inventoryRepo.addItem(reward);

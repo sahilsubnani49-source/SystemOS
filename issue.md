@@ -44,6 +44,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 | SYS-019 | Kotodama: open items | P2 | 🔴 OPEN (tracking list) |
 | SYS-020 | Second correctness sweep (races and stale day state) | P1 | ✅ FIXED (2026-11-02) |
 | SYS-021 | Kotodama bug fixes | P2 | ✅ FIXED (2026-11-02) |
+| SYS-022 | System Monitor (time-windowed technical logs) | P2 | ✅ BUILT (2026-11-02); 🔴 backend logs not merged |
 
 ## Issues
 
@@ -284,6 +285,36 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
   - **Short study sessions never reached the Hunter Log.** The game reported rounded
     whole minutes on every backgrounding and reset its counter; SystemOS drops sessions
     under a minute. Time now accumulates until a full minute and carries leftover seconds.
+  - **A save that failed to open left the game on a blank screen forever.** `boot()` threw
+    and never left the boot screen. It now shows the title (without Continue) and reports
+    the failure through the new `onDiagnostic` prop. Save-write failures, previously
+    unhandled promise rejections, are reported the same way.
+
+### SYS-022 — System Monitor (time-windowed technical logs)
+
+- **Status:** ✅ BUILT (2026-11-02). Backend logs are not merged in (still open, below).
+- **Priority:** P2
+- **Area:** `mobile/src/data/services/MonitorService.ts`, `DiagnosticsRepository.ts`,
+  `presentation/components/SystemMonitorCard.tsx`, `DiagnosticsModal.tsx`
+- **What it does:** Settings → System Monitor opens a recording window (30 min, 2 h, 24 h, or
+  until stopped, capped at 7 days). Only inside it, the app records technical events to the
+  `diagnostic_logs` table:
+  - every backend call (route, status, duration, AI fallback);
+  - uncaught JS errors, and render errors via `SystemErrorBoundary`;
+  - boot timings, auth changes, foreground/background, online/offline;
+  - timeline ticks, timer start/stop/recover, and quest reward paths;
+  - store failures;
+  - Kotodama open/close, study sessions, and its save and render errors.
+
+  Logs can be viewed with a severity filter, exported as text through the system share
+  sheet, and cleared. Tokens, bodies and the Hunter's own text are never recorded.
+- **Verified:** type-check, lint, Android bundle, and a throwaway Vitest harness over the real
+  `MonitorService`. It covered no writes outside a window, redaction, a window that expires
+  closing itself exactly once, the 7-day cap, and the export format. On-device use is not yet
+  verified, because SystemOS can't run on web.
+- **🔴 Still open:** server-side logs (FastAPI `logging`) stay in Cloud Run / Vercel and are
+  not merged into the phone's log. The device records each call's status and round-trip
+  time, which covers most diagnosis.
 
 ## Validation baseline
 

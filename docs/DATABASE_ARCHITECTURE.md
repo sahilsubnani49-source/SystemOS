@@ -39,6 +39,7 @@ only.
 | `task_sessions` | Hand-entered time logged against a category | `schema.ts` |
 | `app_meta` | Key-value app state (timeline cursor, notification dedup) | `AppMeta.ts` |
 | `mutation_queue` | Offline-queued API calls pending replay — **currently unused** | `MutationQueue.ts` |
+| `diagnostic_logs` | System Monitor events, written only during a recording window | `schema.ts` |
 
 `app_meta` and `mutation_queue` self-create in their owning service modules rather than
 in the central schema, keeping their lifecycle next to the only code that uses them.
@@ -272,6 +273,24 @@ Source: `mobile/src/data/database/MutationQueue.ts`
 reward flow writes the fallback coupon locally instead of queuing a replay. Tracked as
 SYS-008.
 
+### `diagnostic_logs`
+
+Source: `mobile/src/data/database/schema.ts`. Written by `MonitorService` (via
+`DiagnosticsRepository`) **only while a System Monitor recording window is open**
+(Settings → System Monitor); the window's end time is the `monitor_until` key in `app_meta`.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT; newest-first order |
+| `at` | TEXT | ISO-8601 timestamp (indexed) |
+| `level` | TEXT | `debug` / `info` / `warn` / `error` |
+| `category` | TEXT | `api` / `error` / `lifecycle` / `timeline` / `timer` / `sync` / `kotodama` / `perf` |
+| `message` | TEXT | Short event line, e.g. `POST /api/goals/plan 504`; clipped to 300 chars |
+| `data` | TEXT | **JSON**, nullable: small context object, already redacted (no tokens, no user text) |
+
+Bounded by pruning, not migrations: at most 5,000 rows and 7 days, pruned whenever a window
+opens or closes. Rows are inserted in batches with one multi-row `INSERT`.
+
 ---
 
 ## Relationships
@@ -339,7 +358,8 @@ erDiagram
 ## Conventions
 
 - **Primary keys** — `TEXT` UUID-style ids, except `gym_sessions` (natural date key),
-  `app_meta` (natural string key), and `mutation_queue` (`INTEGER AUTOINCREMENT`).
+  `app_meta` (natural string key), and `mutation_queue` / `diagnostic_logs`
+  (`INTEGER AUTOINCREMENT`).
 - **Booleans** — `INTEGER` 0/1 (`is_completed`, `is_equipped`).
 - **Timestamps** — `TEXT` ISO-8601. Date-only fields are local `YYYY-MM-DD`, computed in
   local time so a day boundary matches the user's own midnight.

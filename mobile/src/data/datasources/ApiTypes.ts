@@ -95,6 +95,8 @@ export interface ApiQuestCompleteResponse {
   new_exp: number;
   new_exp_required: number;
   reward_item: ApiDynamicItem;
+  /** False when the backend fell back to its rule-based coupon. Absent on older backends. */
+  ai_generated?: boolean;
 }
 
 // --- Goal-driven campaign (replaces the old aspirations→quests flow) ---

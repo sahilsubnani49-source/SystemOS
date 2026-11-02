@@ -19,7 +19,7 @@ const CX = W / 2;
 const CY = 84;
 
 /**
- * The Stats-tab entrance to Kotodama: a torii gate framing a swirling vortex.
+ * The Apps-tab entrance to Kotodama: a torii gate framing a swirling vortex.
  * Pure Skia, animated from the clock on the UI thread, so it costs no re-renders.
  */
 export function GatePortal({ onPress }: { onPress: () => void }) {

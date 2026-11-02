@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Monitor } from '../../data/services/MonitorService';
 import { v4 as uuidv4 } from 'uuid';
 import { Goal } from '../../domain/models/Goal';
 import { Quest } from '../../domain/models/Quest';
@@ -194,6 +195,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       );
       set({ activeGoals: goals, creating: false });
     } catch (e) {
+      Monitor.error('api', 'useGoalStore.createGoal failed', e);
       const message = e instanceof Error ? e.message : 'Campaign generation failed.';
       set({ creating: false, error: message });
       throw e;
@@ -244,6 +246,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
         },
       });
     } catch (e) {
+      Monitor.error('api', 'useGoalStore.generateDraftPlan failed', e);
       const message = e instanceof Error ? e.message : 'Strategy drafting failed.';
       set({ planning: false, error: message });
       throw e;
@@ -282,6 +285,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
         draftPlan: { ...draft, plan: response.plan, aiGenerated: response.ai_generated },
       });
     } catch (e) {
+      Monitor.error('api', 'useGoalStore.regenerateDraftPlan failed', e);
       const message = e instanceof Error ? e.message : 'Strategy revision failed.';
       set({ planning: false, error: message });
       throw e;
@@ -323,6 +327,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       );
       set({ activeGoals: goals, creating: false, draftPlan: null });
     } catch (e) {
+      Monitor.error('api', 'useGoalStore.approveDraftPlan failed', e);
       const message = e instanceof Error ? e.message : 'Campaign generation failed.';
       // Keep the draft on failure — an edited plan must never be lost.
       set({ creating: false, error: message });

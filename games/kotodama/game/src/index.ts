@@ -1,2 +1,2 @@
 export { KotodamaGame } from './KotodamaGame';
-export type { KotodamaGameProps, StudySessionReport } from './types';
+export type { GameDiagnostic, KotodamaGameProps, StudySessionReport } from './types';

@@ -143,4 +143,17 @@ export const CREATE_TABLES_SQL = [
 
   `CREATE INDEX IF NOT EXISTS idx_task_sessions_category ON task_sessions (category_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_task_sessions_date ON task_sessions (date)`,
+
+  // System Monitor: technical-health events, written only while a recording window
+  // is open (see MonitorService). Bounded by pruning, never by a migration.
+  `CREATE TABLE IF NOT EXISTS diagnostic_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL,
+    level TEXT NOT NULL,
+    category TEXT NOT NULL,
+    message TEXT NOT NULL,
+    data TEXT
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_diagnostic_logs_at ON diagnostic_logs (at)`,
 ];

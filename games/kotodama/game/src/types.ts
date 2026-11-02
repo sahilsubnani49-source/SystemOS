@@ -9,6 +9,17 @@ export interface KotodamaGameProps {
   onStudySession?: (report: StudySessionReport) => void;
   /** SQLite file the game owns. Separate from any host database. */
   databaseName?: string;
+  /**
+   * Optional bridge for a host's monitoring: save/load failures and caught render
+   * errors. Called with technical details only (no answers, no player name).
+   */
+  onDiagnostic?: (event: GameDiagnostic) => void;
+}
+
+export interface GameDiagnostic {
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  data?: Record<string, unknown>;
 }
 
 export interface StudySessionReport {

@@ -42,7 +42,7 @@ SystemOS/
 └── issue.md                        # Active technical issue register
 ```
 
-SystemOS opens Kotodama from the Stats tab (`GatePortal` → `KotodamaScreen`, a
+SystemOS opens Kotodama from the Apps tab (`GatePortal` → `KotodamaScreen`, a
 full-screen modal). Code under `games/` never imports from `mobile/`; study sessions come
 back through `onStudySession` and are logged by `useTaskLogStore.recordJapaneseSession`.
 
@@ -65,7 +65,8 @@ expo-sqlite / FastAPI AI endpoints
 Cross-cutting application infrastructure:
 
 - `navigation.tsx` defines the native stack and six bottom tabs: Dashboard,
-  Campaign, Quests, Stats, Army/Training, and Settings.
+  Campaign, Quests, Apps, Army/Training, and Settings. Stats is a stack screen opened
+  from the Dashboard's level board.
 - `useAppBootstrap.ts` requests notification permission, schedules reminders,
   registers background work, loads Zustand stores, and advances the campaign timeline.
 - `backgroundTasks.ts` registers the Expo background task at module load time.
@@ -102,8 +103,8 @@ Concrete data access and business services.
 
 React Native UI and state coordination.
 
-- `screens/` contains the six tab screens (Dashboard, Campaign, Quests, Stats,
-  Training/Army, Settings), the Inventory and TaskDetail stack screens, and the
+- `screens/` contains the six tab screens (Dashboard, Campaign, Quests, Apps,
+  Training/Army, Settings), the Inventory, TaskDetail and Stats stack screens, and the
   Login/Signup screens behind the auth gate.
 - `components/` contains reusable modals, quest/reward cards, visual effects, and
   system-dialog UI.

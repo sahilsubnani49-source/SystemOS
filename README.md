@@ -347,8 +347,9 @@ SystemOS/
 
 ### App navigation
 
-Six bottom tabs — Dashboard, Campaign, Quests, Stats, Army (training), Settings — with
-Inventory and Task Detail pushed as stack screens over them. An auth gate swaps between
+Six bottom tabs — Dashboard, Campaign, Quests, Apps, Army (training), Settings — with
+Inventory, Task Detail and Stats pushed as stack screens over them. Stats opens when you
+tap the level board on the Dashboard; the Apps tab holds the portal to Kotodama. An auth gate swaps between
 the Login/Signup stack and the main stack based on auth status.
 
 ---
