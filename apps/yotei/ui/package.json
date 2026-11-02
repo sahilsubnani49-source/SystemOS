@@ -1,0 +1,28 @@
+{
+  "name": "@yotei/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Yotei React Native UI. Exports <YoteiApp/>; never imports from any host app.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yotei/core": "*",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "expo-document-picker": "~56.0.4",
+    "expo-file-system": "~56.0.11",
+    "expo-sqlite": "~56.0.5",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "~5.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "expo-document-picker": "~56.0.4",
+    "typescript": "~6.0.3"
+  }
+}

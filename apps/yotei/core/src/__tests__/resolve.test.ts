@@ -69,6 +69,17 @@ describe('resolvePlan', () => {
     expect(hours.items[0]).toMatchObject({ start: '2026-11-04T10:00', end: '2026-11-04T11:00' });
   });
 
+  it('ignores a start time for plans not counted in hours (regression: week 1 rejected)', () => {
+    const { plan, items, problems } = resolvePlan(
+      draft({ horizon: { unit: 'week', length: 3 } }, [it_('Week 1 task', { unit: 'week', index: 1 })]),
+      opts({ startDate: '2026-11-02', startTime: '09:00' }),
+    );
+    expect(problems).toEqual([]);
+    expect(plan.start).toBe('2026-11-02T00:00');
+    expect(plan.end).toBe('2026-11-23T00:00');
+    expect(items[0]!.start).toBe('2026-11-02T00:00');
+  });
+
   it('uses absolute dates as written, and month/year spans by calendar', () => {
     const { plan, items } = resolvePlan(
       draft({ horizon: null, startDate: '2026-01-31', endDate: '2027-12-31', boundaryQuote: 'Jan 2026 - Dec 2027' }, [

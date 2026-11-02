@@ -24,7 +24,7 @@ export class NoTimeLimitError extends Error {
 export interface ResolveOptions {
   /** YYYY-MM-DD the plan starts, chosen by the user (ignored if the planner states a start date). */
   startDate: string;
-  /** HH:mm, for plans counted in hours ("Hour 1"). Default 00:00. */
+  /** HH:mm when "Hour 1" begins. Used ONLY by hour-based plans; others start at 00:00. */
   startTime?: string;
   /** IANA zone at import, recorded on the plan. */
   timezone: string;
@@ -48,7 +48,10 @@ export function resolvePlan(draft: PlanDraft, opts: ResolveOptions): ResolvedPla
 
   const startDate = isValidDate(draft.startDate) ? draft.startDate : opts.startDate;
   if (!isValidDate(startDate)) throw new Error(`Invalid start date: ${startDate}`);
-  const startTime = isValidTime(opts.startTime) ? opts.startTime : '00:00';
+  // A start time only means something for a plan counted in hours. Applying it to a
+  // week plan would start "Week 1" mid-morning and push its own items out of bounds.
+  const hourPlan = draft.horizon?.unit === 'hour';
+  const startTime = hourPlan && isValidTime(opts.startTime) ? opts.startTime : '00:00';
   const planStart = wall(startDate, startTime);
 
   let planEnd: WallTime;
