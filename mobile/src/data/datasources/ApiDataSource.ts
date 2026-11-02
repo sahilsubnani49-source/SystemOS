@@ -17,6 +17,7 @@ import {
   ApiNutritionResponse,
   ApiTaskDescribeRequest,
   ApiTaskDescribeResponse,
+  ApiYoteiParseResponse,
 } from './ApiTypes';
 
 // Marker flag on a request config so a 401-triggered retry is attempted at most
@@ -42,6 +43,7 @@ const STRATEGY_TIMEOUT_MS = 90_000; // a single LLM call to draft the campaign s
 const DUNGEON_TIMEOUT_MS = 60_000; // a single mock-exam generation call
 const NUTRITION_TIMEOUT_MS = 30_000; // a single protein-directive generation call
 const TASK_DESCRIBE_TIMEOUT_MS = 30_000; // a single task-line generation call
+const YOTEI_PARSE_TIMEOUT_MS = 180_000; // a long planner is structured in parallel chunks
 const HEALTH_TIMEOUT_MS = 5_000; // plain reachability ping — fail fast
 const LLM_HEALTH_TIMEOUT_MS = 45_000; // one-word LLM ping; local Ollama may cold-load the model
 
@@ -104,11 +106,17 @@ api.interceptors.response.use(
     // Long-running generation calls override the default timeout — report the
     // timeout that was actually in effect, not the 10s default.
     const effectiveTimeoutMs = error.config?.timeout ?? ENV.REQUEST_TIMEOUT_MS;
+    // FastAPI's HTTPException carries a human-readable `detail` (e.g. Yotei's "This
+    // planner has no time limit"). Surface it; validation errors (a list) keep the
+    // generic message.
+    const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
     const message =
       error.code === 'ECONNABORTED'
         ? `Request timed out (${effectiveTimeoutMs}ms): ${url}`
         : status
-          ? `API error ${status}: ${url}`
+          ? typeof detail === 'string' && detail.trim()
+            ? detail
+            : `API error ${status}: ${url}`
           : `Network error: ${url}`;
 
     if (ENV.IS_DEV) {
@@ -221,6 +229,16 @@ export const ApiDataSource = {
     const { data } = await api.post<ApiNutritionResponse>('/api/nutrition/protein', req, {
       timeout: NUTRITION_TIMEOUT_MS,
     });
+    return data;
+  },
+
+  /** Yotei: structure a planner .md. The response is mapped to camelCase by draftFromWire. */
+  async parseYoteiPlan(markdown: string, modelPreference?: string): Promise<ApiYoteiParseResponse> {
+    const { data } = await api.post<ApiYoteiParseResponse>(
+      '/api/yotei/parse',
+      { markdown, model_preference: modelPreference },
+      { timeout: YOTEI_PARSE_TIMEOUT_MS },
+    );
     return data;
   },
 

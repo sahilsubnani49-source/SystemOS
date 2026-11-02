@@ -3,11 +3,13 @@
   "private": true,
   "workspaces": [
     "mobile",
-    "games/kotodama/*"
+    "games/kotodama/*",
+    "apps/yotei/*"
   ],
   "scripts": {
     "test:kotodama": "npm run test --workspace @kotodama/core",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:yotei": "npm run test --workspace @yotei/core"
   },
   "overrides": {
     "expo-asset": "~56.0.20"

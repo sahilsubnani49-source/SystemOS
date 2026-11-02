@@ -14,6 +14,7 @@ import { AppsScreen } from '../presentation/screens/AppsScreen';
 import { TrainingScreen } from '../presentation/screens/TrainingScreen';
 import { SettingsScreen } from '../presentation/screens/SettingsScreen';
 import { KotodamaScreen } from '../presentation/screens/KotodamaScreen';
+import { YoteiScreen } from '../presentation/screens/YoteiScreen';
 import { LoginScreen } from '../presentation/screens/LoginScreen';
 import { SignupScreen } from '../presentation/screens/SignupScreen';
 import { useAuthStore } from '../presentation/stores/useAuthStore';
@@ -28,6 +29,8 @@ export type RootStackParamList = {
   Stats: undefined;
   /** The Kotodama game, opened from the Apps-tab portal. */
   Kotodama: undefined;
+  /** Yotei, the planner app, opened from the Apps tab. */
+  Yotei: undefined;
 };
 
 export type BottomTabParamList = {
@@ -139,6 +142,11 @@ export function AppNavigator() {
               name="Stats"
               component={StatsScreen}
               options={{ ...detailHeader, title: 'STATS' }}
+            />
+            <Stack.Screen
+              name="Yotei"
+              component={YoteiScreen}
+              options={{ presentation: 'fullScreenModal', headerShown: false }}
             />
             <Stack.Screen
               name="Kotodama"

@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Yotei",
+    "slug": "yotei",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F1217",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sahildevhk.yotei",
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "com.sahildevhk.yotei",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": ["expo-sqlite", "expo-secure-store", "expo-document-picker"],
+    "owner": "sahildevhk"
+  }
+}

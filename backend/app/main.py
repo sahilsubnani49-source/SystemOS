@@ -25,6 +25,7 @@ from app.services.task_describer import (
     generate_task_description,
     synthesize_fallback_task_description,
 )
+from app.services.plan_parser import MAX_MARKDOWN_CHARS, PlanNoTimeLimit, parse_planner
 
 from pathlib import Path
 
@@ -166,6 +167,12 @@ class TaskDescribeRequest(BaseModel):
     context: Optional[str] = ""
     plan_excerpt: Optional[str] = ""
     quests: List[TaskQuest] = []
+    model_preference: Optional[str] = "cloud"
+
+
+class YoteiParseRequest(BaseModel):
+    """A planner .md for Yotei. The cap (413 above it) is enforced in the route."""
+    markdown: str = Field(min_length=1)
     model_preference: Optional[str] = "cloud"
 
 
@@ -427,6 +434,36 @@ async def describe_task(req: TaskDescribeRequest, user: dict = Depends(get_curre
         result = synthesize_fallback_task_description(req.goal_title, req.context or "", quests)
         result["ai_generated"] = False
         return result
+
+
+@app.post("/api/yotei/parse")
+async def yotei_parse(req: YoteiParseRequest, user: dict = Depends(get_current_user)):
+    """
+    Yotei: structure a planner .md into dated items. The LLM only points at text in
+    the planner; plan_parser.verify() keeps nothing that isn't verbatim in it.
+
+    Stateless: the device stores the plan (it is the source of truth, like campaigns).
+    No fallback: an invented plan is worse than an honest failure, so an LLM error is
+    a 502. A planner with no stated time limit is a 422, never an invented one.
+    """
+    if len(req.markdown) > MAX_MARKDOWN_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Planner is too long ({len(req.markdown)} characters; the limit is {MAX_MARKDOWN_CHARS}).",
+        )
+    logger.info("[Yotei] Parsing planner chars=%d model=%s", len(req.markdown), req.model_preference)
+    try:
+        result = await parse_planner(req.markdown, req.model_preference or "cloud")
+    except PlanNoTimeLimit as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.warning("[Yotei] Planner analysis failed (%s).", e)
+        raise HTTPException(status_code=502, detail="Planner analysis is unavailable right now. Try again later.")
+    logger.info(
+        "[Yotei] Planner parsed: kept=%d rejected=%d unscheduled=%d unassigned=%d",
+        len(result["items"]), len(result["rejected"]), len(result["unscheduled"]), len(result["unassigned_lines"]),
+    )
+    return {**result, "ai_generated": True}
 
 
 @app.post("/api/quests/{quest_id}/complete")

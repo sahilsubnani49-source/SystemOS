@@ -14,7 +14,10 @@ replaceable.
 
 The repo also contains **Kotodama** (`games/kotodama/`), a Japanese-learning RPG that
 SystemOS opens from the Apps tab and that also ships as its own app. See
-[`games/kotodama/README.md`](games/kotodama/README.md).
+[`games/kotodama/README.md`](games/kotodama/README.md). It also contains **Yotei**
+(`apps/yotei/`), a planner app that turns a planner `.md` into dated tasks, using the planner
+as the only source of truth; it too opens from the Apps tab and ships on its own. See
+[`apps/yotei/README.md`](apps/yotei/README.md).
 
 **Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
 gaps, dead subsystems, and deploy blockers, and prevents "fixing" something that is
@@ -24,7 +27,7 @@ deliberately unfinished.
 
 ## Tech Stack
 
-- **Monorepo**: npm workspaces (`mobile`, `games/kotodama/*`), one root `package-lock.json`.
+- **Monorepo**: npm workspaces (`mobile`, `games/kotodama/*`, `apps/yotei/*`), one root `package-lock.json`.
   Expo SDK 56 configures Metro for workspaces automatically: no `metro.config.js`.
 - **Frontend**: Expo SDK 56, React Native 0.85, React 19.2, TypeScript 6 — `mobile/`
 - **Graphics**: `@shopify/react-native-skia` + `react-native-reanimated` (Kotodama and the
@@ -180,14 +183,17 @@ ChatPromptTemplate (system + few-shot)
 | Architect (reward) | `reward_generator.py` | `POST /api/quests/{id}/complete` |
 | Nutritionist | `nutrition_advisor.py` | `POST /api/nutrition/protein` |
 | Architect (task line) | `task_describer.py` | `POST /api/tasks/describe` |
+| Yotei planner parser | `plan_parser.py` | `POST /api/yotei/parse` |
 
 **Provider priority** (cloud): Groq → xAI Grok → Gemini → Anthropic → OpenAI — first key
 present wins. Local mode uses Ollama. `_get_llm()` lives **exclusively** in
 `reward_generator.py`; import it, never redefine it.
 
-Every route except `/api/goals/strategy` has a deterministic fallback and returns HTTP
-200 with `ai_generated: false` on LLM failure. Strategy deliberately has none — a
-fabricated plan is worse than an honest failure.
+Every route except `/api/goals/strategy` and `/api/yotei/parse` has a deterministic
+fallback and returns HTTP 200 with `ai_generated: false` on LLM failure. Those two
+deliberately have none: a fabricated plan is worse than an honest failure. The Yotei parser
+also runs at temperature 0 (`_get_llm(..., temperature=0)`) and passes everything the LLM
+returns through a deterministic verbatim-quote gate (`plan_parser.verify()`).
 
 ### Campaign flow
 
@@ -320,6 +326,24 @@ cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / np
 - The game keeps its own SQLite file (`kotodama.db`), never SystemOS's tables.
 - `expo-asset` is pinned through a root `overrides` entry: `expo-audio`'s loose range
   otherwise resolves the SDK 58 build, which breaks the Metro bundle.
+
+### Yotei (`apps/yotei/`)
+
+```bash
+npm run test --workspace @yotei/core                        # Vitest
+backend/venv/bin/python backend/tests/test_plan_parser.py   # backend gate (pytest-compatible)
+cd apps/yotei/app && npx expo run:android                   # standalone app
+```
+
+- **Same boundary rule:** nothing under `apps/` imports from `mobile/`. SystemOS renders
+  `<YoteiApp parsePlan onExit onDiagnostic />` (`YoteiScreen.tsx`), supplying the API call.
+- **The planner is the only source of truth.** Task text must be a verbatim quote, and
+  timing must be quoted; dates are computed by `@yotei/core`, never by the LLM. A planner
+  with no stated time limit is rejected, never given an invented one. `normalizeLine()`
+  (TS) and `normalize_line()` (Python) must stay identical: both run
+  `apps/yotei/core/src/__tests__/normalize.vectors.json`.
+- Yotei keeps its own SQLite file (`yotei.db`). Times are wall-clock strings, compared with
+  "now" in the device's **current** timezone.
 
 ## Not implemented
 
