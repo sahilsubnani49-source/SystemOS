@@ -145,7 +145,7 @@ def _build_prompt() -> ChatPromptTemplate:
 # Provider factory
 # ---------------------------------------------------------------------------
 
-def _get_llm(model_preference: str, max_tokens: int = 512):
+def _get_llm(model_preference: str, max_tokens: int = 512, temperature: float | None = None):
     """
     Returns the appropriate LangChain chat model based on model_preference.
     model_preference: "local" → Ollama, "cloud" → first available cloud key wins,
@@ -157,7 +157,12 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
 
     max_tokens caps the model's output length. Reward/dungeon generation fits in
     the 512 default; batched campaign quest generation passes a larger value.
+
+    temperature overrides the creative defaults (0.9 cloud, 0.8 local). Extraction
+    work that must not invent anything (Yotei's planner parser) passes 0.
     """
+    cloud_temp = 0.9 if temperature is None else temperature
+    local_temp = 0.8 if temperature is None else temperature
     if model_preference == "local":
         try:
             try:
@@ -167,7 +172,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
             return ChatOllama(
                 model=os.getenv("OLLAMA_MODEL", "llama3"),
                 base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-                temperature=0.8,
+                temperature=local_temp,
                 num_predict=max_tokens,
             )
         except Exception as e:
@@ -185,7 +190,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
         return ChatGroq(
             model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             api_key=groq_key,
-            temperature=0.9,
+            temperature=cloud_temp,
             max_tokens=max_tokens,
         )
 
@@ -194,7 +199,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
         return ChatXAI(
             model=os.getenv("XAI_MODEL", "grok-2-latest"),
             api_key=xai_key,
-            temperature=0.9,
+            temperature=cloud_temp,
             max_tokens=max_tokens,
         )
 
@@ -203,7 +208,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
         return ChatGoogleGenerativeAI(
             model=os.getenv("GOOGLE_MODEL", "gemini-2.5-flash"),
             google_api_key=google_key,
-            temperature=0.9,
+            temperature=cloud_temp,
             max_output_tokens=max_tokens,
         )
 
@@ -212,7 +217,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
         return ChatAnthropic(
             model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
             api_key=anthropic_key,
-            temperature=0.9,
+            temperature=cloud_temp,
             max_tokens=max_tokens,
         )
 
@@ -221,7 +226,7 @@ def _get_llm(model_preference: str, max_tokens: int = 512):
         return ChatOpenAI(
             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             api_key=openai_key,
-            temperature=0.9,
+            temperature=cloud_temp,
             max_tokens=max_tokens,
         )
 
