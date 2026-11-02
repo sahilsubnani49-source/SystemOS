@@ -1,9 +1,9 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors, Fonts, FontSize, Spacing, Typography } from '../../core/theme';
+import { Colors, Fonts, FontSize, Radius, Shadow, Spacing, Typography } from '../../core/theme';
 import { GatePortal } from '../components/GatePortal';
 import type { RootStackParamList } from '../../core/navigation';
 
@@ -23,6 +23,21 @@ export function AppsScreen() {
 
         {/* Kotodama, the Japanese-learning RPG (games/kotodama). */}
         <GatePortal onPress={() => navigation.navigate('Kotodama')} />
+
+        {/* Yotei, the planner app (apps/yotei). */}
+        <Pressable
+          onPress={() => navigation.navigate('Yotei')}
+          style={({ pressed }) => [styles.appCard, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Open Yotei, the planner"
+        >
+          <Text style={styles.appIcon}>予</Text>
+          <View style={styles.appInfo}>
+            <Text style={styles.appName}>YOTEI</Text>
+            <Text style={styles.appDesc}>Your planner, week by week. Only what it says.</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -43,6 +58,26 @@ const styles = StyleSheet.create({
     // the on-device overlay hovers (matches the Dashboard header).
     paddingRight: 52,
   },
+  appCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadow.card,
+  },
+  pressed: { opacity: 0.7 },
+  appIcon: { fontSize: 28, color: Colors.primary, width: 40, textAlign: 'center' },
+  appInfo: { flex: 1, gap: 4 },
+  appName: { color: Colors.textPrimary, fontFamily: Fonts.pixel, fontSize: FontSize.sm },
+  appDesc: {
+    color: Colors.textSecondary,
+    fontFamily: Fonts.pixel,
+    fontSize: FontSize.xs,
+    lineHeight: 14,
+  },
+  chevron: { color: Colors.textSecondary, fontSize: 24 },
   subtitle: {
     color: Colors.textSecondary,
     fontFamily: Fonts.pixel,

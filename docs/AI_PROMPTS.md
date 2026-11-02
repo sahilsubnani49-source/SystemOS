@@ -19,6 +19,7 @@ The code is the source of truth; when they disagree, the code wins.
 | **Architect — Reward** | `reward_generator.py` | `POST /api/quests/{id}/complete` | Grant a real-world reward coupon |
 | **Architect — Nutritionist** | `nutrition_advisor.py` | `POST /api/nutrition/protein` | Set a daily protein target |
 | **Architect — Task line** | `task_describer.py` | `POST /api/tasks/describe` | Name the work on a running focus timer |
+| **Yotei — Planner parser** | `plan_parser.py` | `POST /api/yotei/parse` | Structure a user's planner `.md` into dated items, verbatim only |
 
 ## Shared conventions
 
@@ -248,6 +249,42 @@ The device starts the timer *before* calling this, so a slow or failed response 
 forgoes an upgrade to the line. Falls back to
 `synthesize_fallback_task_description()` — the same deterministic template the device
 uses offline.
+
+---
+
+## Yotei — Planner parser
+
+`_META_PROMPT` and `_ITEMS_PROMPT` in `plan_parser.py`. Structures a user's planner `.md`
+for the Yotei app. **The LLM is a copier, not a writer:** it may only point at text that is
+already in the planner. Runs at **temperature 0** (`_get_llm(..., temperature=0)`).
+
+Two chains run in parallel: one reads the plan's title and **time limit** from its opening
+and headings; one per heading-aligned chunk (≤ 8,000 chars) lists the items.
+
+```python
+class MetaOut(BaseModel):
+    title_quote: str          # copied exactly
+    boundary_quote: str       # the planner's own words for its time limit, or ''
+    horizon_unit: str | None  # hour | day | week | month | year
+    horizon_length: int | None
+    start_date: str | None    # only if the planner states it
+    end_date: str | None
+
+class ItemOut(BaseModel):
+    quote: str                # the task, copied exactly
+    period_quote: str         # the planner's own words for WHEN, or ''
+    period: PeriodOut | None  # unit, index ("Week 3" -> 3), weekday, date, end_date, time_start, time_end
+```
+
+**Deterministic gate (`verify()`), never the prompt alone:**
+- `quote` must be verbatim in the planner, after markdown/whitespace normalization; otherwise it is **rejected**.
+- `period_quote` must be verbatim too, with a usable period; otherwise the item is **unscheduled**.
+- `boundary_quote` must be verbatim, with a horizon or an end date; otherwise **HTTP 422**.
+- Duplicates are rejected. Task-like lines that nothing covers come back as `unassigned_lines`.
+- The input is capped at 60,000 chars (413 above that) and 2,000 items.
+
+**No fallback**, like the Strategist: an LLM failure is HTTP 502. The device re-runs the
+same quote checks before saving.
 
 ---
 

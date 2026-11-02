@@ -31,6 +31,7 @@ SystemOS/
 │   ├── requirements.txt            # Python/LangChain dependencies
 │   └── .env.example                # Local provider configuration template
 ├── games/kotodama/                 # Japanese-learning RPG (see its README)
+├── apps/yotei/                     # Planner app: planner .md → dated tasks (see its README)
 │   ├── core/                       # @kotodama/core: pure-TS rules, content, SRS, maps (Vitest)
 │   ├── game/                       # @kotodama/game: React Native + Skia renderer, <KotodamaGame/>
 │   └── app/                        # @kotodama/app: standalone Expo app shell

@@ -45,6 +45,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 | SYS-020 | Second correctness sweep (races and stale day state) | P1 | ✅ FIXED (2026-11-02) |
 | SYS-021 | Kotodama bug fixes | P2 | ✅ FIXED (2026-11-02) |
 | SYS-022 | System Monitor (time-windowed technical logs) | P2 | ✅ BUILT (2026-11-02); 🔴 backend logs not merged |
+| SYS-023 | Yotei: open items | P2 | 🔴 OPEN (tracking list) |
 
 ## Issues
 
@@ -316,6 +317,23 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
   not merged into the phone's log. The device records each call's status and round-trip
   time, which covers most diagnosis.
 
+### SYS-023 — Yotei: open items
+
+- **Status:** 🔴 OPEN (tracking list). Yotei was built on branch `claude/yotei` (2026-11-02).
+- **Priority:** P2
+- **Area:** `apps/yotei/`, `backend/app/services/plan_parser.py`, `mobile/src/presentation/screens/YoteiScreen.tsx`
+- **Verified:**
+  - `@yotei/core`: 36 Vitest tests.
+  - Backend gate (`backend/tests/test_plan_parser.py`): shared vectors, verbatim gate, 422/413/502/401, chunking. Checked to fail when the quote check is disabled.
+  - Playwright on the standalone web export (Asia/Kolkata, mocked backend and clock): an invented item is dropped by the device; a weekday slot is placed correctly; the week rolls over at local midnight with undone items overdue; state survives a reload.
+  - SystemOS type-checks, lints and bundles for Android with Yotei inside.
+- **🔴 Open:**
+  - **Live LLM quality not measured.** The gate guarantees nothing unquoted is shown, but a weak model may *miss* items: they appear under "Not picked up", never silently. Converting written dates like "12 Jan" (no year) is left null by design.
+  - **Not run on a device.** Rebuild the dev client for `expo-document-picker` and `expo-file-system` (SystemOS and the standalone app).
+  - **Not linked to SystemOS XP or the Hunter Log.**
+  - **No reminders/notifications** for upcoming slots yet.
+  - The parse route has no per-user rate limit (same gap as SYS-002).
+
 ## Validation baseline
 
 | Check | Result (2026-11-02) |
@@ -323,7 +341,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 | `cd mobile && npx tsc --noEmit` | Passes |
 | `./backend/venv/bin/python -m compileall -q backend/app` | Passes |
 | `cd mobile && npm run lint` | 0 errors, 1 warning (the `computeTaskCredit()` placeholder, SYS-018) |
-| Automated tests | SystemOS: none (SYS-014). `npm run test --workspace @kotodama/core`: 160 passing |
+| Automated tests | SystemOS: none (SYS-014). `@kotodama/core`: 160 passing. `@yotei/core`: 36 passing. `backend/tests/test_plan_parser.py`: 5 passing |
 
 ## Recommended implementation order
 
