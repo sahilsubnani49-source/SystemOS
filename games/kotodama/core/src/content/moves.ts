@@ -8,8 +8,10 @@ import type { Element } from './elements';
  * spell:     see "terebi", choose テレビ among near-miss spellings
  * reading:   see 学生 (or 水), choose がくせい (or みず) among near-miss readings
  * context:   read a sentence with a blank, choose the word that completes it
+ * arrange:   FOCUS puzzle: put word or kana tiles in order
+ * riddle:    FOCUS puzzle: a なぞなぞ, or the odd word out
  */
-export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading' | 'context' | 'passage';
+export type PromptKind = 'recognize' | 'recall' | 'listen' | 'type' | 'mirror' | 'meaning' | 'spell' | 'reading' | 'context' | 'passage' | 'arrange' | 'riddle' | 'hear';
 
 /** Visual effect the renderer plays when the move lands. */
 export type FxKind =

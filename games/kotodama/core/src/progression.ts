@@ -1,6 +1,6 @@
 import { addDaysStr } from './util/dates';
 import { HEROES, type HeroClass } from './content/heroes';
-import { familyForRow, familyItemIds, getFamily, movesAt, stageForMastery, statsAt } from './content/spirits';
+import { familyForRow, familyItemIds, getFamily, movesAt, stageForMastery, statsAt, type BaseStats } from './content/spirits';
 import { getKana } from './content/kana';
 import { getKanji } from './content/kanji';
 import { isKanaId, isKanjiId } from './content/items';
@@ -38,9 +38,43 @@ export function familyStage(familyId: string, srs: SrsTable): 0 | 1 | 2 {
   return stageForMastery(averageStage(srs, familyItemIds(getFamily(familyId))));
 }
 
+/**
+ * The Well of Old Tales: each floor's guardian leaves a seal, a permanent blessing
+ * on the whole party. Kept small on purpose: all four together are about +7%
+ * attack and defence and +9% HP, which rewards the dungeon without undoing the
+ * boss pacing that balance.test.ts holds the story to.
+ */
+export const SEALS = [
+  { flag: 'seal_words', name: 'Seal of Words', nameJa: 'ことばの しるし', atk: 0.04, def: 0, hp: 0 },
+  { flag: 'seal_heart', name: 'Seal of Heart', nameJa: 'こころの しるし', atk: 0, def: 0.04, hp: 0 },
+  { flag: 'seal_rules', name: 'Seal of Rules', nameJa: 'きまりの しるし', atk: 0, def: 0, hp: 0.06 },
+  { flag: 'seal_deep', name: 'Seal of the Deep', nameJa: 'そこの しるし', atk: 0.03, def: 0.03, hp: 0.03 },
+  // The Terakoya's exam halls: passing a mock JLPT is worth as much as a seal.
+  { flag: 'pass_jlpt5', name: 'N5 Certificate', nameJa: 'エヌご ごうかく', atk: 0.01, def: 0.01, hp: 0 },
+  { flag: 'pass_jlpt4', name: 'N4 Certificate', nameJa: 'エヌよん ごうかく', atk: 0.02, def: 0.02, hp: 0.01 },
+] as const;
+
+export interface SealBonus {
+  atk: number;
+  def: number;
+  hp: number;
+}
+
+/** Stat multipliers from the seals these flags hold (1 = no seal). */
+export function sealBonus(flags: Record<string, boolean> = {}): SealBonus {
+  const held = SEALS.filter((s) => flags[s.flag]);
+  const sum = (key: 'atk' | 'def' | 'hp') => 1 + held.reduce((n, s) => n + s[key], 0);
+  return { atk: sum('atk'), def: sum('def'), hp: sum('hp') };
+}
+
+function sealed(stats: BaseStats, flags: Record<string, boolean> | undefined): BaseStats {
+  const b = sealBonus(flags);
+  return { hp: Math.round(stats.hp * b.hp), atk: Math.round(stats.atk * b.atk), def: Math.round(stats.def * b.def), spd: stats.spd };
+}
+
 export function heroCombatant(save: Save): Combatant {
   const def = HEROES[save.hero];
-  const stats = statsAt(def.base, save.heroLevel, 0);
+  const stats = sealed(statsAt(def.base, save.heroLevel, 0), save.flags);
   return {
     uid: 'hero',
     side: 'party',
@@ -61,10 +95,11 @@ export function heroCombatant(save: Save): Combatant {
   };
 }
 
-export function spiritCombatant(owned: OwnedSpirit, srs: SrsTable): Combatant {
+/** `flags` carries the party's seals; omit it for a spirit with none. */
+export function spiritCombatant(owned: OwnedSpirit, srs: SrsTable, flags?: Record<string, boolean>): Combatant {
   const family = getFamily(owned.familyId);
   const stage = familyStage(family.id, srs);
-  const stats = statsAt(family.base, owned.level, stage);
+  const stats = sealed(statsAt(family.base, owned.level, stage), flags);
   const form = family.stages[stage];
   return {
     uid: owned.uid,

@@ -314,7 +314,7 @@ When code and docs disagree, the code wins — and update the doc.
 ### Kotodama (`games/kotodama/`)
 
 ```bash
-npm run test --workspace @kotodama/core        # the repo's only automated tests (160)
+npm run test --workspace @kotodama/core        # the repo's only automated tests (282)
 cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / npm run web)
 ```
 
@@ -322,6 +322,11 @@ cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / np
   `<KotodamaGame onExit onStudySession />` (`KotodamaScreen.tsx`) and receives study
   sessions back; `useTaskLogStore.recordJapaneseSession` files them via `logSession`.
 - The game keeps its own SQLite file (`kotodama.db`), never SystemOS's tables.
+- **Neural voice:** Kokoro-82M runs on-device through `onnxruntime-react-native` (a native
+  module: rebuild the dev client). The player downloads the model from the menu; it reads
+  kana only (`core/src/speech/kokoroJa.ts`) and every other line uses `expo-speech`.
+- **Music:** tracks are named after `MapDef.music` slots; `musicSlotFor()` (core) picks the
+  slot and `game/src/audio/music.ts` plays it. Volumes and mutes are on the save (`save.audio`).
 - `expo-asset` is pinned through a root `overrides` entry: `expo-audio`'s loose range
   otherwise resolves the SDK 58 build, which breaks the Metro bundle.
 

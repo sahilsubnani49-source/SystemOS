@@ -75,11 +75,15 @@ const sakura_village: MapDef = {
     'T..##D##.=...,,,,..T',
     'T....=====...,,,,..T',
     'T~~~~~~~~H~~~~~~~~~T',
-    'T........=.........T',
+    'T........=.....e...T',
     'TTTTTTTTT=TTTTTTTTTT',
   ],
   warps: [
     { x: 5, y: 12, to: 'hayate_dojo', toX: 6, toY: 9 },
+    // The old well (the 'e' steps south of the river): the Well of Old Tales, see well.ts.
+    // Opened by Fumi's lesson, not by the Oni's fall alone, so its story is always heard first.
+    { x: 15, y: 15, to: 'well_words', toX: 7, toY: 10, requires: 'learned_focus',
+      lockedText: 'An old well, shut under a heavy stone lid. Something beneath it is whispering, but the lid will not move.' },
     { x: 9, y: 0, to: 'bamboo_grove', toX: 9, toY: 17 },
     { x: 9, y: 16, to: 'river_crossing', toX: 2, toY: 1, requires: 'beat_goro',
       lockedText: 'Raider tracks lead south. Master Kaito wants you to face Ronin Goro in the Bamboo Grove first.' },
@@ -96,6 +100,23 @@ const sakura_village: MapDef = {
       dialogue: [{ speaker: 'Sayo', text: 'Tip: a spirit evolves when YOU master its kana row. Your Akari grows as you learn あいうえお.' }] },
     { id: 'merchant', name: 'Merchant Ichiro', x: 16, y: 9, sprite: 'merchant', facing: 'left',
       dialogue: [{ speaker: 'Merchant Ichiro', text: 'Answering fast makes ninja crits. Chaining right answers makes everyone hit harder. That one is free advice.' }] },
+    // ── The Well of Old Tales (after the Oni). Fumi waits WEST of the bridge: the south
+    // bank is one tile deep, so anyone standing east of it would wall off the well. ──
+    { id: 'fumi', name: 'Grandmother Fumi', x: 7, y: 15, sprite: 'villagerB', facing: 'right', showIf: 'beat_oni', hideIf: 'seal_deep',
+      setsFlag: 'learned_focus',
+      dialogue: [
+        { speaker: 'Grandmother Fumi', ja: 'むかし むかし…', text: 'Mukashi mukashi: long, long ago. Every tale I know begins so. And now I cannot remember how a single one ends.' },
+        { speaker: 'Grandmother Fumi', text: 'When the Oni fell, the lid of the old well east of the bridge cracked. The raiders did not only break our letters, child. They sank our STORIES down there.' },
+        { speaker: 'Grandmother Fumi', text: 'Momotaro, Urashima, the Crane, the Moon Princess. Garbled, each one, into a spirit that has forgotten its own ending.' },
+        { speaker: 'Grandmother Fumi', text: 'On every floor a scroll still holds the true tale. Read it, then face the one who lived it, and remind them who they are.' },
+        { speaker: 'Grandmother Fumi', ja: 'しゅうちゅう', text: 'One more thing: shuuchuu, FOCUS. A storyteller untangles a knot before she speaks. Untangle one in battle and your spirits will burn bright.' },
+        { speaker: 'System', text: 'You learned FOCUS! In any battle, solve a hard puzzle to charge your party: its next 3 attacks SURGE. The Well of Old Tales, east of the bridge, is open.' },
+      ] },
+    { id: 'fumi_after', name: 'Grandmother Fumi', x: 7, y: 15, sprite: 'villagerB', facing: 'right', showIf: 'seal_deep',
+      dialogue: [
+        { speaker: 'Grandmother Fumi', ja: 'めでたし めでたし。', text: 'Medetashi, medetashi: and so it ends well. I remember them all now. Every ending.' },
+        { speaker: 'Grandmother Fumi', text: 'The well stays open, child. A tale is not finished by being read once. Go down and read them again whenever you like.' },
+      ] },
   ],
   encounterRate: 0.18,
   encounters: [{ familyId: 'akari', weight: 1, levels: [2, 3] }],

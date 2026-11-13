@@ -1,6 +1,8 @@
 import { getKana, KANA, lookalikesOf, acceptsRomaji, type Kana } from '../content/kana';
-import { getItem, isKanaId, isKanjiId, isPassageId, isSentenceId, isWordId, mirrorKanaId } from '../content/items';
-import { getWord, WORDS, type Word } from '../content/words';
+import { getItem, isKanaId, isKanjiId, isListeningId, isPassageId, isPhraseId, isPuzzleId, isSentenceId, isWordId, mirrorKanaId } from '../content/items';
+import { listeningText } from '../content/listening';
+import { getWord, EVERY_WORD, type Word } from '../content/words';
+import { getPuzzle, kanaTiles, puzzleSolution, starFrame, type Puzzle } from '../content/puzzles';
 import { KANJI, acceptedKanjiRomaji, getKanji, kanjiLookalikes, kanjiReadings, primaryReading, type Kanji } from '../content/kanji';
 import { toHiragana, toRomaji } from '../util/romaji';
 import type { PromptKind } from '../content/moves';
@@ -20,6 +22,10 @@ export interface Prompt {
   answer: string;
   /** Optional line under the prompt (a sentence's English translation). */
   hint?: string;
+  /** 'arrange' only: the tiles to put in order, already shuffled. */
+  tiles?: string[];
+  /** Other answers that are also right (a sentence whose words may go in two orders). */
+  accept?: string[];
   timeLimitMs: number | null;
 }
 
@@ -175,6 +181,17 @@ function shownReadings(k: Kanji): string[] {
  * usable in every area.
  */
 export function resolveKind(kind: PromptKind, itemId: string): PromptKind {
+  // A puzzle is only ever itself, and a phrase is only ever asked for its meaning.
+  if (isPuzzleId(itemId)) {
+    const p = getPuzzle(itemId);
+    return p.kind === 'order' || p.kind === 'scramble' || p.kind === 'star' ? 'arrange' : 'riddle';
+  }
+  if (isPhraseId(itemId)) return 'meaning';
+  // A listening exercise is only ever heard; 'hear' on anything else is plain listening.
+  if (isListeningId(itemId)) return 'hear';
+  if (kind === 'hear') return resolveKind('listen', itemId);
+  // Puzzle kinds on anything else (never requested in play) fall back to plain reading.
+  if (kind === 'arrange' || kind === 'riddle') return resolveKind('recognize', itemId);
   // A sentence is only ever a fill-in-the-blank and a passage only ever a reading
   // question; nothing else uses 'context' or 'passage'.
   if (isSentenceId(itemId)) return 'context';
@@ -231,12 +248,67 @@ function buildKanjiPrompt(kind: PromptKind, k: Kanji, pool: readonly string[], r
   }
 }
 
+/** Tiles in an order that is not already the answer (when any other order exists). */
+function scrambled(tiles: string[], rng: Rng): string[] {
+  const solved = tiles.join('\u0000');
+  let out = rng.shuffle(tiles);
+  for (let i = 0; i < 6 && out.join('\u0000') === solved; i++) out = rng.shuffle(tiles);
+  // Two identical tiles (もも) can never be shuffled apart: rotate so it at least looks unsolved.
+  return out.join('\u0000') === solved && new Set(tiles).size > 1 ? [...tiles.slice(1), tiles[0] as string] : out;
+}
+
+/** FOCUS puzzles are never timed: they are meant to be thought about. */
+function buildPuzzlePrompt(p: Puzzle, rng: Rng): Prompt {
+  const base = { itemId: p.id, timeLimitMs: null, choices: [] as string[] };
+  switch (p.kind) {
+    case 'order': {
+      const answer = p.tiles.join('');
+      return {
+        ...base, kind: 'arrange', display: p.en, speak: answer, answer, tiles: scrambled(p.tiles, rng),
+        accept: p.alt.map((order) => order.map((i) => p.tiles[i]).join('')),
+      };
+    }
+    case 'scramble': {
+      const w = getWord(p.wordId);
+      return { ...base, kind: 'arrange', display: w.meaning, speak: w.text, answer: w.text, tiles: scrambled(kanaTiles(w.text), rng) };
+    }
+    case 'riddle':
+      return { ...base, kind: 'riddle', display: p.text, hint: p.en, speak: p.text, answer: p.answer, choices: rng.shuffle([p.answer, ...p.wrong]) };
+    case 'star': {
+      // Built like a word-order puzzle, but the clue is the exam's own frame.
+      const answer = p.tiles.join('');
+      return {
+        ...base, kind: 'arrange', display: starFrame(p), hint: p.en, speak: puzzleSolution(p), answer, tiles: scrambled([...p.tiles], rng),
+        accept: p.alt.map((order) => order.map((i) => p.tiles[i]).join('')),
+      };
+    }
+    case 'oddOne':
+      return {
+        ...base, kind: 'riddle', display: 'なかまはずれは どれ？', hint: 'Which one does not belong?', speak: p.answer, answer: p.answer,
+        choices: rng.shuffle([p.answer, ...p.others]),
+      };
+  }
+}
+
 export function buildPrompt(requested: PromptKind, itemId: string, pool: readonly string[], rng: Rng, timeLimitMs: number | null): Prompt {
   const kind = resolveKind(requested, itemId);
   const item = getItem(itemId);
   const base = { kind, itemId, timeLimitMs };
 
+  if (item.kind === 'puzzle') return buildPuzzlePrompt(item.puzzle, rng);
+
+  if (item.kind === 'phrase') {
+    const f = item.phrase;
+    return { ...base, kind: 'meaning', display: f.text, speak: f.text.replace(/\s/g, ''), answer: f.meaning, choices: rng.shuffle([f.meaning, ...f.wrong]) };
+  }
+
   if (item.kind === 'kanji') return buildKanjiPrompt(kind, item.kanji, pool, rng, timeLimitMs);
+
+  if (item.kind === 'listening') {
+    const l = item.listening;
+    // Like a reading passage: never on a clock, and it can be replayed.
+    return { ...base, kind: 'hear', timeLimitMs: null, display: '', hint: l.question, speak: listeningText(l), answer: l.answer, choices: rng.shuffle([l.answer, ...l.wrong]) };
+  }
 
   if (item.kind === 'passage') {
     const p = item.passage;
@@ -253,8 +325,9 @@ export function buildPrompt(requested: PromptKind, itemId: string, pool: readonl
     const w = item.word;
     // Distractors come from the same kind of word: loanwords vs loanwords, vocab vs vocab.
     const others = poolWords(pool).filter((o) => o.id !== w.id && o.kind === w.kind);
-    const everyone = WORDS.filter((o) => o.id !== w.id && o.kind === w.kind);
-    const nearMisses = w.kind === 'vocab' ? kanjiMisspellings(w.text) : misspellings(w.text);
+    const everyone = EVERY_WORD.filter((o) => o.id !== w.id && o.kind === w.kind);
+    // A hiragana word's near misses are reading slips (a dropped っ, the wrong voicing), not katakana ones.
+    const nearMisses = w.kind === 'vocab' ? kanjiMisspellings(w.text) : w.kind === 'native' ? readingMutations(w.text) : misspellings(w.text);
     const spellings = () => takeDistinct(w.text, [nearMisses, others.map((o) => o.text), everyone.map((o) => o.text)], rng);
     const speak = w.reading;
     switch (kind) {
@@ -296,7 +369,7 @@ export type Grade = 'correct' | 'wrong' | 'timeout';
 export function gradeAnswer(prompt: Prompt, value: string, elapsedMs: number): Grade {
   if (prompt.timeLimitMs !== null && elapsedMs > prompt.timeLimitMs) return 'timeout';
   if (prompt.kind === 'type') return acceptsTyped(prompt.itemId, value) ? 'correct' : 'wrong';
-  return value === prompt.answer ? 'correct' : 'wrong';
+  return value === prompt.answer || !!prompt.accept?.includes(value) ? 'correct' : 'wrong';
 }
 
 /** Typed romaji for a kana (any accepted spelling) or a kanji (ANY of its readings). */

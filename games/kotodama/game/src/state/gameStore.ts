@@ -1,8 +1,10 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  applyXp, battleXp, createRng, familyStage, foeCombatant, getFamily, getMap, heroCombatant, isWalkable, battlePool, dueCount, REVIEW_AREA,
+  applyXp, battleXp, createRng, familyStage, foeCombatant, focusPool, getFamily, getMap, getTale, heroCombatant, isWalkable, battlePool, dueCount, REVIEW_AREA, taleReadFlag,
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
+  releaseSpirit, spiritToReserve, spiritToTeam, swapSpirits,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
+  audioSettings, type AudioSettings,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
   type NpcDef, type OwnedSpirit, type Save,
 } from '@kotodama/core';
@@ -19,6 +21,12 @@ export interface Dialogue {
   npc?: NpcDef;
 }
 
+/** A folk tale being read: which one, and the page that is open. */
+export interface TaleReading {
+  taleId: string;
+  page: number;
+}
+
 export interface BattleContext {
   state: BattleState;
   /** Story battle: flag set on victory. Wild battles have none. */
@@ -33,6 +41,8 @@ export interface GameState {
   save: Save | null;
   hasSave: boolean;
   dialogue: Dialogue | null;
+  /** The folk tale open in the reader, if any. Walking and talking wait for it. */
+  tale: TaleReading | null;
   battle: BattleContext | null;
   /** Map banner ("Bamboo Grove / たけばやし"), cleared by the UI after showing. */
   banner: { name: string; nameJa: string; label: string } | null;
@@ -40,6 +50,8 @@ export interface GameState {
   stepId: number;
   /** Brief notice ("Your party was healed."). */
   toast: string | null;
+  /** The game menu is open over the world (the music follows it). */
+  menuOpen: boolean;
 
   boot(): Promise<void>;
   openHeroSelect(): void;
@@ -48,8 +60,24 @@ export interface GameState {
   tryStep(dir: Facing): 'moved' | 'blocked' | 'busy';
   interact(): void;
   advanceDialogue(): void;
+  /** Turn the tale's page (dir -1 goes back). Past the last page, the tale counts as read. */
+  turnTalePage(dir?: 1 | -1): void;
+  /** Put the tale down without finishing it. */
+  closeTale(): void;
   battleAction(action: BattleAction): void;
+  /** Swap two spirits' places: team with reserve, or the order within the team. */
+  swapSpirits(uidA: string, uidB: string): void;
+  /** Reserve to team (needs a free place). */
+  spiritToTeam(uid: string): void;
+  /** Team to reserve (never the last team spirit). */
+  spiritToReserve(uid: string): void;
+  /** Let a spirit go for good (never the last one owned). */
+  releaseSpirit(uid: string): void;
   closeBattle(): void;
+  /** Choose the voice Japanese is read in (undefined: let the game pick). */
+  setVoice(voiceId: string | undefined): void;
+  /** Change sound settings (music or effects volume, mute). Saved at once. */
+  setAudio(patch: Partial<AudioSettings>): void;
   toggleRide(): void;
   clearBanner(): void;
   clearToast(): void;
@@ -83,6 +111,16 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       return { name: m.name, nameJa: m.nameJa, label: '' };
     };
 
+    /** Team changes happen in the menu, never mid-battle, and are saved at once. */
+    const manageSpirits = (fn: (s: Save) => Save) => {
+      const save = get().save;
+      if (!save || get().battle) return;
+      const next = fn(save);
+      if (next === save) return;
+      set({ save: next });
+      void get().persist();
+    };
+
     const say = (lines: DialogueLine[], npc?: NpcDef) => set({ dialogue: { lines, index: 0, npc } });
 
     const startStoryOrWildBattle = (foes: FoeSpec[], opts: { isBoss: boolean; area: string; winFlag?: string; title: string }) => {
@@ -91,8 +129,11 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       // The Daily Trial ('review') builds its pool from the save's own SRS table.
       const pool = battlePool(opts.area, save.srs, now());
       const enemies = foes.map((f, i) => foeCombatant(f, `foe${i}`, pool, rng));
-      const party = [heroCombatant(save), ...save.party.slice(0, PARTY_SIZE).map((p) => spiritCombatant(p, save.srs))];
-      const state = startBattle({ party, enemies, kanaPool: pool, srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32 });
+      // Seals (the Well of Old Tales) ride on the save's flags; so does knowing FOCUS.
+      const party = [heroCombatant(save), ...save.party.slice(0, PARTY_SIZE).map((p) => spiritCombatant(p, save.srs, save.flags))];
+      const state = startBattle({
+        party, enemies, kanaPool: pool, focusPool: focusPool(save.flags), srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32,
+      });
       update((s) => ({
         ...s,
         seed: rng.seed,
@@ -125,6 +166,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         void get().persist();
       }
       if (npc.heals) set({ toast: 'Your party is fully rested.' });
+      if (npc.readsTale) set({ tale: { taleId: npc.readsTale, page: 0 } });
       if (npc.travelsTo) {
         const t = npc.travelsTo;
         update((s) => ({
@@ -144,10 +186,12 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       save: null,
       hasSave: false,
       dialogue: null,
+      tale: null,
       battle: null,
       banner: null,
       stepId: 0,
       toast: null,
+      menuOpen: false,
 
       async boot() {
         try {
@@ -164,8 +208,10 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       openHeroSelect: () => set({ screen: 'heroSelect' }),
 
       async startNewGame(hero, name) {
-        const save = newGame(hero, name, new Date(now()).toISOString(), now());
-        set({ save, hasSave: true, screen: 'world', banner: bannerFor(save.mapId), dialogue: null, battle: null });
+        // A new game keeps how this device is set up to sound: the voice and the volumes.
+        const prev = get().save;
+        const save = { ...newGame(hero, name, new Date(now()).toISOString(), now()), voiceId: prev?.voiceId, audio: prev?.audio };
+        set({ save, hasSave: true, screen: 'world', banner: bannerFor(save.mapId), dialogue: null, tale: null, battle: null });
         await get().persist();
       },
 
@@ -183,8 +229,8 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
 
       tryStep(dir) {
-        const { save, dialogue, battle, screen } = get();
-        if (!save || dialogue || battle || screen !== 'world') return 'busy';
+        const { save, dialogue, tale, battle, screen } = get();
+        if (!save || dialogue || tale || battle || screen !== 'world') return 'busy';
         const map = getMap(save.mapId);
         const [nx, ny] = stepFrom(save.x, save.y, dir);
         if (!isWalkable(map, nx, ny, save.flags)) {
@@ -246,8 +292,8 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
 
       interact() {
-        const { save, dialogue, battle } = get();
-        if (!save || battle) return;
+        const { save, dialogue, tale, battle } = get();
+        if (!save || battle || tale) return;
         if (dialogue) return get().advanceDialogue();
         const [fx, fy] = stepFrom(save.x, save.y, save.facing);
         const npc = visibleNpcs(getMap(save.mapId), save.flags).find((n) => n.x === fx && n.y === fy);
@@ -266,6 +312,30 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         set({ dialogue: null });
         if (d.npc) runNpcEffects(d.npc);
       },
+
+      turnTalePage(dir = 1) {
+        const reading = get().tale;
+        const save = get().save;
+        if (!reading || !save) return;
+        const tale = getTale(reading.taleId);
+        const page = reading.page + dir;
+        if (page < 0) return;
+        if (page < tale.pages.length) {
+          set({ tale: { ...reading, page } });
+          return;
+        }
+        // The last page is turned: the tale is read, and its hero can be called up.
+        const flag = taleReadFlag(tale.id);
+        const first = !save.flags[flag];
+        update((s) => ({ ...s, flags: { ...s.flags, [flag]: true } }));
+        set({ tale: null });
+        if (first) {
+          say([{ speaker: 'System', text: `You read ${tale.title}. Something stirs at the far end of the hall: the one who lived this tale.` }]);
+          void get().persist();
+        }
+      },
+
+      closeTale: () => set({ tale: null }),
 
       battleAction(action) {
         const ctx = get().battle;
@@ -341,6 +411,21 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         // Story battles continue the NPC's after-dialogue automatically.
         const npc = visibleNpcs(getMap(save.mapId), save.flags).find((n) => n.showIf === ctx.winFlag);
         if (npc && ctx.result.outcome === 'won') say(npc.dialogue, npc);
+      },
+
+      swapSpirits: (a, b) => manageSpirits((s) => swapSpirits(s, a, b)),
+      spiritToTeam: (uid) => manageSpirits((s) => spiritToTeam(s, uid)),
+      spiritToReserve: (uid) => manageSpirits((s) => spiritToReserve(s, uid)),
+      releaseSpirit: (uid) => manageSpirits((s) => releaseSpirit(s, uid)),
+
+      setAudio(patch) {
+        update((s) => ({ ...s, audio: { ...audioSettings(s), ...patch } }));
+        void get().persist();
+      },
+
+      setVoice(voiceId) {
+        update((s) => ({ ...s, voiceId }));
+        void get().persist();
       },
 
       toggleRide() {

@@ -11,6 +11,10 @@ import { TitleScreen } from './screens/TitleScreen';
 import { HeroSelectScreen } from './screens/HeroSelectScreen';
 import { WorldScreen } from './screens/WorldScreen';
 import { BattleScreen } from './battle/BattleScreen';
+import { audioSettings, getMap, musicSlotFor } from '@kotodama/core';
+import { pauseMusic, setAudioSettings, setMusic, stopAllAudio } from './audio/music';
+import { initNeural } from './audio/neural';
+import { loadJaVoices, setPreferredVoice } from './audio/speak';
 import { C } from './theme';
 import type { GameDiagnostic, KotodamaGameProps } from './types';
 
@@ -36,6 +40,8 @@ export function GameRoot({ onExit, onStudySession, onDiagnostic, databaseName = 
     void store.getState().boot();
     // Backgrounding = the session might end here: save, and report study time.
     const sub = AppState.addEventListener('change', (state) => {
+      // Music belongs to the game on screen: silent in the background.
+      pauseMusic(state !== 'active');
       if (state !== 'active') {
         void store.getState().persist();
         store.getState().flushSession();
@@ -43,6 +49,7 @@ export function GameRoot({ onExit, onStudySession, onDiagnostic, databaseName = 
     });
     return () => {
       sub.remove();
+      stopAllAudio();
       void store.getState().persist();
       store.getState().flushSession();
     };
@@ -72,7 +79,30 @@ export function GameRoot({ onExit, onStudySession, onDiagnostic, databaseName = 
 
 function Router({ onExit }: { onExit?: () => void }) {
   const screen = useGame((s) => s.screen);
+  const voiceId = useGame((s) => s.save?.voiceId);
   const api = useGameApi();
+  // Find the device's Japanese voices before the first line is spoken, and keep
+  // the speaker on the voice this save chose.
+  useEffect(() => {
+    setPreferredVoice(voiceId);
+    void loadJaVoices();
+  }, [voiceId]);
+  // Sound: the save's volumes, and the track for what is on screen.
+  const audio = useGame((s) => s.save?.audio);
+  const mapId = useGame((s) => s.save?.mapId);
+  const battleIsBoss = useGame((s) => (s.battle ? s.battle.state.isBoss : null));
+  const menuOpen = useGame((s) => s.menuOpen);
+  useEffect(() => setAudioSettings(audioSettings({ audio })), [audio]);
+  useEffect(() => {
+    setMusic(musicSlotFor({
+      screen,
+      mapMusic: mapId ? getMap(mapId).def.music : undefined,
+      battle: battleIsBoss === null ? null : { isBoss: battleIsBoss },
+      menuOpen,
+    }));
+  }, [screen, mapId, battleIsBoss, menuOpen]);
+  // See whether the neural voice's model is already on this device.
+  useEffect(() => initNeural(), []);
   const exit = onExit
     ? () => {
         void api.getState().persist();

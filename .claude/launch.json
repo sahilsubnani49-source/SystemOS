@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kotodama-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web", "--workspace", "@kotodama/app"],
+      "port": 8081
+    }
+  ]
+}

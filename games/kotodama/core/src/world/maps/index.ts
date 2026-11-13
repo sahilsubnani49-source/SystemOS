@@ -4,8 +4,10 @@ import { ARC2_MAPS } from './arc2';
 import { ARC3_MAPS } from './arc3';
 import { ARC4_MAPS } from './arc4';
 import { ARC5_MAPS } from './arc5';
+import { WELL_MAPS } from './well';
+import { TERAKOYA_MAPS } from './terakoya';
 
-export const ALL_MAPS: readonly MapDef[] = [...ARC1_MAPS, ...ARC2_MAPS, ...ARC3_MAPS, ...ARC4_MAPS, ...ARC5_MAPS];
+export const ALL_MAPS: readonly MapDef[] = [...ARC1_MAPS, ...ARC2_MAPS, ...ARC3_MAPS, ...ARC4_MAPS, ...ARC5_MAPS, ...WELL_MAPS, ...TERAKOYA_MAPS];
 
 const parsed = new Map<string, ParsedMap>();
 
