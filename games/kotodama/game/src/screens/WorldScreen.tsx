@@ -7,6 +7,8 @@ import { WorldCanvas } from '../overworld/WorldCanvas';
 import { DPad, RoundButton, useHeldDirection } from '../input/DPad';
 import { DialogueBox } from '../ui/DialogueBox';
 import { GameMenu } from '../ui/GameMenu';
+import { playSfx } from '../audio/music';
+import { TaleReader } from '../ui/TaleReader';
 import { PText } from '../ui/Pixel';
 import { useGame, useGameApi } from '../state/context';
 import { C } from '../theme';
@@ -18,10 +20,16 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
   const save = useGame((s) => s.save);
   const stepId = useGame((s) => s.stepId);
   const dialogue = useGame((s) => s.dialogue);
+  const tale = useGame((s) => s.tale);
   const banner = useGame((s) => s.banner);
   const toast = useGame((s) => s.toast);
   const { width, height } = useWindowDimensions();
   const [menu, setMenu] = useState(false);
+  // The store hears about the menu so the music can change with it.
+  useEffect(() => {
+    api.setState({ menuOpen: menu });
+    return () => api.setState({ menuOpen: false });
+  }, [api, menu]);
 
   const riding = !!save?.horse.riding;
   const stepMs = riding ? Math.round(WALK_MS / horseSpeed(save?.streakDays ?? 1)) : WALK_MS;
@@ -48,8 +56,8 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
   }, [toast, api]);
   // Stop walking the moment a dialogue or battle takes over.
   useEffect(() => {
-    if (dialogue) stop();
-  }, [dialogue, stop]);
+    if (dialogue || tale) stop();
+  }, [dialogue, tale, stop]);
 
   if (!save) return null;
   const area = CURRICULUM[getMap(save.mapId).def.area];
@@ -64,7 +72,7 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
             <PText style={styles.chipText}>Lv {save.heroLevel}</PText>
             <PText style={[styles.chipText, { color: C.gold }]}>🔥{save.streakDays}</PText>
           </View>
-          <RoundButton label="≡" sub="menu" size={46} color={C.panelEdge} onPress={() => setMenu(true)} />
+          <RoundButton label="≡" sub="menu" size={46} color={C.panelEdge} onPress={() => { playSfx('menuClick'); setMenu(true); }} />
         </View>
 
         {banner ? (
@@ -80,20 +88,21 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
           </Animated.View>
         ) : null}
 
-        {!dialogue && !menu ? (
+        {!dialogue && !menu && !tale ? (
           <View style={styles.controls} pointerEvents="box-none">
             <DPad start={start} stop={stop} />
             <View style={styles.buttons}>
               {save.horse.owned ? (
                 <RoundButton label="🐎" sub={riding ? 'dismount' : 'ride'} size={52} color={riding ? C.gold : '#6B4A2E'} onPress={() => api.getState().toggleRide()} />
               ) : null}
-              <RoundButton label="A" sub="talk" size={70} color={C.red} onPress={() => api.getState().interact()} />
+              <RoundButton label="A" sub="talk" size={70} color={C.red} onPress={() => { playSfx('talk'); api.getState().interact(); }} />
             </View>
           </View>
         ) : null}
       </SafeAreaView>
 
       {dialogue ? <DialogueBox dialogue={dialogue} onAdvance={() => api.getState().advanceDialogue()} /> : null}
+      {tale ? <TaleReader reading={tale} onTurn={(dir) => api.getState().turnTalePage(dir)} onClose={() => api.getState().closeTale()} /> : null}
       {menu ? (
         <GameMenu
           save={save}

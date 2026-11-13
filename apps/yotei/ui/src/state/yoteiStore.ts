@@ -1,52 +1,44 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
-  NoTimeLimitError,
   deviceTimeZone,
+  parsePlanJson,
   resolvePlan,
-  verifyItems,
   wallClock,
   wallDate,
   type Plan,
-  type PlanDraft,
   type PlanItem,
   type WallTime,
 } from '@yotei/core';
 import type { YoteiStore } from '../storage/store';
-import type { YoteiAppProps, YoteiDiagnostic } from '../types';
+import type { YoteiDiagnostic } from '../types';
 
-export type Screen = 'loading' | 'now' | 'import' | 'review' | 'plans' | 'source';
+export type Screen = 'loading' | 'today' | 'week' | 'year' | 'plans' | 'add' | 'source';
 
 export interface YoteiState {
   screen: Screen;
   plans: Plan[];
-  activeId: string | null;
+  /** Items of every plan; screens filter out archived plans with useActiveItems(). */
   items: PlanItem[];
   /** The user's current wall-clock time, in the device's CURRENT timezone. */
   now: WallTime;
   timezone: string;
   error: string | null;
 
-  importText: string;
-  importName: string | null;
-  analyzing: boolean;
-  draft: PlanDraft | null;
-  /** Items the device's own re-check dropped (server drift guard). */
-  deviceRejected: PlanDraft['rejected'];
+  /** The Add screen's pasted JSON, kept across tab switches. */
+  draftText: string;
+  draftName: string | null;
+  /** YYYY-MM-DD, used when the JSON gives no "start". */
   startDate: string;
-  startTime: string;
   sourcePlanId: string | null;
 
   boot(): Promise<void>;
   tick(): void;
   go(screen: Screen): void;
-  setImportText(text: string, name?: string | null): void;
-  analyze(): Promise<void>;
+  setDraftText(text: string, name?: string | null): void;
   setStartDate(date: string): void;
-  setStartTime(time: string): void;
-  saveDraft(): Promise<void>;
-  discardDraft(): void;
+  /** Parse, date and store the draft. Resolves true when saved. */
+  savePlan(): Promise<boolean>;
   toggleDone(itemId: string): Promise<void>;
-  selectPlan(planId: string): Promise<void>;
   archivePlan(planId: string, archived: boolean): Promise<void>;
   deletePlan(planId: string): Promise<void>;
   viewSource(planId: string): void;
@@ -55,7 +47,6 @@ export interface YoteiState {
 
 export interface YoteiDeps {
   store: YoteiStore;
-  parsePlan: YoteiAppProps['parsePlan'];
   report: (e: YoteiDiagnostic) => void;
   makeId?: () => string;
 }
@@ -73,38 +64,31 @@ export function createYoteiState(deps: YoteiDeps): StoreApi<YoteiState> {
       set({ error: `${message}: ${errText(e)}` });
     };
 
-    const loadActive = async (planId: string | null) => {
-      const items = planId ? await deps.store.getItems(planId) : [];
-      set({ activeId: planId, items });
+    const reload = async () => {
+      const [plans, items] = await Promise.all([deps.store.listPlans(), deps.store.getAllItems()]);
+      set({ plans, items });
+      return plans;
     };
 
     return {
       screen: 'loading',
       plans: [],
-      activeId: null,
       items: [],
       now: nowWall(),
       timezone: deviceTimeZone(),
       error: null,
-      importText: '',
-      importName: null,
-      analyzing: false,
-      draft: null,
-      deviceRejected: [],
+      draftText: '',
+      draftName: null,
       startDate: wallDate(nowWall()),
-      startTime: '09:00',
       sourcePlanId: null,
 
       async boot() {
         try {
-          const plans = await deps.store.listPlans();
-          const first = plans.find((p) => !p.archived) ?? null;
-          set({ plans });
-          await loadActive(first?.id ?? null);
-          set({ screen: first ? 'now' : 'import' });
+          const plans = await reload();
+          set({ screen: plans.some((p) => !p.archived) ? 'today' : 'add' });
         } catch (e) {
-          fail('Could not open Yotei\'s data', e);
-          set({ screen: 'import' });
+          fail("Could not open Yotei's data", e);
+          set({ screen: 'add' });
         }
       },
 
@@ -118,64 +102,38 @@ export function createYoteiState(deps: YoteiDeps): StoreApi<YoteiState> {
         set({ screen, error: null });
       },
 
-      setImportText(text, name = null) {
-        set({ importText: text, importName: name });
-      },
-
-      async analyze() {
-        const md = get().importText;
-        if (!md.trim() || get().analyzing) return;
-        set({ analyzing: true, error: null });
-        try {
-          const draft = await deps.parsePlan(md);
-          // Never trust the server blindly: re-check every quote against the planner here.
-          const { kept, rejected } = verifyItems(md, draft.items);
-          const today = wallDate(nowWall());
-          set({
-            analyzing: false,
-            draft: { ...draft, items: kept },
-            deviceRejected: rejected,
-            startDate: draft.startDate ?? today,
-            screen: 'review',
-          });
-        } catch (e) {
-          set({ analyzing: false });
-          fail('Could not read the planner', e);
-        }
+      setDraftText(text, name = null) {
+        set({ draftText: text, draftName: name });
       },
 
       setStartDate(date) {
         set({ startDate: date });
       },
-      setStartTime(time) {
-        set({ startTime: time });
-      },
 
-      async saveDraft() {
-        const { draft, importText, startDate, startTime } = get();
-        if (!draft) return;
+      async savePlan() {
+        const { draftText, startDate } = get();
+        const parsed = parsePlanJson(draftText);
+        if (!parsed.spec) {
+          set({ error: parsed.errors[0]?.message ?? 'Paste a plan first.' });
+          return false;
+        }
         try {
-          const { plan, items } = resolvePlan(draft, {
+          const { plan, items } = resolvePlan(parsed.spec, {
             startDate,
-            startTime,
             timezone: deviceTimeZone(),
-            sourceMd: importText,
+            source: draftText,
             makeId,
             nowIso: new Date().toISOString(),
           });
           await deps.store.savePlan(plan, items);
-          const plans = await deps.store.listPlans();
-          set({ plans, draft: null, deviceRejected: [], importText: '', importName: null, screen: 'now', now: nowWall() });
-          await loadActive(plan.id);
+          await reload();
+          set({ draftText: '', draftName: null, startDate: wallDate(nowWall()), screen: 'today', now: nowWall() });
           deps.report({ level: 'info', message: 'Plan saved', data: { items: items.length, unit: plan.unit } });
+          return true;
         } catch (e) {
-          if (e instanceof NoTimeLimitError) set({ error: e.message });
-          else fail('Could not save the plan', e);
+          fail('Could not save the plan', e);
+          return false;
         }
-      },
-
-      discardDraft() {
-        set({ draft: null, deviceRejected: [], screen: 'import' });
       },
 
       async toggleDone(itemId) {
@@ -192,25 +150,22 @@ export function createYoteiState(deps: YoteiDeps): StoreApi<YoteiState> {
         }
       },
 
-      async selectPlan(planId) {
-        await loadActive(planId);
-        set({ screen: 'now', now: nowWall() });
-      },
-
       async archivePlan(planId, archived) {
-        await deps.store.setArchived(planId, archived);
-        const plans = await deps.store.listPlans();
-        set({ plans });
-        if (archived && get().activeId === planId) {
-          await loadActive(plans.find((p) => !p.archived)?.id ?? null);
+        try {
+          await deps.store.setArchived(planId, archived);
+          await reload();
+        } catch (e) {
+          fail('Could not archive the plan', e);
         }
       },
 
       async deletePlan(planId) {
-        await deps.store.deletePlan(planId);
-        const plans = await deps.store.listPlans();
-        set({ plans });
-        if (get().activeId === planId) await loadActive(plans.find((p) => !p.archived)?.id ?? null);
+        try {
+          await deps.store.deletePlan(planId);
+          await reload();
+        } catch (e) {
+          fail('Could not delete the plan', e);
+        }
       },
 
       viewSource(planId) {

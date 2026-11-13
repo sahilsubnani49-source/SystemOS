@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOutUp, ZoomIn, useSharedValue, withSequence, withTiming, useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { BlendColor, Canvas, Circle, Group, Image, LinearGradient, Oval, Rect, useClock, vec } from '@shopify/react-native-skia';
 import {
-  canPurify, getItem, getMap, getMove, itemReading, itemText, kanjiReadings, primaryReading,
+  canFocus, canPurify, getItem, getMap, getMove, itemReading, itemText, kanjiReadings, primaryReading, puzzleSolution, puzzleWhy,
   type StudyItem,
   type BattleEvent, type BattleState, type Combatant,
 } from '@kotodama/core';
@@ -16,6 +16,7 @@ import { PButton, PText, Panel } from '../ui/Pixel';
 import { useGame, useGameApi } from '../state/context';
 import type { BattleContext } from '../state/gameStore';
 import { speakJa } from '../audio/speak';
+import { playSfx } from '../audio/music';
 import { bump } from '../audio/haptics';
 import { C, hpColor } from '../theme';
 import { PROMPT_TAG } from '../ui/promptLabels';
@@ -53,6 +54,24 @@ const SKY: Record<string, [string, string]> = {
   pass: ['#3A2A5A', '#C88A6A'],
   shrine: ['#1A1440', '#8A4A8A'],
   gate: ['#1A0A10', '#7A1E2E'],
+  // The Well of Old Tales: lantern light on wet stone, darker with every floor.
+  well1: ['#10141E', '#4A5A6A'],
+  well2: ['#0E1220', '#3A4A72'],
+  well3: ['#120E1E', '#5A3A6A'],
+  well4: ['#08060E', '#3A1E4A'],
+  lesson1: ['#1A1612', '#6A5236'],
+  lesson2: ['#1A1612', '#6A5236'],
+  lesson3: ['#1A1612', '#6A5236'],
+  lesson4: ['#1A1612', '#6A5236'],
+  lesson5: ['#1A1612', '#6A5236'],
+  lesson6: ['#1A1612', '#6A5236'],
+  lesson7: ['#1A1612', '#6A5236'],
+  lesson8: ['#1A1612', '#6A5236'],
+  lesson9: ['#1A1612', '#6A5236'],
+  lesson10: ['#1A1612', '#6A5236'],
+  lesson11: ['#1A1612', '#6A5236'],
+  jlpt5: ['#12141C', '#3A4A6A'],
+  jlpt4: ['#12141C', '#4A3A6A'],
 };
 
 interface Popup {
@@ -83,11 +102,24 @@ export function BattleScreen() {
   const [popups, setPopups] = useState<Popup[]>([]);
   const [verdict, setVerdict] = useState<{ ok: boolean; text: string; sub?: string } | null>(null);
   const [fainted, setFainted] = useState<Record<string, boolean>>({});
+  // Surge charges as the ANIMATION has reached them, like `hp` (state.surge is already final).
+  const [surge, setSurge] = useState(0);
   const seq = useRef(0);
   const shake = useSharedValue(0);
   const lastEvents = useRef<BattleEvent[] | null>(null);
 
   const state = ctx?.state;
+
+  // Sound cues for the battle's two big moments: how it opens, and how it ends.
+  const isBoss = state?.isBoss;
+  useEffect(() => {
+    if (isBoss !== undefined) playSfx(isBoss ? 'bossEncounter' : 'clack');
+  }, [isBoss]);
+  const outcome = ctx?.result && !playing ? ctx.result.outcome : undefined;
+  useEffect(() => {
+    if (outcome === 'recruited') playSfx('capture');
+    else if (outcome === 'won' && isBoss) playSfx('taiko');
+  }, [outcome, isBoss]);
 
   // Fixed stage positions for each combatant (scene-relative).
   const layout = useMemo(() => {
@@ -136,11 +168,23 @@ export function BattleScreen() {
             const ok = ev.grade === 'correct';
             speakJa(itemReading(ev.itemId));
             bump(ok ? 'success' : 'error');
-            setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub: revealLine(item, ev.answer) });
-            await sleep(ok ? 650 : 1700);
+            playSfx(!ok ? 'wrong' : ev.itemId.startsWith('z-j') ? 'starSolve' : 'correct');
+            const sub = revealLine(item, ev.answer);
+            setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub });
+            // A two-line reveal carries an explanation (a grammar rule, a proverb's image, why
+            // a riddle's answer is the answer): leave time to read it, even when right.
+            const explained = sub.includes('\n');
+            await sleep(ok ? (explained ? 1600 : 650) : explained ? 2800 : 1700);
             setVerdict(null);
             break;
           }
+          case 'surge':
+            setSurge(ev.charges);
+            pop({ text: 'SPIRIT SURGE!', x: width / 2, y: sceneH * 0.2, color: C.violet, big: true });
+            bump('heavy');
+            playSfx('focus');
+            await sleep(700);
+            break;
           case 'combo':
             pop({ text: `${ev.count} COMBO!`, x: width / 2, y: sceneH * 0.12, color: C.gold, big: true });
             break;
@@ -153,11 +197,13 @@ export function BattleScreen() {
           }
           case 'damage': {
             const p = at(ev.target);
+            if (state.enemies.some((e) => e.uid === ev.target)) playSfx('slash');
             setHp((h) => ({ ...h, [ev.target]: Math.max(0, (h[ev.target] ?? 0) - ev.amount) }));
-            const color = ev.crit ? C.gold : ev.effective === 'super' ? C.sakura : C.white;
-            const label = `${ev.amount}${ev.crit ? ' CRIT!' : ''}${ev.effective === 'super' ? ' ▲' : ev.effective === 'weak' ? ' ▼' : ''}`;
-            pop({ text: label, x: p.x, y: p.y - p.size * 0.6, color, big: ev.crit });
-            shake.value = withSequence(withTiming(ev.crit ? 12 : 6, { duration: 40 }), withTiming(-6, { duration: 60 }), withTiming(0, { duration: 80 }));
+            if (ev.surged) setSurge((n) => Math.max(0, n - 1));
+            const color = ev.surged ? C.violet : ev.crit ? C.gold : ev.effective === 'super' ? C.sakura : C.white;
+            const label = `${ev.amount}${ev.surged ? ' SURGE!' : ''}${ev.crit ? ' CRIT!' : ''}${ev.effective === 'super' ? ' ▲' : ev.effective === 'weak' ? ' ▼' : ''}`;
+            pop({ text: label, x: p.x, y: p.y - p.size * 0.6, color, big: ev.crit || ev.surged });
+            shake.value = withSequence(withTiming(ev.crit || ev.surged ? 12 : 6, { duration: 40 }), withTiming(-6, { duration: 60 }), withTiming(0, { duration: 80 }));
             bump(ev.crit ? 'heavy' : 'light');
             await sleep(380);
             break;
@@ -265,6 +311,7 @@ export function BattleScreen() {
           </Animated.View>
         ) : null}
         <View style={[styles.hpPanel, { right: 10, bottom: 10, minWidth: width * 0.46 }]}>
+          {surge > 0 ? <PText style={styles.surge}>{`SURGE ${'◆'.repeat(surge)}`}</PText> : null}
           {state.party.map((p) => (
             <View key={p.uid} style={{ marginBottom: 4 }}>
               <PText style={[styles.hpName, p.uid === actor?.uid && choosing && { color: C.gold }]}>
@@ -358,6 +405,7 @@ function HpBar({ value, max, small }: { value: number; max: number; small?: bool
 function MoveMenu({ state, actor }: { state: BattleState; actor: Combatant }) {
   const api = useGameApi();
   const purifiable = canPurify(state);
+  const knowsFocus = state.focusPool.length > 0;
   return (
     <View style={{ gap: 8 }}>
       <PText style={styles.menuHead}>What will {actor.name} do?</PText>
@@ -378,6 +426,17 @@ function MoveMenu({ state, actor }: { state: BattleState; actor: Combatant }) {
         })}
       </View>
       <View style={styles.moveGrid}>
+        {knowsFocus ? (
+          <PButton
+            testID="focus"
+            label="FOCUS"
+            sub={state.surge > 0 ? `surging: ${state.surge} left` : 'しゅうちゅう · solve a puzzle'}
+            tone="violet"
+            disabled={!canFocus(state)}
+            style={styles.moveBtn}
+            onPress={() => api.getState().battleAction({ type: 'focus', now: Date.now() })}
+          />
+        ) : null}
         {purifiable ? (
           <PButton testID="purify" label="PURIFY" sub="浄化 · type its kana" tone="violet" style={styles.moveBtn} onPress={() => api.getState().battleAction({ type: 'purify' })} />
         ) : null}
@@ -418,6 +477,7 @@ const styles = StyleSheet.create({
     minWidth: 170,
   },
   hpName: { fontSize: 8, color: C.paper },
+  surge: { fontSize: 8, color: C.violet, marginBottom: 4 },
   hpJa: { fontSize: 13, lineHeight: 18, color: C.sakura },
   hpTrack: { height: 9, backgroundColor: '#0E0C18', borderRadius: 3, overflow: 'hidden', marginTop: 3 },
   hpNum: { fontSize: 7, color: C.dim, textAlign: 'right' },
@@ -439,6 +499,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignSelf: 'center',
     top: '34%',
+    maxWidth: '94%',
     backgroundColor: 'rgba(12,10,22,0.92)',
     borderWidth: 3,
     borderRadius: 8,
@@ -447,7 +508,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   verdictText: { fontSize: 28, lineHeight: 36 },
-  verdictSub: { fontSize: 18, lineHeight: 24, color: C.paper },
+  verdictSub: { fontSize: 18, lineHeight: 24, color: C.paper, textAlign: 'center' },
   panelArea: { flex: 1, padding: 10, justifyContent: 'flex-start' },
   command: { gap: 8 },
   waiting: { fontSize: 9, color: C.dim, textAlign: 'center', paddingVertical: 20 },
@@ -472,7 +533,14 @@ function revealLine(item: StudyItem, answer: string): string {
     const readings = kanjiReadings(k).filter((r) => r.length > 1 || k.kun.length === 0).slice(0, 3);
     return `${k.char} = ${k.meanings[0]} (${[primaryReading(k), ...readings.filter((r) => r !== primaryReading(k))].slice(0, 3).join(', ')})`;
   }
-  if (item.kind === 'sentence') return item.sentence.text.replace('＿＿', `【${item.sentence.answer}】`);
+  if (item.kind === 'sentence') {
+    const s = item.sentence;
+    return `${s.text.replace('＿＿', `【${s.answer}】`)}${s.note ? `\n${s.note}` : ''}`;
+  }
+  if (item.kind === 'phrase') return `${item.phrase.text}\n${item.phrase.literal ?? item.phrase.meaning}`;
+  if (item.kind === 'puzzle') return `${puzzleSolution(item.puzzle)}\n${puzzleWhy(item.puzzle)}`;
+  // A listening exercise shows what was said only now, with its translation.
+  if (item.kind === 'listening') return `${item.listening.lines.join('\n')}\n${item.listening.en}`;
   if (item.kind === 'passage') return `${item.passage.question} → ${item.passage.answer}`;
   const kana = item.kana;
   return answer !== kana.romaji && answer !== kana.char ? `${kana.char} ↔ ${answer}  (${kana.romaji})` : `${kana.char} = ${kana.romaji}`;

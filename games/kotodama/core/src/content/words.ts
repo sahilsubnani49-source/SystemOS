@@ -10,12 +10,27 @@ export type WordArea =
   | 'tower' | 'longship' // Arc 2 loanwords
   | 'castle' | 'market' | 'teahouse' | 'gardens' | 'keep' // Arc 3 N5
   | 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks' // Arc 4 N4
-  | 'coast' | 'glacier' | 'forge' | 'valor' | 'runeforge'; // Arc 5 N3
+  | 'coast' | 'glacier' | 'forge' | 'valor' | 'runeforge' // Arc 5 N3
+  | WellArea // The Well of Old Tales (hiragana only)
+  | LessonArea; // The Terakoya, Castle Town's school (kana only)
+
+/**
+ * The Terakoya's eleven classrooms, in the order the two standard beginners'
+ * courses teach (Genki I-II and Minna no Nihongo I-II): rooms 1-6 are the N5
+ * year, rooms 7-11 the N4 year. Only the ORDER and the grammar points follow
+ * the courses; every word choice and sentence here was written for this game.
+ */
+export type LessonArea =
+  | 'lesson1' | 'lesson2' | 'lesson3' | 'lesson4' | 'lesson5' | 'lesson6' // N5 wing
+  | 'lesson7' | 'lesson8' | 'lesson9' | 'lesson10' | 'lesson11'; // N4 wing
+
+/** The four floors of the Well of Old Tales, the hiragana-only dungeon under Sakura Village. */
+export type WellArea = 'well1' | 'well2' | 'well3' | 'well4';
 
 export interface Word {
   id: string;
-  kind: 'loanword' | 'vocab';
-  /** How it is written (katakana, or kanji + okurigana). */
+  kind: 'loanword' | 'vocab' | 'native';
+  /** How it is written (katakana, kanji + okurigana, or plain hiragana for native words). */
   text: string;
   /** How it is read, in kana. Equals `text` for loanwords. */
   reading: string;
@@ -63,7 +78,7 @@ const build = (rows: Row[], area: WordArea): Word[] =>
 // area or an earlier one (checked by arc3.test.ts). ─────────────────────────
 type VocabRow = [text: string, reading: string, meaning: string];
 
-const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship'>, VocabRow[]> = {
+const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship' | WellArea | LessonArea>, VocabRow[]> = {
   // numbers + days
   castle: [
     ['一つ', 'ひとつ', 'one (thing)'], ['二つ', 'ふたつ', 'two (things)'], ['三つ', 'みっつ', 'three (things)'],
@@ -235,7 +250,128 @@ export const LOANWORDS: readonly Word[] = [...build(TOWER, 'tower'), ...build(LO
 export const VOCABULARY: readonly Word[] = (Object.keys(VOCAB) as (keyof typeof VOCAB)[]).flatMap(buildVocab);
 export const WORDS: readonly Word[] = [...LOANWORDS, ...VOCABULARY];
 
-const BY_ID = new Map(WORDS.map((w) => [w.id, w]));
+// ── The Well of Old Tales: everyday words in plain hiragana. Id `n-<romaji>`.
+// Kept OUT of `WORDS` (whose meanings are unique across loanwords and kanji
+// vocabulary) so 'water' can be both 水 in Arc 3 and みず here.
+type NativeRow = [text: string, meaning: string];
+
+const NATIVE: Record<Exclude<WellArea, 'well4'>, NativeRow[]> = {
+  // Floor 1: the things the old tales are made of.
+  well1: [
+    ['いぬ', 'dog'], ['ねこ', 'cat'], ['さる', 'monkey'], ['とり', 'bird'], ['うま', 'horse'], ['さかな', 'fish'],
+    ['かめ', 'turtle'], ['つる', 'crane'], ['もも', 'peach'], ['みず', 'water'], ['やま', 'mountain'], ['かわ', 'river'],
+    ['うみ', 'sea'], ['そら', 'sky'], ['つき', 'moon'], ['ほし', 'star'], ['はな', 'flower'], ['たけ', 'bamboo'],
+    ['むら', 'village'], ['おに', 'ogre'], ['ゆき', 'snow'], ['かぜ', 'wind'], ['あめ', 'rain'], ['ひかり', 'light'],
+  ],
+  // Floor 2: people and feelings.
+  well2: [
+    ['こころ', 'heart'], ['ともだち', 'friend'], ['かぞく', 'family'], ['おじいさん', 'old man'], ['おばあさん', 'old woman'],
+    ['こども', 'child'], ['ゆめ', 'dream'], ['ちから', 'strength'], ['たから', 'treasure'], ['やくそく', 'promise'],
+    ['うれしい', 'happy'], ['かなしい', 'sad'], ['やさしい', 'kind'], ['こわい', 'scary'], ['おもしろい', 'interesting'],
+    ['うつくしい', 'beautiful'],
+  ],
+  // Floor 3: the verbs the grammar sentences are built from.
+  well3: [
+    ['たべる', 'to eat'], ['のむ', 'to drink'], ['みる', 'to see'], ['きく', 'to listen'], ['いく', 'to go'], ['くる', 'to come'],
+    ['かえる', 'to return'], ['あるく', 'to walk'], ['およぐ', 'to swim'], ['ねる', 'to sleep'], ['おきる', 'to wake up'],
+    ['はなす', 'to speak'], ['よむ', 'to read'], ['かく', 'to write'], ['あける', 'to open'], ['たすける', 'to help'],
+  ],
+};
+
+// The Terakoya's classrooms: the everyday words a first-year course starts with.
+// Plain hiragana, so they share the `n-` namespace with the well's words; a word
+// may be taught in only one place (a test keeps the ids unique).
+const LESSON: Record<LessonArea, NativeRow[]> = {
+  // Classroom 1: introductions, things and prices.
+  lesson1: [
+    ['がくせい', 'student'], ['せんせい', 'teacher'], ['だいがく', 'university'], ['なまえ', 'name'],
+    ['せんこう', 'major (subject)'], ['でんわ', 'telephone'], ['ばんごう', 'number'], ['ほん', 'book'],
+    ['かさ', 'umbrella'], ['かばん', 'bag'], ['とけい', 'watch; clock'], ['くつ', 'shoes'],
+    ['さいふ', 'wallet'], ['ぼうし', 'hat'], ['いくら', 'how much'], ['だれ', 'who'],
+  ],
+  // Classroom 2: the day, from getting up to going to bed.
+  lesson2: [
+    ['する', 'to do'], ['べんきょうする', 'to study'], ['はたらく', 'to work'], ['あう', 'to meet'],
+    ['かう', 'to buy'], ['まつ', 'to wait'], ['あそぶ', 'to play'], ['つくる', 'to make'],
+    ['あさごはん', 'breakfast'], ['ばんごはん', 'dinner'], ['まいにち', 'every day'], ['しゅうまつ', 'weekend'],
+    ['がっこう', 'school'], ['うち', 'home'], ['としょかん', 'library'], ['えいが', 'movie'],
+  ],
+  // Classroom 3: describing things, liking them, and asking for them.
+  lesson3: [
+    ['たかい', 'expensive; tall'], ['やすい', 'cheap'], ['あたらしい', 'new'], ['ふるい', 'old (things)'],
+    ['あつい', 'hot'], ['さむい', 'cold (weather)'], ['いそがしい', 'busy'], ['むずかしい', 'difficult'],
+    ['たのしい', 'fun'], ['おいしい', 'delicious'], ['しずか', 'quiet'], ['にぎやか', 'lively'],
+    ['げんき', 'healthy; energetic'], ['ひま', 'free (not busy)'], ['すき', 'liked'], ['きらい', 'disliked'],
+  ],
+  // Classroom 4: people, what they are doing, and what they have done.
+  lesson4: [
+    ['きる', 'to wear (on the body)'], ['はく', 'to wear (on the legs)'], ['すむ', 'to live (somewhere)'], ['しる', 'to come to know'],
+    ['おぼえる', 'to memorize'], ['わすれる', 'to forget'], ['おもう', 'to think'], ['いう', 'to say'],
+    ['やすむ', 'to rest; to be absent'], ['ならう', 'to learn (from someone)'], ['のる', 'to ride'], ['てつだう', 'to help (with a task)'],
+    ['しゅくだい', 'homework'], ['びょうき', 'illness'], ['りょこう', 'trip'], ['しごと', 'job'],
+  ],
+  // Classroom 5: colours, seasons, getting about, holiday plans.
+  lesson5: [
+    ['あかい', 'red'], ['あおい', 'blue'], ['くろい', 'black'], ['しろい', 'white'],
+    ['はる', 'spring'], ['なつ', 'summer'], ['あき', 'autumn'], ['ふゆ', 'winter'],
+    ['でんしゃ', 'train'], ['ひこうき', 'airplane'], ['ふね', 'ship'], ['じてんしゃ', 'bicycle'],
+    ['えき', 'station'], ['きっぷ', 'ticket'], ['やすみ', 'holiday; break'], ['よてい', 'plan; schedule'],
+  ],
+  // Classroom 6: the body, and feeling ill.
+  lesson6: [
+    ['あたま', 'head'], ['おなか', 'stomach'], ['のど', 'throat'], ['め', 'eye'],
+    ['みみ', 'ear'], ['あし', 'leg; foot'], ['ねつ', 'fever'], ['くすり', 'medicine'],
+    ['びょういん', 'hospital'], ['いしゃ', 'doctor'], ['いたい', 'painful'], ['つかれる', 'to get tired'],
+    ['なおる', 'to get better'], ['しんぱい', 'worry'], ['だいじょうぶ', 'all right'], ['ちょうし', 'condition; shape'],
+  ],
+  // Classroom 7: what you can do, and giving and receiving.
+  lesson7: [
+    ['できる', 'to be able to'], ['うたう', 'to sing'], ['おどる', 'to dance'], ['ひく', 'to play (piano, guitar)'],
+    ['ほしい', 'wanted'], ['あげる', 'to give'], ['くれる', 'to give (to me)'], ['もらう', 'to receive'],
+    ['おくる', 'to send'], ['てがみ', 'letter'], ['おかし', 'sweets'], ['ゆびわ', 'ring (jewellery)'],
+    ['じょうず', 'skilful'], ['へた', 'unskilful'], ['けっこん', 'marriage'], ['おれい', 'thanks; a thank-you gift'],
+  ],
+  // Classroom 8: trips, favours, and things lost and found.
+  lesson8: [
+    ['りょかん', 'Japanese inn'], ['よやく', 'reservation'], ['しらべる', 'to look up'], ['じゅんび', 'preparation'],
+    ['おみやげ', 'souvenir'], ['わすれもの', 'something left behind'], ['さがす', 'to look for'], ['みつける', 'to find'],
+    ['おしえる', 'to teach; to tell'], ['かす', 'to lend'], ['かりる', 'to borrow'], ['おこす', 'to wake (someone) up'],
+    ['まにあう', 'to be in time'], ['おそい', 'late; slow'], ['はやい', 'early; fast'], ['ちず', 'map'],
+  ],
+  // Classroom 9: gossip, and things that happen by themselves.
+  lesson9: [
+    ['うわさ', 'rumour'], ['てんきよほう', 'weather forecast'], ['あく', 'to open (by itself)'], ['しまる', 'to close (by itself)'],
+    ['つく', 'to come on (a light)'], ['きえる', 'to go out (a light)'], ['こわれる', 'to break (by itself)'], ['こわす', 'to break (something)'],
+    ['おちる', 'to fall'], ['よごれる', 'to get dirty'], ['あらう', 'to wash'], ['りょうり', 'cooking'],
+    ['ちこく', 'being late'], ['けんか', 'quarrel'], ['わかれる', 'to part; to break up'], ['おどろく', 'to be surprised'],
+  ],
+  // Classroom 10: polite Japanese, for raising others and lowering yourself.
+  lesson10: [
+    ['いらっしゃる', 'to be, come, go (honorific)'], ['めしあがる', 'to eat, drink (honorific)'], ['おっしゃる', 'to say (honorific)'], ['なさる', 'to do (honorific)'],
+    ['くださる', 'to give me (honorific)'], ['ごぞんじ', 'knowing (honorific)'], ['まいる', 'to go, come (humble)'], ['もうす', 'to say (humble)'],
+    ['いたす', 'to do (humble)'], ['いただく', 'to receive (humble)'], ['うかがう', 'to visit; to ask (humble)'], ['おる', 'to be (humble)'],
+    ['しゃちょう', 'company president'], ['ぶちょう', 'department head'], ['おきゃくさま', 'customer; guest'], ['しつれい', 'rudeness'],
+  ],
+  // Classroom 11: things done to you, things you are made to do, decisions.
+  lesson11: [
+    ['どろぼう', 'thief'], ['ぬすむ', 'to steal'], ['しかる', 'to scold'], ['ほめる', 'to praise'],
+    ['ふむ', 'to step on'], ['こまる', 'to be in trouble'], ['やめる', 'to quit'], ['つづける', 'to continue'],
+    ['きめる', 'to decide'], ['がまんする', 'to put up with'], ['しゅうかん', 'habit'], ['しょうらい', 'the future'],
+    ['けいけん', 'experience'], ['せいせき', 'grades'], ['しけん', 'exam'], ['わかれ', 'farewell'],
+  ],
+};
+
+export const NATIVE_WORDS: readonly Word[] = [...(Object.keys(NATIVE) as (keyof typeof NATIVE)[]), ...(Object.keys(LESSON) as LessonArea[])].flatMap((area) =>
+  (area in NATIVE ? NATIVE[area as keyof typeof NATIVE] : LESSON[area as LessonArea]).map(([text, meaning]): Word => {
+    const romaji = toRomaji(text);
+    return { id: `n-${romaji}`, kind: 'native', text, reading: text, romaji, meaning, from: 'Japanese', area };
+  }),
+);
+
+/** Every word of every kind. `WORDS` stays loanwords + kanji vocabulary only. */
+export const EVERY_WORD: readonly Word[] = [...WORDS, ...NATIVE_WORDS];
+
+const BY_ID = new Map(EVERY_WORD.map((w) => [w.id, w]));
 
 export function getWord(id: string): Word {
   const w = BY_ID.get(id);
@@ -244,5 +380,5 @@ export function getWord(id: string): Word {
 }
 
 export function wordsForArea(area: WordArea): Word[] {
-  return WORDS.filter((w) => w.area === area);
+  return EVERY_WORD.filter((w) => w.area === area);
 }

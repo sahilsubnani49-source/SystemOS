@@ -13,6 +13,9 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
   const shownAt = useRef(Date.now());
   const answered = useRef(false);
   const [typed, setTyped] = useState('');
+  // 'arrange' puzzles: indexes into prompt.tiles, in the order tapped. Indexes, not
+  // strings, because a word can hold the same kana twice (こころ).
+  const [picked, setPicked] = useState<number[]>([]);
   const bar = useSharedValue(1);
 
   const submit = (value: string, elapsed?: number) => {
@@ -26,7 +29,8 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
     shownAt.current = Date.now();
     answered.current = false;
     setTyped('');
-    if (prompt.kind === 'listen') speakJa(prompt.speak);
+    setPicked([]);
+    if (prompt.kind === 'listen' || prompt.kind === 'hear') speakJa(prompt.speak);
     if (prompt.timeLimitMs === null) return;
     bar.value = 1;
     bar.value = withTiming(0, { duration: prompt.timeLimitMs, easing: Easing.linear });
@@ -47,11 +51,19 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
     prompt.kind === 'mirror' ||
     prompt.kind === 'spell' ||
     prompt.kind === 'reading' ||
-    prompt.kind === 'context';
+    prompt.kind === 'context' ||
+    prompt.kind === 'riddle';
   const isSentence = prompt.kind === 'context';
   const isPassage = prompt.kind === 'passage';
+  const isRiddle = prompt.kind === 'riddle';
+  const isArrange = prompt.kind === 'arrange';
+  const isPhrase = prompt.itemId.startsWith('f-');
+  const tiles = prompt.tiles ?? [];
+  // Long pieces (a JLPT ★ sentence) get smaller tiles so the whole card still fits one screen.
+  const compact = /[\u3040-\u30ff]/.test(prompt.display) || tiles.join('').length > 12;
   const isKanji = prompt.itemId.startsWith('j-');
-  const choicesAreEnglish = prompt.kind === 'meaning' || isPassage;
+  const isHear = prompt.kind === 'hear';
+  const choicesAreEnglish = prompt.kind === 'meaning' || isPassage || isHear;
   const longest = Math.max(1, ...prompt.choices.map((c) => [...c].length));
 
   return (
@@ -63,11 +75,15 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
         </View>
       ) : null}
 
-      {prompt.kind === 'listen' ? (
-        <Pressable onPress={() => speakJa(prompt.speak)} style={styles.listen} accessibilityLabel="play sound again">
-          <PText style={styles.listenIcon}>🔊</PText>
-          <PText style={styles.listenHint}>tap to hear again</PText>
-        </Pressable>
+      {prompt.kind === 'listen' || isHear ? (
+        // A listening exercise has nothing to read but its question, under the speaker.
+        <View style={{ gap: 6 }}>
+          <Pressable testID="hear-again" onPress={() => speakJa(prompt.speak)} style={styles.listen} accessibilityLabel="play sound again">
+            <PText style={styles.listenIcon}>🔊</PText>
+            <PText style={styles.listenHint}>tap to hear again</PText>
+          </Pressable>
+          {isHear && prompt.hint ? <PText style={styles.question}>{prompt.hint}</PText> : null}
+        </View>
       ) : isPassage ? (
         // A reading passage scrolls in its own box, with the English question under it.
         <View style={{ gap: 6 }}>
@@ -75,6 +91,33 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
             <PText ja style={styles.passage}>{prompt.display}</PText>
           </ScrollView>
           {prompt.hint ? <PText style={styles.question}>{prompt.hint}</PText> : null}
+        </View>
+      ) : isArrange ? (
+        // The clue (an English sentence, or a word's meaning), then the row being built.
+        <View style={{ gap: 8 }}>
+          {/[\u3040-\u30ff]/.test(prompt.display) ? (
+            // A JLPT ★ question: the exam's own sentence frame, with its English under it.
+            <View style={{ gap: 4 }} testID="star-frame">
+              <PText ja style={styles.sentence}>{prompt.display}</PText>
+              {prompt.hint ? <PText style={styles.hint}>{prompt.hint}</PText> : null}
+            </View>
+          ) : (
+            <PText style={styles.question}>{prompt.display}</PText>
+          )}
+          <View style={styles.answerRow} testID="arrange-answer">
+            {picked.length === 0 ? <PText style={styles.hint}>tap the tiles in order</PText> : null}
+            {picked.map((i, n) => (
+              <Pressable key={`${i}-${n}`} accessibilityRole="button" accessibilityLabel={`remove ${tiles[i]}`} onPress={() => setPicked((p) => p.filter((x) => x !== i))} style={[styles.tile, compact && styles.tileCompact, styles.tilePicked]}>
+                <PText ja style={[styles.tileText, compact && styles.tileTextCompact]}>{tiles[i]}</PText>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : isRiddle || isPhrase ? (
+        // A riddle or a proverb wraps like a sentence; a riddle's English sits underneath.
+        <View style={{ gap: 6 }}>
+          <PText ja style={styles.sentence}>{prompt.display}</PText>
+          {prompt.hint ? <PText style={styles.hint}>{prompt.hint}</PText> : null}
         </View>
       ) : isSentence ? (
         // A sentence wraps at a readable size; its translation sits underneath.
@@ -102,7 +145,40 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
         </View>
       )}
 
-      {prompt.kind === 'type' ? (
+      {isArrange ? (
+        <View style={{ gap: 8 }}>
+          <View style={styles.tileBank}>
+            {tiles.map((t, i) => {
+              const used = picked.includes(i);
+              return (
+                <Pressable
+                  key={`${t}-${i}`}
+                  testID={`tile-${i}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={t}
+                  disabled={used}
+                  onPress={() => setPicked((p) => [...p, i])}
+                  style={[styles.tile, compact && styles.tileCompact, used && { opacity: 0.25 }]}
+                >
+                  <PText ja style={[styles.tileText, compact && styles.tileTextCompact]}>{t}</PText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <PButton label="CLEAR" tone="dim" onPress={() => setPicked([])} disabled={picked.length === 0} style={{ flex: 1 }} />
+            <PButton
+              testID="arrange-submit"
+              label="FOCUS!"
+              sub="しゅうちゅう"
+              tone="violet"
+              disabled={picked.length !== tiles.length}
+              onPress={() => submit(picked.map((i) => tiles[i]).join(''))}
+              style={{ flex: 2 }}
+            />
+          </View>
+        </View>
+      ) : prompt.kind === 'type' ? (
         <View style={{ gap: 8 }}>
           <TextInput
             testID="type-input"
@@ -128,7 +204,7 @@ export function PromptCard({ prompt, purify, onAnswer }: { prompt: Prompt; purif
               accessibilityRole="button"
               accessibilityLabel={c}
               onPress={() => submit(c)}
-              style={({ pressed }) => [styles.choice, isPassage && styles.choiceWide, pressed && { backgroundColor: '#2E2A44' }]}
+              style={({ pressed }) => [styles.choice, (isPassage || isPhrase) && styles.choiceWide, pressed && { backgroundColor: '#2E2A44' }]}
             >
               <PText
                 ja={choicesAreJa}
@@ -189,6 +265,16 @@ const styles = StyleSheet.create({
   question: { fontSize: 9, lineHeight: 15, color: C.gold, textAlign: 'center' },
   choiceWide: { width: '100%', minHeight: 40, paddingVertical: 6 },
   hint: { fontSize: 7, lineHeight: 12, color: C.dim, textAlign: 'center' },
+  answerRow: {
+    minHeight: 56, flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#0E0C18', borderColor: C.violet, borderWidth: 2, borderRadius: 6, padding: 6,
+  },
+  tileBank: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' },
+  tile: { backgroundColor: '#15131F', borderColor: C.panelEdge, borderWidth: 3, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
+  tilePicked: { borderColor: C.violet },
+  tileText: { fontSize: 20, lineHeight: 28, color: C.paper },
+  tileCompact: { paddingHorizontal: 6, paddingVertical: 3, minWidth: 34 },
+  tileTextCompact: { fontSize: 15, lineHeight: 21 },
   displayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   speaker: { padding: 6, borderRadius: 6, borderWidth: 2, borderColor: C.panelEdge },
   speakerIcon: { fontSize: 18, lineHeight: 24 },

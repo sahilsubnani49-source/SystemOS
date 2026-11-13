@@ -23,8 +23,8 @@ export function createYoteiStore(databaseName: string): YoteiStore {
         (a, b) => Number(a.archived) - Number(b.archived) || (a.createdAt < b.createdAt ? 1 : -1),
       );
     },
-    async getItems(planId) {
-      return read().items.filter((i) => i.planId === planId).sort((a, b) => a.sort - b.sort);
+    async getAllItems() {
+      return [...read().items].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.sort - b.sort));
     },
     async savePlan(plan, items) {
       const d = read();

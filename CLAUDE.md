@@ -15,8 +15,9 @@ replaceable.
 The repo also contains **Kotodama** (`games/kotodama/`), a Japanese-learning RPG that
 SystemOS opens from the Apps tab and that also ships as its own app. See
 [`games/kotodama/README.md`](games/kotodama/README.md). It also contains **Yotei**
-(`apps/yotei/`), a planner app that turns a planner `.md` into dated tasks, using the planner
-as the only source of truth; it too opens from the Apps tab and ships on its own. See
+(`apps/yotei/`), an offline planner: the user asks any LLM for a plan in Yotei's JSON format,
+pastes it in, and Yotei dates every task and shows today, the week and the year. It too
+opens from the Apps tab and ships on its own. See
 [`apps/yotei/README.md`](apps/yotei/README.md).
 
 **Before changing behavior in an area, read [`issue.md`](issue.md)** — it records known
@@ -183,17 +184,14 @@ ChatPromptTemplate (system + few-shot)
 | Architect (reward) | `reward_generator.py` | `POST /api/quests/{id}/complete` |
 | Nutritionist | `nutrition_advisor.py` | `POST /api/nutrition/protein` |
 | Architect (task line) | `task_describer.py` | `POST /api/tasks/describe` |
-| Yotei planner parser | `plan_parser.py` | `POST /api/yotei/parse` |
 
 **Provider priority** (cloud): Groq → xAI Grok → Gemini → Anthropic → OpenAI — first key
 present wins. Local mode uses Ollama. `_get_llm()` lives **exclusively** in
 `reward_generator.py`; import it, never redefine it.
 
-Every route except `/api/goals/strategy` and `/api/yotei/parse` has a deterministic
-fallback and returns HTTP 200 with `ai_generated: false` on LLM failure. Those two
-deliberately have none: a fabricated plan is worse than an honest failure. The Yotei parser
-also runs at temperature 0 (`_get_llm(..., temperature=0)`) and passes everything the LLM
-returns through a deterministic verbatim-quote gate (`plan_parser.verify()`).
+Every route except `/api/goals/strategy` has a deterministic fallback and returns HTTP 200
+with `ai_generated: false` on LLM failure. The strategy route deliberately has none: a
+fabricated plan is worse than an honest failure.
 
 ### Campaign flow
 
@@ -316,7 +314,7 @@ When code and docs disagree, the code wins — and update the doc.
 ### Kotodama (`games/kotodama/`)
 
 ```bash
-npm run test --workspace @kotodama/core        # the repo's only automated tests (160)
+npm run test --workspace @kotodama/core        # the repo's only automated tests (282)
 cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / npm run web)
 ```
 
@@ -324,24 +322,28 @@ cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / np
   `<KotodamaGame onExit onStudySession />` (`KotodamaScreen.tsx`) and receives study
   sessions back; `useTaskLogStore.recordJapaneseSession` files them via `logSession`.
 - The game keeps its own SQLite file (`kotodama.db`), never SystemOS's tables.
+- **Neural voice:** Kokoro-82M runs on-device through `onnxruntime-react-native` (a native
+  module: rebuild the dev client). The player downloads the model from the menu; it reads
+  kana only (`core/src/speech/kokoroJa.ts`) and every other line uses `expo-speech`.
+- **Music:** tracks are named after `MapDef.music` slots; `musicSlotFor()` (core) picks the
+  slot and `game/src/audio/music.ts` plays it. Volumes and mutes are on the save (`save.audio`).
 - `expo-asset` is pinned through a root `overrides` entry: `expo-audio`'s loose range
   otherwise resolves the SDK 58 build, which breaks the Metro bundle.
 
 ### Yotei (`apps/yotei/`)
 
 ```bash
-npm run test --workspace @yotei/core                        # Vitest
-backend/venv/bin/python backend/tests/test_plan_parser.py   # backend gate (pytest-compatible)
-cd apps/yotei/app && npx expo run:android                   # standalone app
+npm run test --workspace @yotei/core        # Vitest
+cd apps/yotei/app && npx expo run:android   # standalone app
 ```
 
 - **Same boundary rule:** nothing under `apps/` imports from `mobile/`. SystemOS renders
-  `<YoteiApp parsePlan onExit onDiagnostic />` (`YoteiScreen.tsx`), supplying the API call.
-- **The planner is the only source of truth.** Task text must be a verbatim quote, and
-  timing must be quoted; dates are computed by `@yotei/core`, never by the LLM. A planner
-  with no stated time limit is rejected, never given an invented one. `normalizeLine()`
-  (TS) and `normalize_line()` (Python) must stay identical: both run
-  `apps/yotei/core/src/__tests__/normalize.vectors.json`.
+  `<YoteiApp onExit onDiagnostic />` (`YoteiScreen.tsx`).
+- **No LLM, no backend.** Yotei is fully offline. The user copies `PLAN_PROMPT`
+  (`core/src/prompt.ts`) into any LLM and pastes the JSON back; `parsePlanJson()` validates
+  it and `resolvePlan()` computes every date. The JSON says *when* only relative to the plan
+  ("week 3, wed") or on a calendar date. A plan with no time limit is rejected, never given
+  an invented one. Change the format and `EXAMPLE_PLAN` together: a test parses the example.
 - Yotei keeps its own SQLite file (`yotei.db`). Times are wall-clock strings, compared with
   "now" in the device's **current** timezone.
 

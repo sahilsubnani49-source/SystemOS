@@ -4,10 +4,14 @@ import type { Plan, PlanItem } from '@yotei/core';
 /**
  * Yotei's own database (default yotei.db), never a host's. Schema changes must be
  * additive: the device holds the only copy of the user's plans and progress.
+ *
+ * Column names predate the JSON format: `source_md` holds the imported source (JSON),
+ * `boundary_quote` the plan's limit label, `period_quote` an item's timing label.
  */
 export interface YoteiStore {
   listPlans(): Promise<Plan[]>;
-  getItems(planId: string): Promise<PlanItem[]>;
+  /** Every item of every plan (archived ones too: the Plans screen shows their progress). */
+  getAllItems(): Promise<PlanItem[]>;
   /** The plan and all its items, in one transaction. */
   savePlan(plan: Plan, items: PlanItem[]): Promise<void>;
   setDone(itemId: string, doneAt: string | null): Promise<void>;
@@ -44,6 +48,9 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_plan_items_plan ON plan_items (plan_id, start)`,
 ];
 
+/** Additive columns. SQLite has no ADD COLUMN IF NOT EXISTS, so each runs in try/catch. */
+const MIGRATIONS = ['ALTER TABLE plan_items ADD COLUMN notes TEXT', 'ALTER TABLE plan_items ADD COLUMN phase TEXT'];
+
 interface PlanRow {
   id: string;
   title: string;
@@ -63,6 +70,8 @@ interface ItemRow {
   plan_id: string;
   text: string;
   period_quote: string;
+  notes: string | null;
+  phase: string | null;
   unit: PlanItem['unit'];
   start: string;
   end: string;
@@ -74,13 +83,13 @@ interface ItemRow {
 const rowToPlan = (r: PlanRow): Plan => ({
   id: r.id,
   title: r.title,
-  sourceMd: r.source_md,
+  source: r.source_md,
   sourceHash: r.source_hash,
   timezone: r.timezone,
   unit: r.unit,
   start: r.start,
   end: r.end,
-  boundaryQuote: r.boundary_quote,
+  limit: r.boundary_quote,
   createdAt: r.created_at,
   archived: r.archived === 1,
 });
@@ -89,7 +98,9 @@ const rowToItem = (r: ItemRow): PlanItem => ({
   id: r.id,
   planId: r.plan_id,
   text: r.text,
-  periodQuote: r.period_quote,
+  timing: r.period_quote,
+  notes: r.notes ?? null,
+  phase: r.phase ?? null,
   unit: r.unit,
   start: r.start,
   end: r.end,
@@ -98,8 +109,8 @@ const rowToItem = (r: ItemRow): PlanItem => ({
   doneAt: r.done_at,
 });
 
-/** Rows per multi-row INSERT: 10 params each keeps under SQLite's 999-variable floor. */
-const ROWS_PER_INSERT = 90;
+/** Rows per multi-row INSERT: 12 params each keeps under SQLite's 999-variable floor. */
+const ROWS_PER_INSERT = 80;
 
 export function createYoteiStore(databaseName: string): YoteiStore {
   let db: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -109,6 +120,13 @@ export function createYoteiStore(databaseName: string): YoteiStore {
       .then(async (d) => {
         await d.execAsync('PRAGMA journal_mode = WAL;');
         for (const sql of SCHEMA) await d.execAsync(sql);
+        for (const sql of MIGRATIONS) {
+          try {
+            await d.execAsync(sql);
+          } catch {
+            // column already exists
+          }
+        }
         return d;
       })
       .catch((e) => {
@@ -124,9 +142,9 @@ export function createYoteiStore(databaseName: string): YoteiStore {
       const rows = await d.getAllAsync<PlanRow>('SELECT * FROM plans ORDER BY archived ASC, created_at DESC');
       return rows.map(rowToPlan);
     },
-    async getItems(planId) {
+    async getAllItems() {
       const d = await open();
-      const rows = await d.getAllAsync<ItemRow>('SELECT * FROM plan_items WHERE plan_id = ? ORDER BY sort ASC', [planId]);
+      const rows = await d.getAllAsync<ItemRow>('SELECT * FROM plan_items ORDER BY start ASC, sort ASC');
       return rows.map(rowToItem);
     },
     async savePlan(plan, items) {
@@ -135,15 +153,15 @@ export function createYoteiStore(databaseName: string): YoteiStore {
         await d.runAsync(
           `INSERT INTO plans (id, title, source_md, source_hash, timezone, unit, start, "end", boundary_quote, created_at, archived)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [plan.id, plan.title, plan.sourceMd, plan.sourceHash, plan.timezone, plan.unit, plan.start, plan.end,
-            plan.boundaryQuote, plan.createdAt, plan.archived ? 1 : 0],
+          [plan.id, plan.title, plan.source, plan.sourceHash, plan.timezone, plan.unit, plan.start, plan.end,
+            plan.limit, plan.createdAt, plan.archived ? 1 : 0],
         );
         for (let i = 0; i < items.length; i += ROWS_PER_INSERT) {
           const batch = items.slice(i, i + ROWS_PER_INSERT);
           await d.runAsync(
-            `INSERT INTO plan_items (id, plan_id, text, period_quote, unit, start, "end", timed, sort, done_at)
-             VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
-            batch.flatMap((it) => [it.id, it.planId, it.text, it.periodQuote, it.unit, it.start, it.end,
+            `INSERT INTO plan_items (id, plan_id, text, period_quote, notes, phase, unit, start, "end", timed, sort, done_at)
+             VALUES ${batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ')}`,
+            batch.flatMap((it) => [it.id, it.planId, it.text, it.timing, it.notes, it.phase, it.unit, it.start, it.end,
               it.timed ? 1 : 0, it.sort, it.doneAt]),
           );
         }

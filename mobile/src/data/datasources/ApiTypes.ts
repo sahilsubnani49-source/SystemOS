@@ -211,11 +211,3 @@ export interface ApiTaskDescribeResponse {
   rationale: string;
   ai_generated: boolean;
 }
-
-// --- Yotei (planner app) ---
-
-/**
- * POST /api/yotei/parse. The wire shape is owned by @yotei/core (WireParseResponse),
- * which also maps it to camelCase (draftFromWire), so both Yotei hosts share one mapping.
- */
-export type { WireParseResponse as ApiYoteiParseResponse } from '@yotei/core';

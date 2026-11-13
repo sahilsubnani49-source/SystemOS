@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
-  KANJI, KANJI_GROUPS, MAX_STAGE, dueCount, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
+  KANJI, KANJI_GROUPS, MAX_STAGE, PARTY_SIZE, SEALS, VOLUME_STEPS, audioSettings, canReleaseSpirit, stepVolume, dueCount, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
   type KanaRow, type KanjiGroup, type Save, type Script, type SpiritFamily,
 } from '@kotodama/core';
 import { characterImage, spiritImage } from '../art/atlas';
 import { SpriteView } from './Sprite';
 import { PButton, PText, Panel } from './Pixel';
-import { speakJa } from '../audio/speak';
+import { currentVoice, loadJaVoices, scoreVoice, setPreferredVoice, speakJa, type JaVoice } from '../audio/speak';
+import { NEURAL_DOWNLOAD_MB, deleteNeural, downloadNeural, neuralStatus, subscribeNeural, type NeuralStatus } from '../audio/neural';
+import { playSfx } from '../audio/music';
+import { useGameApi } from '../state/context';
 import { C } from '../theme';
 
 type Tab = 'party' | 'kana' | 'kanji' | 'words' | 'dex' | 'system';
@@ -28,7 +31,7 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
       <Panel style={styles.sheet}>
         <View style={styles.tabs}>
           {(['party', 'kana', 'kanji', 'words', 'dex', 'system'] as Tab[]).map((t) => (
-            <Pressable key={t} onPress={() => setTab(t)} style={[styles.tab, tab === t && styles.tabOn]}>
+            <Pressable key={t} onPress={() => { playSfx('menuClick'); setTab(t); }} style={[styles.tab, tab === t && styles.tabOn]}>
               <PText style={[styles.tabText, tab === t && { color: C.ink }]}>{t.toUpperCase()}</PText>
             </Pressable>
           ))}
@@ -41,6 +44,9 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
           {tab === 'dex' && <DexTab save={save} />}
           {tab === 'system' && (
             <View style={{ gap: 10 }}>
+              <SoundSection save={save} />
+              <NeuralSection />
+              <VoiceSection save={save} />
               <PText style={styles.dim}>Your game saves automatically on every map change and after every battle.</PText>
               <PButton label="SAVE NOW" sub="セーブ" onPress={onSave} />
               <PButton label="TITLE SCREEN" tone="dim" onPress={onTitle} />
@@ -54,7 +60,155 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
   );
 }
 
+const VOICE_SAMPLE = 'こんにちは。 むかし むかし、 ある ところに、 おじいさんと おばあさんが いました。';
+
+/** One volume control: a row of notches, quieter and louder, and a mute switch. */
+function VolumeRow({ id, label, volume, muted, onVolume, onMute }: {
+  id: string; label: string; volume: number; muted: boolean; onVolume: (v: number) => void; onMute: (m: boolean) => void;
+}) {
+  const notches = Math.round(volume * VOLUME_STEPS);
+  return (
+    <View style={{ gap: 6 }} testID={`volume-${id}`}>
+      <View style={styles.volumeHead}>
+        <PText style={styles.dim}>{label}</PText>
+        <PText style={[styles.dim, { color: muted ? C.red : C.paper }]}>{muted ? 'MUTED' : `${notches * 10}%`}</PText>
+      </View>
+      <View style={styles.notches} accessibilityLabel={`${label} volume ${notches} of ${VOLUME_STEPS}`}>
+        {Array.from({ length: VOLUME_STEPS }, (_, i) => (
+          <View key={i} style={[styles.notch, i < notches && { backgroundColor: muted ? C.dim : C.gold }]} />
+        ))}
+      </View>
+      <View style={styles.actions}>
+        <SmallButton testID={`${id}-down`} label="-" color={C.paper} onPress={() => onVolume(stepVolume(volume, -1))} />
+        <SmallButton testID={`${id}-up`} label="+" color={C.paper} onPress={() => onVolume(stepVolume(volume, 1))} />
+        <SmallButton testID={`${id}-mute`} label={muted ? 'UNMUTE' : 'MUTE'} color={muted ? C.jade : C.red} onPress={() => onMute(!muted)} />
+      </View>
+    </View>
+  );
+}
+
+/** Music and sound-effect volume. Changes are heard at once and saved with the game. */
+function SoundSection({ save }: { save: Save }) {
+  const api = useGameApi();
+  const a = audioSettings(save);
+  const set = api.getState().setAudio;
+  return (
+    <View testID="sound-section" style={styles.spirit}>
+      <PText style={styles.name}>SOUND</PText>
+      <VolumeRow id="music" label="MUSIC" volume={a.musicVolume} muted={a.musicMuted}
+        // Turning the volume up from a muted state is asking to hear it again.
+        onVolume={(musicVolume) => set({ musicVolume, musicMuted: false })} onMute={(musicMuted) => set({ musicMuted })} />
+      <VolumeRow id="sfx" label="SOUND EFFECTS" volume={a.sfxVolume} muted={a.sfxMuted}
+        onVolume={(sfxVolume) => { set({ sfxVolume, sfxMuted: false }); playSfx('correct'); }}
+        onMute={(sfxMuted) => { set({ sfxMuted }); if (!sfxMuted) playSfx('correct'); }} />
+      <PText style={styles.dim}>The music lowers itself while Japanese is being spoken.</PText>
+    </View>
+  );
+}
+
+/** The optional on-device neural voice (Kokoro): download it, try it, remove it. */
+function NeuralSection() {
+  const [status, setStatus] = useState<NeuralStatus>(neuralStatus);
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => subscribeNeural(setStatus), []);
+
+  return (
+    <View testID="neural-section" style={styles.spirit}>
+      <PText style={styles.name}>NEURAL VOICE</PText>
+      {status.state === 'unsupported' ? (
+        <PText style={styles.dim}>{status.reason}</PText>
+      ) : status.state === 'ready' ? (
+        <>
+          <PText style={[styles.dim, { color: C.jade }]}>ON. Kokoro, an open model, running on this device.</PText>
+          <PText style={styles.dim}>It reads hiragana and katakana lines. Lines with kanji use the device voice below. The first time a line is spoken takes a moment; after that it is instant.</PText>
+          {confirming ? (
+            <View style={styles.actions}>
+              <SmallButton testID="neural-remove-yes" label="YES, REMOVE" color={C.red} onPress={() => { deleteNeural(); setConfirming(false); }} />
+              <SmallButton label="KEEP" color={C.paper} onPress={() => setConfirming(false)} />
+            </View>
+          ) : (
+            <View style={styles.actions}>
+              <SmallButton testID="neural-test" label="TEST" color={C.gold} onPress={() => speakJa(VOICE_SAMPLE)} />
+              <SmallButton testID="neural-remove" label="REMOVE" color={C.red} onPress={() => setConfirming(true)} />
+            </View>
+          )}
+        </>
+      ) : status.state === 'downloading' ? (
+        <PText style={styles.dim}>Downloading... {Math.round(status.progress * 100)}%. Keep the game open.</PText>
+      ) : (
+        <>
+          <PText style={styles.dim}>
+            A more natural voice that runs on this device, with no account and nothing sent anywhere. It is a one-time {NEURAL_DOWNLOAD_MB} MB download; use Wi-Fi.
+          </PText>
+          {status.state === 'error' ? <PText style={[styles.dim, { color: C.red }]}>It did not work: {status.message}</PText> : null}
+          <View style={styles.actions}>
+            <SmallButton testID="neural-download" label={status.state === 'error' ? 'TRY AGAIN' : `DOWNLOAD ${NEURAL_DOWNLOAD_MB} MB`} color={C.jade} onPress={() => void downloadNeural()} />
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
+/** Which of the device's Japanese voices reads the game aloud. */
+function VoiceSection({ save }: { save: Save }) {
+  const api = useGameApi();
+  const [voices, setVoices] = useState<JaVoice[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    void loadJaVoices().then((v) => { if (live) setVoices(v); });
+    return () => { live = false; };
+  }, []);
+
+  if (!voices) return null;
+  if (voices.length === 0) {
+    return <PText style={styles.dim}>This device has no Japanese voice, so nothing is read aloud. Add one in the device settings (text-to-speech), then reopen the game.</PText>;
+  }
+  const voice = voices.find((v) => v.identifier === save.voiceId) ?? currentVoice() ?? (voices[0] as JaVoice);
+  const choose = (v: JaVoice) => {
+    // Set it here too: the sample below is spoken before the store's change is rendered.
+    setPreferredVoice(v.identifier);
+    api.getState().setVoice(v.identifier);
+    speakJa(VOICE_SAMPLE);
+  };
+  const next = voices[(voices.indexOf(voice) + 1) % voices.length] as JaVoice;
+  return (
+    <View testID="voice-section" style={styles.spirit}>
+      <PText style={styles.name}>VOICE</PText>
+      <PText ja style={styles.ja}>{voice.name}</PText>
+      <PText style={styles.dim}>
+        {voices.indexOf(voice) + 1} of {voices.length} Japanese voice{voices.length === 1 ? '' : 's'} on this device, best first. Tap a speaker twice to hear a line slowly.
+      </PText>
+      <View style={styles.actions}>
+        <SmallButton testID="voice-test" label="TEST" color={C.gold} onPress={() => speakJa(VOICE_SAMPLE)} />
+        {voices.length > 1 ? <SmallButton testID="voice-next" label="NEXT VOICE" color={C.paper} onPress={() => choose(next)} /> : null}
+      </View>
+      {scoreVoice(voice) < 60 ? (
+        <PText style={styles.dim}>
+          For a clearer voice, download a higher-quality Japanese voice in your device settings. iPhone: Accessibility, Spoken Content, Voices, Japanese. Android: System, Text-to-speech output, then install voice data. It will appear here.
+        </PText>
+      ) : null}
+    </View>
+  );
+}
+
+/** A compact action under a spirit: three fit on one row. */
+function SmallButton({ label, color, onPress, testID }: { label: string; color: string; onPress: () => void; testID?: string }) {
+  return (
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.small, { borderColor: color }]}>
+      <PText style={[styles.smallText, { color }]}>{label}</PText>
+    </Pressable>
+  );
+}
+
 function PartyTab({ save }: { save: Save }) {
+  const api = useGameApi();
+  /** The spirit chosen to trade places; the next spirit tapped completes the swap. */
+  const [picked, setPicked] = useState<string | null>(null);
+  /** The spirit waiting on a yes/no before it is released. */
+  const [releasing, setReleasing] = useState<string | null>(null);
+  const reset = () => { setPicked(null); setReleasing(null); };
+  const owned = [...save.party, ...save.box];
   return (
     <>
       <View style={styles.member}>
@@ -64,24 +218,60 @@ function PartyTab({ save }: { save: Save }) {
           <PText style={styles.dim}>Lv {save.heroLevel} · {save.heroXp}/{xpToNext(save.heroLevel)} XP</PText>
           <PText style={styles.dim}>Study streak: {save.streakDays} day{save.streakDays === 1 ? '' : 's'}</PText>
           {save.horse.owned ? <PText style={styles.dim}>Hayate rides at {horseSpeed(save.streakDays).toFixed(1)}x speed</PText> : null}
+          {SEALS.some((s) => save.flags[s.flag]) ? (
+            <PText style={styles.dim}>Seals: {SEALS.filter((s) => save.flags[s.flag]).map((s) => s.name.replace('Seal of ', '')).join(', ')} ({SEALS.filter((s) => save.flags[s.flag]).length}/{SEALS.length})</PText>
+          ) : save.flags.learned_focus ? (
+            <PText style={styles.dim}>The Well of Old Tales is open (Sakura Village, east of the bridge).</PText>
+          ) : null}
           {save.flags.game_complete ? <PText style={styles.dim}>Daily Trial: {dueCount(save.srs, Date.now())} items due (Master Kaito, Hayate Dojo)</PText> : null}
         </View>
       </View>
-      {[...save.party, ...save.box].map((sp, i) => {
+      {owned.length > 0 ? (
+        <PText style={styles.dim}>
+          {picked
+            ? 'Choose the spirit to trade places with.'
+            : `TEAM spirits fight beside you (${save.party.length}/${PARTY_SIZE}). The first one acts first. RESERVE spirits wait.`}
+        </PText>
+      ) : null}
+      {owned.map((sp, i) => {
         const fam = getFamily(sp.familyId);
         const stage = familyStage(sp.familyId, save.srs);
         const form = fam.stages[stage];
+        const onTeam = i < save.party.length;
+        const isPicked = picked === sp.uid;
         return (
-          <View key={sp.uid} style={styles.member}>
-            <SpriteView image={spiritImage(form.sprite)} size={56} />
-            <View style={{ flex: 1, gap: 4 }}>
-              <PText style={styles.name}>
-                {form.name} {i >= save.party.length ? '(reserve)' : ''}
-              </PText>
-              <PText ja style={styles.ja}>{form.nameJa}</PText>
-              <PText style={styles.dim}>Lv {sp.level} · {fam.element} · stage {stage + 1}/3</PText>
-              <PText style={styles.dim}>Evolves as you master {masteryLabel(fam)}.</PText>
+          <View key={sp.uid} testID={`spirit-${i}`} style={[styles.spirit, isPicked && styles.spiritPicked]}>
+            <View style={styles.spiritTop}>
+              <SpriteView image={spiritImage(form.sprite)} size={56} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <PText style={styles.name}>{form.name}</PText>
+                <PText ja style={styles.ja}>{form.nameJa}</PText>
+                <PText style={[styles.dim, { color: onTeam ? C.jade : C.dim }]}>{onTeam ? `TEAM ${i + 1}` : 'RESERVE'} · Lv {sp.level} · {fam.element} · stage {stage + 1}/3</PText>
+                <PText style={styles.dim}>Evolves as you master {masteryLabel(fam)}.</PText>
+              </View>
             </View>
+            {releasing === sp.uid ? (
+              <View style={{ gap: 6 }}>
+                <PText style={[styles.dim, { color: C.red }]}>Release {form.name} for good? It will not come back.</PText>
+                <View style={styles.actions}>
+                  <SmallButton testID={`release-yes-${i}`} label="YES, RELEASE" color={C.red} onPress={() => { api.getState().releaseSpirit(sp.uid); reset(); }} />
+                  <SmallButton testID={`release-no-${i}`} label="KEEP" color={C.paper} onPress={reset} />
+                </View>
+              </View>
+            ) : picked ? (
+              <View style={styles.actions}>
+                {isPicked
+                  ? <SmallButton testID={`swap-cancel-${i}`} label="CANCEL" color={C.paper} onPress={reset} />
+                  : <SmallButton testID={`swap-here-${i}`} label="SWAP HERE" color={C.gold} onPress={() => { api.getState().swapSpirits(picked, sp.uid); reset(); }} />}
+              </View>
+            ) : (
+              <View style={styles.actions}>
+                {owned.length > 1 ? <SmallButton testID={`swap-${i}`} label="SWAP" color={C.gold} onPress={() => setPicked(sp.uid)} /> : null}
+                {onTeam && save.party.length > 1 ? <SmallButton testID={`rest-${i}`} label="REST" color={C.paper} onPress={() => api.getState().spiritToReserve(sp.uid)} /> : null}
+                {!onTeam && save.party.length < PARTY_SIZE ? <SmallButton testID={`join-${i}`} label="JOIN TEAM" color={C.jade} onPress={() => api.getState().spiritToTeam(sp.uid)} /> : null}
+                {canReleaseSpirit(save) ? <SmallButton testID={`release-${i}`} label="RELEASE" color={C.red} onPress={() => setReleasing(sp.uid)} /> : null}
+              </View>
+            )}
           </View>
         );
       })}
@@ -235,6 +425,15 @@ const styles = StyleSheet.create({
   tabOn: { backgroundColor: C.gold, borderColor: C.gold },
   tabText: { fontSize: 7 },
   member: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#15131F', padding: 8, borderRadius: 4 },
+  spirit: { backgroundColor: '#15131F', padding: 8, borderRadius: 4, gap: 8, borderWidth: 2, borderColor: 'transparent' },
+  spiritPicked: { borderColor: C.gold },
+  spiritTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  actions: { flexDirection: 'row', gap: 6 },
+  volumeHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  notches: { flexDirection: 'row', gap: 3 },
+  notch: { flex: 1, height: 8, borderRadius: 2, backgroundColor: '#2A2740' },
+  small: { flex: 1, minHeight: 40, borderWidth: 2, borderRadius: 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  smallText: { fontSize: 7, lineHeight: 12, textAlign: 'center' },
   name: { fontSize: 9, color: C.gold },
   ja: { fontSize: 14, lineHeight: 18, color: C.sakura },
   dim: { fontSize: 7, lineHeight: 12, color: C.dim },

@@ -10,7 +10,7 @@ const walkableTile = (m: ParsedMap, x: number, y: number) => !TILE_PROPS[tileAt(
 
 /** Every flag a full playthrough sets, to explore the "everything unlocked" world. */
 const ALL_FLAGS = Object.fromEntries(
-  ALL_MAPS.flatMap((d) => d.npcs.flatMap((n) => [n.setsFlag, n.battle?.winFlag])).filter(Boolean).map((f) => [f, true]),
+  ALL_MAPS.flatMap((d) => d.npcs.flatMap((n) => [n.setsFlag, n.battle?.winFlag, n.readsTale && `read_${n.readsTale}`])).filter(Boolean).map((f) => [f, true]),
 ) as Record<string, boolean>;
 
 /** Flood-fill tiles reachable on foot across warps, respecting NPCs and warp locks. */
@@ -166,6 +166,43 @@ describe('Arc 1 maps', () => {
     expect(visibleNpcs(dojo, { starter: true, game_complete: true }).map((n) => n.id)).toContain('daily_trial');
     const ending = getMap('runeforge_throne').def.npcs.find((n) => n.id === 'ending')!;
     expect(ending).toMatchObject({ showIf: 'beat_jarl', setsFlag: 'game_complete' });
+  });
+
+  it('opens the Well of Old Tales after the Oni, one floor per seal', () => {
+    const arc1 = ['starter', 'beat_goro', 'beat_bjorn', 'beat_shizuka', 'shrine_trial', 'beat_oni'];
+    // Fumi's lesson (learned_focus) lifts the lid, not the Oni's fall alone.
+    const story = ['learned_focus', 'seal_words', 'seal_heart', 'seal_rules'];
+    const order = ['well_words', 'well_heart', 'well_rules', 'well_deep'];
+    const reached = (n: number, map: string) =>
+      [...explore(Object.fromEntries([...arc1, ...story.slice(0, n)].map((f) => [f, true])))].some((k) => k.startsWith(`${map}:`));
+    order.forEach((map, i) => {
+      expect(reached(i, map), `${map} reachable too early`).toBe(false);
+      expect(reached(i + 1, map), `${map} unreachable`).toBe(true);
+    });
+  });
+
+  it('lets every NPC that appears later in the story be talked to', () => {
+    // The reachability test above only covers NPCs present from the start. An NPC with
+    // showIf can still be walled in (Fumi once stood where the well's own steps cut her off).
+    for (const d of ALL_MAPS) {
+      for (const n of d.npcs.filter((x) => x.showIf)) {
+        const flags = { ...ALL_FLAGS };
+        if (n.hideIf) delete flags[n.hideIf];
+        if (n.battle) delete flags[n.battle.winFlag];
+        if (n.setsFlag) delete flags[n.setsFlag];
+        if (!visibleNpcs(getMap(d.id), flags).includes(n)) continue;
+        expect(canTalkTo(explore(flags), d.id, n.x, n.y), `${d.id}/${n.id} unreachable`).toBe(true);
+      }
+    }
+  });
+
+  it('lets the guardian of every well floor be reached once its tale is read', () => {
+    for (const [map, tale, seal] of [['well_words', 'momotaro', 'seal_words'], ['well_heart', 'urashima', 'seal_heart'], ['well_rules', 'tsuru', 'seal_rules'], ['well_deep', 'kaguya', 'seal_deep']] as const) {
+      const flags = { ...ALL_FLAGS, [`read_${tale}`]: true };
+      delete (flags as Record<string, boolean>)[seal];
+      const boss = visibleNpcs(getMap(map), flags).find((n) => n.battle)!;
+      expect(canTalkTo(explore(flags), map, boss.x, boss.y), `${map} guardian unreachable`).toBe(true);
+    }
   });
 
   it('opens the story gates in order', () => {

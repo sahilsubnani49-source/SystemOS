@@ -2,7 +2,7 @@
   "name": "@yotei/core",
   "version": "0.1.0",
   "private": true,
-  "description": "Yotei planner rules: quote verification, period resolution, 'what's due now'. Pure TypeScript: no React, no Expo.",
+  "description": "Yotei planner rules: the JSON plan format, date resolution, today/week/year views. Pure TypeScript: no React, no Expo.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {

@@ -34,7 +34,7 @@ export function AppsScreen() {
           <Text style={styles.appIcon}>予</Text>
           <View style={styles.appInfo}>
             <Text style={styles.appName}>YOTEI</Text>
-            <Text style={styles.appDesc}>Your planner, week by week. Only what it says.</Text>
+            <Text style={styles.appDesc}>Paste a plan. See today, this week, this year.</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </Pressable>

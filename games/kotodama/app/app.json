@@ -12,9 +12,24 @@
     },
     "android": {
       "package": "com.sahildevhk.kotodama",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
-    "plugins": ["expo-sqlite", "expo-font", "expo-audio"],
-    "owner": "sahildevhk"
+    "plugins": [
+      "expo-sqlite",
+      "expo-font",
+      "expo-audio"
+    ],
+    "owner": "sahildevhk",
+    "extra": {
+      "eas": {
+        "projectId": "efbcbb9c-5832-4f76-bd0a-707aee2e8cab"
+      }
+    }
   }
 }

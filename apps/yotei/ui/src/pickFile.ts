@@ -1,10 +1,11 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 
-/** Let the user pick a planner file; returns its text, or null if they cancelled. */
-export async function pickPlannerFile(): Promise<{ name: string; text: string } | null> {
+/** Let the user pick a plan file (.json); returns its text, or null if they cancelled. */
+export async function pickPlanFile(): Promise<{ name: string; text: string } | null> {
   const res = await DocumentPicker.getDocumentAsync({
-    type: ['text/markdown', 'text/x-markdown', 'text/plain', '*/*'],
+    // Android often labels .json as text/plain or octet-stream, so allow anything and let the parser judge.
+    type: ['application/json', 'text/plain', '*/*'],
     copyToCacheDirectory: true,
     multiple: false,
   });

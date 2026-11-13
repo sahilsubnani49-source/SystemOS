@@ -155,7 +155,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 
 ### SYS-014 — No automated test suite covers the engine
 
-- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 160 Vitest tests; see SYS-019.)
+- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 282 Vitest tests; see SYS-019.)
 - **Priority:** P1
 - **Area:** `mobile/`, `backend/`
 - **Current behavior:** SystemOS has no test runner or test files.
@@ -223,9 +223,41 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
   Arc 5 was verified from seeded saves: the Tengu King's winds → Rune Coast → a battle with
   reading-passage prompts → purifying a spirit by typing a reading of 個; Jarl Ulfhild's N3
   exam → the credits → `game_complete`; and a Daily Trial that asked only seeded overdue items
-  and could be fought again. The core has 160 Vitest tests, including a map validator, a
-  boss-pacing simulation over all 29 bosses and the Daily Trial, and data checks on every
+  and could be fought again. The core has 282 Vitest tests, including a map validator, a
+  boss-pacing simulation over all 33 bosses and the Daily Trial, and data checks on every
   kanji reading, word, sentence and passage.
+- **State (2026-11-13): music and sound effects.** 25 tracks and 12 effects wired through
+  `expo-audio`, with volume and mute for each in the System tab. Verified on the iOS
+  simulator: the app bundles and runs with the audio code, the Sound controls change and
+  save `save.audio`. Not verified: that anything is audible (it cannot be heard from here),
+  loop seams, the ducking level against the voice, Android, web autoplay, SystemOS's build.
+- **State (2026-11-13): the Terakoya.** Castle Town's school: eleven classrooms and N5/N4
+  mock-exam halls in Genki / Minna no Nihongo lesson order (original content only): 176
+  words, 132 grammar sentences, 88 listening exercises (`hear` prompts), 24 JLPT ★
+  questions, 13 exams, repeatable practice battles, two certificate bonuses, three spirit
+  rewards. Verified on the iOS simulator from seeded saves: room 1, a lesson word, a listening
+  question with its neural-voice clip, the N5 hall, and a ★ question answered and revealed.
+  Not played: rooms 2-11, the N4 hall, practice battles, the spirit gifts, Android.
+- **State (2026-11-11): the neural voice runs on the iOS simulator; quality is unjudged.**
+  Kokoro-82M runs through `onnxruntime-react-native` 1.24.3 (`game/src/audio/neural.ts`), with
+  our own kana-to-phoneme front end (`core/src/speech/kokoroJa.ts`, 11 tests). Verified in the
+  standalone app on an iPhone 17 Pro simulator (React Native 0.85): the native module loads
+  through the legacy `NativeModules` interop, the 93 MB download completes, and a test line
+  produces a 5.5 s, 24 kHz clip with real signal (and a 7.9 s slow one). Not verified: how the
+  Japanese sounds (Kokoro's authors grade its best Japanese voice C+), single kana and other
+  very short lines, speed and memory on a real phone, Android, and the SystemOS build
+  (`mobile/` needs `pod install` and a rebuild). Long vowels and particles are rebuilt by
+  rule, so a word outside the rules (a verb like おもう not in `NOT_LONG`) is spoken with a long
+  vowel it should not have. `pod install` needs `LANG=en_US.UTF-8` in the shell.
+- **State (2026-11-11): the Well of Old Tales.** A hiragana-only side dungeon under Sakura
+  Village, opened by Grandmother Fumi after the Oni: four floors (56 native words, 17 phrases
+  and proverbs, 24 grammar sentences, mixed exercises), four folk tales to read (Momotaro,
+  Urashima Taro, The Grateful Crane, Princess Kaguya), a permanent party seal per floor, and
+  the in-battle FOCUS command (word-order, kana-scramble, riddle and odd-one-out puzzles that
+  charge a 3-hit spirit surge). Verified in the web build from a seeded save: reading a tale to
+  its end, the guardian appearing, a riddle and a scramble puzzle, the surge indicator. Not
+  yet clicked through: floors 2 to 4, the seal rewards, and anything on a device.
+  A surged hit deals x2.5, then x2, then x1.5 (`surgeMultiplier()` in `core/src/battle/damage.ts`).
 - **🔴 Open:**
   - **Art and audio are procedural or absent.** The planned CC0 packs (Ninja Adventure, from
     itch.io / OpenGameArt) were blocked by the build environment's network policy. `expo-audio`
@@ -319,20 +351,21 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 
 ### SYS-023 — Yotei: open items
 
-- **Status:** 🔴 OPEN (tracking list). Yotei was built on branch `claude/yotei` (2026-11-02).
+- **Status:** 🔴 OPEN (tracking list). Yotei was built on branch `claude/yotei` (2026-11-02), then
+  rebuilt the same day as an offline JSON planner: the LLM route (`/api/yotei/parse`,
+  `plan_parser.py`) and the standalone app's sign-in were removed.
 - **Priority:** P2
-- **Area:** `apps/yotei/`, `backend/app/services/plan_parser.py`, `mobile/src/presentation/screens/YoteiScreen.tsx`
+- **Area:** `apps/yotei/`, `mobile/src/presentation/screens/YoteiScreen.tsx`
 - **Verified:**
-  - `@yotei/core`: 36 Vitest tests.
-  - Backend gate (`backend/tests/test_plan_parser.py`): shared vectors, verbatim gate, 422/413/502/401, chunking. Checked to fail when the quote check is disabled.
-  - Playwright on the standalone web export (Asia/Kolkata, mocked backend and clock): an invented item is dropped by the device; a weekday slot is placed correctly; the week rolls over at local midnight with undone items overdue; state survives a reload.
-  - SystemOS type-checks, lints and bundles for Android with Yotei inside.
+  - `@yotei/core`: 25 Vitest tests, including that the example inside the copy-snippet prompt parses.
+  - SystemOS and the standalone app type-check and bundle for Android; SystemOS lint is clean.
 - **🔴 Open:**
-  - **Live LLM quality not measured.** The gate guarantees nothing unquoted is shown, but a weak model may *miss* items: they appear under "Not picked up", never silently. Converting written dates like "12 Jan" (no year) is left null by design.
-  - **Not run on a device.** Rebuild the dev client for `expo-document-picker` and `expo-file-system` (SystemOS and the standalone app).
+  - **Not run on a device.** `expo-clipboard` is a new native module: rebuild the dev client (SystemOS and the standalone app).
+  - **`pickFocus()` (the Today screen's "Right now" card) is a stub** returning null until implemented.
+  - **Plans can't be edited in place.** To change one, copy its JSON from Plans → Source, edit it (or ask an AI to), and add it again.
+  - **Old Markdown plans** from the first importer still load and show, but their source is Markdown.
   - **Not linked to SystemOS XP or the Hunter Log.**
   - **No reminders/notifications** for upcoming slots yet.
-  - The parse route has no per-user rate limit (same gap as SYS-002).
 
 ## Validation baseline
 
@@ -341,7 +374,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 | `cd mobile && npx tsc --noEmit` | Passes |
 | `./backend/venv/bin/python -m compileall -q backend/app` | Passes |
 | `cd mobile && npm run lint` | 0 errors, 1 warning (the `computeTaskCredit()` placeholder, SYS-018) |
-| Automated tests | SystemOS: none (SYS-014). `@kotodama/core`: 160 passing. `@yotei/core`: 36 passing. `backend/tests/test_plan_parser.py`: 5 passing |
+| Automated tests | SystemOS: none (SYS-014). `@kotodama/core`: 282 passing. `@yotei/core`: 25 passing |
 
 ## Recommended implementation order
 

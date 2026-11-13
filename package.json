@@ -9,9 +9,13 @@
   "scripts": {
     "test:kotodama": "npm run test --workspace @kotodama/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test:yotei": "npm run test --workspace @yotei/core"
+    "test:yotei": "npm run test --workspace @yotei/core",
+    "postinstall": "patch-package"
   },
   "overrides": {
     "expo-asset": "~56.0.20"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

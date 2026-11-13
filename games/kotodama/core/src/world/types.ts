@@ -147,6 +147,8 @@ export interface NpcDef {
   name?: string;
   /** Talking carries the player to another map (ferries between arcs). */
   travelsTo?: { map: string; x: number; y: number };
+  /** Talking opens this folk tale to read; finishing it sets `read_<tale id>`. */
+  readsTale?: string;
 }
 
 export interface EncounterEntry {

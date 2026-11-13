@@ -8,7 +8,7 @@ import { isPassageId, isSentenceId } from '../content/items';
 import { pickNextPrompt } from '../srs/pickNextPrompt';
 import { recordAnswer, type SrsTable } from '../srs/schedule';
 import { createRng } from '../util/rng';
-import { computeDamage } from './damage';
+import { computeDamage, SURGE_CHARGES, surgeMultiplier } from './damage';
 import { buildPrompt, gradeAnswer, type Grade, type Prompt } from './prompts';
 
 export interface Combatant {
@@ -43,7 +43,8 @@ export type BattleEvent =
   | { type: 'prompt'; prompt: Prompt }
   | { type: 'graded'; grade: Grade; itemId: string; answer: string }
   | { type: 'fx'; fx: FxKind; from: string; to: string }
-  | { type: 'damage'; target: string; amount: number; crit: boolean; effective: 'super' | 'weak' | 'normal' }
+  | { type: 'damage'; target: string; amount: number; crit: boolean; effective: 'super' | 'weak' | 'normal'; surged?: boolean }
+  | { type: 'surge'; charges: number }
   | { type: 'miss'; from: string; to: string }
   | { type: 'guarded'; target: string }
   | { type: 'evaded'; target: string }
@@ -69,7 +70,7 @@ export interface BattleState {
   enemies: Combatant[];
   /** Index into `party` of whose move it is. */
   actor: number;
-  pendingMove: MoveId | 'purify' | null;
+  pendingMove: MoveId | 'purify' | 'focus' | null;
   prompt: Prompt | null;
   combo: number;
   /** Events produced by the most recent action, for the renderer to play. */
@@ -77,6 +78,10 @@ export interface BattleState {
   /** Every graded answer this battle; the caller folds these into the SRS table. */
   answers: AnswerLogEntry[];
   kanaPool: string[];
+  /** FOCUS puzzles this battle may offer. Empty until the party has learned FOCUS. */
+  focusPool: string[];
+  /** Charged party hits left from a solved FOCUS puzzle (0 = no surge). */
+  surge: number;
   /** SRS table, updated after every answer. Persist it when the battle ends. */
   srs: SrsTable;
   isBoss: boolean;
@@ -86,6 +91,7 @@ export interface BattleState {
 export type BattleAction =
   | { type: 'choose'; move: MoveId; now: number }
   | { type: 'purify' }
+  | { type: 'focus'; now: number }
   | { type: 'answer'; value: string; elapsedMs: number; now: number }
   | { type: 'flee' };
 
@@ -93,6 +99,7 @@ export interface BattleSetup {
   party: Combatant[];
   enemies: Combatant[];
   kanaPool: string[];
+  focusPool?: string[];
   srs: SrsTable;
   isBoss?: boolean;
   seed: number;
@@ -117,6 +124,8 @@ export function startBattle(setup: BattleSetup): BattleState {
     events: [],
     answers: [],
     kanaPool: [...setup.kanaPool],
+    focusPool: [...(setup.focusPool ?? [])],
+    surge: 0,
     srs: setup.srs,
     isBoss: setup.isBoss ?? false,
     seed: setup.seed,
@@ -143,6 +152,14 @@ export function canPurify(state: BattleState): boolean {
     !!target.trueName &&
     target.hp / target.maxHp <= PURIFY_THRESHOLD
   );
+}
+
+/**
+ * FOCUS: spend this turn on a hard puzzle to charge the party. Not while a surge
+ * is still running, so it can't be stacked, and only once it has been taught.
+ */
+export function canFocus(state: BattleState): boolean {
+  return state.phase === 'choose' && state.focusPool.length > 0 && state.surge === 0;
 }
 
 /** Prompt kinds that only make sense on one kind of item, and how to recognise it. */
@@ -195,6 +212,18 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       return finish();
     }
 
+    case 'focus': {
+      if (!canFocus(s)) return state;
+      const lastItem = s.answers[s.answers.length - 1]?.itemId;
+      const itemId = pickNextPrompt(s.focusPool, s.srs, action.now, rng, lastItem);
+      // The puzzle decides its own prompt kind (resolveKind); 'arrange' is only the request.
+      s.prompt = buildPrompt('arrange', itemId, s.kanaPool, rng, null);
+      s.pendingMove = 'focus';
+      s.phase = 'answer';
+      s.events.push({ type: 'prompt', prompt: s.prompt });
+      return finish();
+    }
+
     case 'answer': {
       if (s.phase !== 'answer' || !s.prompt || !s.pendingMove) return state;
       const prompt = s.prompt;
@@ -221,6 +250,17 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
         }
         s.combo = 0;
         s.events.push({ type: 'purifyFail', target: target.uid });
+      } else if (s.pendingMove === 'focus') {
+        if (correct) {
+          // The solved puzzle keeps the combo alive and charges the whole party.
+          s.combo += 1;
+          s.surge = SURGE_CHARGES;
+          s.events.push({ type: 'fx', fx: 'light', from: actor.uid, to: actor.uid });
+          s.events.push({ type: 'surge', charges: s.surge });
+        } else {
+          s.combo = 0;
+          s.events.push({ type: 'miss', from: actor.uid, to: actor.uid });
+        }
       } else {
         if (correct) {
           s.combo += 1;
@@ -324,7 +364,13 @@ function hit(
     s.events.push({ type: 'evaded', target: defender.uid });
     return;
   }
+  // A surge charges the PARTY's damaging hits; each one spends a charge, even if
+  // the foe then guards it.
+  const surged = attacker.side === 'party' && s.surge > 0 && power > 0;
+  const surge = surged ? surgeMultiplier(s.surge) : 1;
+  if (surged) s.surge -= 1;
   let amount = computeDamage({
+    surge,
     atk: attacker.atk,
     def: defender.def,
     power,
@@ -348,12 +394,12 @@ function hit(
     amount = defender.hp - 1;
     defender.spared = true;
     defender.hp = 1;
-    s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element) });
+    s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element), surged });
     s.events.push({ type: 'spared', target: defender.uid });
     return;
   }
   defender.hp = Math.max(0, defender.hp - amount);
-  s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element) });
+  s.events.push({ type: 'damage', target: defender.uid, amount, crit, effective: elementLabel(element, defender.element), surged });
   if (defender.hp === 0) s.events.push({ type: 'faint', target: defender.uid });
 }
 

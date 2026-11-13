@@ -1,7 +1,11 @@
 import { kanaWhere, type KanaKind, type KanaRow, type Script } from './kana';
-import { wordsForArea, type WordArea } from './words';
+import { wordsForArea, type LessonArea, type WordArea } from './words';
+import { listeningFor } from './listening';
+import { PHRASES } from './phrases';
+import { TALE_PASSAGES } from './tales';
+import { starsFor, type Star } from './puzzles';
 import { kanjiInGroup, type KanjiGroup } from './kanji';
-import { sentencesForArea, type Sentence } from './sentences';
+import { GRAMMAR, lessonGrammarFor, sentencesForArea, type Sentence } from './sentences';
 import { passagesForArea, type PassageArea } from './passages';
 
 /**
@@ -25,6 +29,18 @@ export interface AreaCurriculum {
   sentences?: Sentence['area'][];
   /** Reading-passage sets included in the pool (Arc 5). */
   passages?: PassageArea[];
+  /** The Well of Old Tales: set phrases and proverbs. */
+  phrases?: boolean;
+  /** The Well of Old Tales: the hiragana grammar sentences. */
+  grammar?: boolean;
+  /** The Well of Old Tales: questions on these folk tales (tale ids). */
+  tales?: string[];
+  /** The Terakoya: these classrooms' grammar sentences. */
+  lessonGrammar?: LessonArea[];
+  /** The Terakoya: these classrooms' listening exercises. */
+  listening?: LessonArea[];
+  /** The Terakoya's exam halls: JLPT ★ sentence-building questions of these levels. */
+  stars?: Star['level'][];
 }
 
 const BASIC_ALL: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
@@ -47,6 +63,15 @@ function n3(id: string, label: string, groups: number, all = false): AreaCurricu
 }
 
 const area = (a: Omit<AreaCurriculum, 'script'> & { script?: Script }): AreaCurriculum => ({ script: 'hiragana', ...a });
+
+/** The Terakoya's classrooms, in teaching order. */
+const LESSONS: LessonArea[] = ['lesson1', 'lesson2', 'lesson3', 'lesson4', 'lesson5', 'lesson6', 'lesson7', 'lesson8', 'lesson9', 'lesson10', 'lesson11'];
+
+/** A classroom from room 5 on: its own material plus the room before, so last week comes back. */
+function lesson(n: number, label: string): AreaCurriculum {
+  const sets = LESSONS.slice(n - 2, n);
+  return area({ id: `lesson${n}`, arc: 3, label, newRows: [], rows: [], kinds: [], words: sets, lessonGrammar: sets, listening: sets });
+}
 
 export const CURRICULUM: Record<string, AreaCurriculum> = {
   // ── Arc 1: Sakura Valley (hiragana) ─────────────────────────────────
@@ -90,6 +115,33 @@ export const CURRICULUM: Record<string, AreaCurriculum> = {
   valor: n3('valor', 'N3: communication + change', 8),
   runeforge: n3('runeforge', 'N3: reasons + travel', 10),
   finale: n3('finale', 'N3 mock exam: every N3 kanji, word and passage', 10, true),
+  // ── The Well of Old Tales (side dungeon, opens after Arc 1; hiragana only) ──
+  // No bare kana: these floors teach what kana are FOR. Each floor keeps the
+  // floor before it, and the last one is everything.
+  well1: area({ id: 'well1', arc: 1, label: 'Hiragana words', newRows: [], rows: [], kinds: [], words: ['well1'], tales: ['momotaro'] }),
+  well2: area({ id: 'well2', arc: 1, label: 'Phrases and proverbs', newRows: [], rows: [], kinds: [], words: ['well1', 'well2'], phrases: true, tales: ['urashima'] }),
+  well3: area({ id: 'well3', arc: 1, label: 'Grammar: particles and endings', newRows: [], rows: [], kinds: [], words: ['well2', 'well3'], grammar: true, tales: ['tsuru'] }),
+  well4: area({
+    id: 'well4', arc: 1, label: 'Exercises: words, phrases and grammar', newRows: [], rows: [], kinds: [],
+    words: ['well1', 'well2', 'well3'], phrases: true, grammar: true, tales: ['momotaro', 'urashima', 'tsuru', 'kaguya'],
+  }),
+  // ── The Terakoya (Castle Town's school): kana only, in course order. ─────
+  // Words build up room by room; grammar and listening are this room's plus the last.
+  lesson1: area({ id: 'lesson1', arc: 3, label: 'Lesson: introductions and prices', newRows: [], rows: [], kinds: [], words: ['lesson1'], lessonGrammar: ['lesson1'], listening: ['lesson1'] }),
+  lesson2: area({ id: 'lesson2', arc: 3, label: 'Lesson: daily life and verbs', newRows: [], rows: [], kinds: [], words: ['lesson1', 'lesson2'], lessonGrammar: ['lesson1', 'lesson2'], listening: ['lesson1', 'lesson2'] }),
+  lesson3: area({ id: 'lesson3', arc: 3, label: 'Lesson: adjectives and requests', newRows: [], rows: [], kinds: [], words: ['lesson2', 'lesson3'], lessonGrammar: ['lesson2', 'lesson3'], listening: ['lesson2', 'lesson3'] }),
+  lesson4: area({ id: 'lesson4', arc: 3, label: 'Lesson: people and experiences', newRows: [], rows: [], kinds: [], words: ['lesson3', 'lesson4'], lessonGrammar: ['lesson3', 'lesson4'], listening: ['lesson3', 'lesson4'] }),
+  lesson5: lesson(5, 'Lesson: plans, comparisons, changes'),
+  lesson6: lesson(6, 'Lesson: health, advice, obligation'),
+  // The N5 exam hall: everything from rooms 1-6, plus ★ questions.
+  jlpt5: area({ id: 'jlpt5', arc: 3, label: 'JLPT N5 mock exam', newRows: [], rows: [], kinds: [], words: LESSONS.slice(0, 6), lessonGrammar: LESSONS.slice(0, 6), listening: LESSONS.slice(0, 6), stars: ['n5'] }),
+  lesson7: lesson(7, 'Lesson: can, looks like, giving'),
+  lesson8: lesson(8, 'Lesson: plans, favours, preparing'),
+  lesson9: lesson(9, 'Lesson: hearsay, if, by itself'),
+  lesson10: lesson(10, 'Lesson: polite Japanese (keigo)'),
+  lesson11: lesson(11, 'Lesson: passive and causative'),
+  // The N4 exam hall: everything from rooms 7-11, plus ★ questions of both levels.
+  jlpt4: area({ id: 'jlpt4', arc: 3, label: 'JLPT N4 mock exam', newRows: [], rows: [], kinds: [], words: LESSONS.slice(6), lessonGrammar: LESSONS.slice(6), listening: LESSONS.slice(6), stars: ['n5', 'n4'] }),
 };
 
 function kanjiArea(id: string, label: string, kanji: KanjiGroup[], words: WordArea[], arc: 3 | 4 = 3): AreaCurriculum {
@@ -122,5 +174,11 @@ export function poolForArea(areaId: string): string[] {
     ...(a.words ?? []).flatMap((set) => wordsForArea(set).map((w) => w.id)),
     ...(a.sentences ?? []).flatMap((set) => sentencesForArea(set).map((s) => s.id)),
     ...(a.passages ?? []).flatMap((set) => passagesForArea(set).map((p) => p.id)),
+    ...(a.phrases ? PHRASES.map((p) => p.id) : []),
+    ...(a.grammar ? GRAMMAR.map((g) => g.id) : []),
+    ...TALE_PASSAGES.filter((t) => a.tales?.includes(t.taleId)).map((t) => t.id),
+    ...(a.lessonGrammar ?? []).flatMap((set) => lessonGrammarFor(set).map((s) => s.id)),
+    ...(a.listening ?? []).flatMap((set) => listeningFor(set).map((l) => l.id)),
+    ...(a.stars ?? []).flatMap((level) => starsFor(level).map((q) => q.id)),
   ];
 }

@@ -4,10 +4,12 @@ import type { PromptKind } from '@kotodama/core';
 export const PROMPT_TAG: Record<PromptKind, string> = {
   recognize: 'READ', recall: 'RECALL', listen: 'LISTEN', type: 'TYPE',
   mirror: 'MIRROR', meaning: 'MEANING', spell: 'SPELL', reading: 'READING', context: 'SENTENCE', passage: 'READING PASSAGE',
+  arrange: 'ARRANGE', riddle: 'RIDDLE', hear: 'HEAR',
 };
 
 /** Heading on the prompt card. */
 export const PROMPT_HEADING: Record<PromptKind, string> = {
   recognize: 'READ IT', recall: 'FIND THE KANA', listen: 'LISTEN', type: 'TYPE THE READING',
   mirror: 'FIND ITS MIRROR', meaning: 'WHAT DOES IT MEAN?', spell: 'PICK THE SPELLING', reading: 'HOW IS IT READ?', context: 'FILL THE BLANK', passage: 'ANSWER THE QUESTION',
+  arrange: 'PUT IT IN ORDER', riddle: 'SOLVE THE RIDDLE', hear: 'LISTEN AND ANSWER',
 };

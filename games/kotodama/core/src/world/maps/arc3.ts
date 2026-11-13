@@ -24,6 +24,8 @@ const castle_town: MapDef = {
     'TTTTTTTTTTTTTTTTTTTT',
   ],
   warps: [
+    // The west house is the Terakoya, the temple school (see terakoya.ts).
+    { x: 5, y: 8, to: 'terakoya_1', toX: 7, toY: 9 },
     { x: 9, y: 0, to: 'market_street', toX: 1, toY: 4, requires: 'beat_takeda',
       lockedText: 'The castle gate is shut. Gate Captain Takeda answers only to those who can read the city\'s numbers.' },
   ],
@@ -45,6 +47,11 @@ const castle_town: MapDef = {
       dialogue: [
         { speaker: 'Old Scribe', ja: '木、林、森', text: 'A kanji is a picture with a meaning. 木 is a tree; two make a grove, 林; three make a forest, 森.' },
         { speaker: 'Old Scribe', text: 'Most kanji have two kinds of reading: on\'yomi from China (水 = sui) and kun\'yomi, the native word (水 = mizu).' },
+      ] },
+    { id: 'terakoya_sign', name: 'School Porter', x: 4, y: 9, sprite: 'villager', facing: 'right',
+      dialogue: [
+        { speaker: 'School Porter', ja: 'てらこや', text: 'Terakoya: the temple school. Four classrooms, the same order every beginners\' course follows, from はじめまして to talking about your weekend.' },
+        { speaker: 'School Porter', text: 'All kana, no kanji, and many lessons are HEARD. Come in through this door whenever you like.' },
       ] },
     { id: 'abacus_kid', name: 'Merchant\'s Boy', x: 15, y: 9, sprite: 'villager', facing: 'left',
       dialogue: [{ speaker: 'Merchant\'s Boy', text: 'Abacus-bead spirits roll around the gravel. They only answer to numbers: 一, 十, 百, 千, 万!' }] },
