@@ -170,6 +170,11 @@ export function kanjiMisspellings(text: string): string[] {
 }
 
 /** Readings shown as answers: on'yomi in hiragana and full kun'yomi (stems omitted). */
+/** The reading a learner meets first: the first on'yomi, or the first kun'yomi if it has none. */
+export function mainReading(k: Kanji): string {
+  return k.on[0] ? toHiragana(k.on[0]) : (k.kun[0] as string).replace('.', '');
+}
+
 function shownReadings(k: Kanji): string[] {
   return [...new Set([...k.on.map(toHiragana), ...k.kun.map((r) => r.replace('.', ''))])];
 }
@@ -232,8 +237,10 @@ function buildKanjiPrompt(kind: PromptKind, k: Kanji, pool: readonly string[], r
     case 'type':
       return { ...base, display: k.char, answer: toRomaji(primaryReading(k)), choices: [] };
     default: {
-      // reading: any one of its readings is the answer; no choice may be ANY valid reading.
-      const answer = rng.pick(shownReadings(k));
+      // reading: always the MAIN reading (a learner looking at 一 expects いち, and a rare
+      // reading such as いつ looks like no right answer at all); no choice may be ANY
+      // valid reading, so another correct reading can never be marked wrong.
+      const answer = mainReading(k);
       const valid = new Set(kanjiReadings(k));
       const notValid = (list: string[]) => list.filter((r) => !valid.has(r));
       return {

@@ -4,6 +4,8 @@ import { useFonts } from 'expo-font';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DotGothic16_400Regular } from '@expo-google-fonts/dotgothic16';
 import { PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import { KleeOne_600SemiBold } from '@expo-google-fonts/klee-one/600SemiBold';
+import { FontProvider } from './ui/fonts';
 import { createGameStore } from './state/gameStore';
 import { GameStoreProvider, useGame, useGameApi } from './state/context';
 import { createSaveStore } from './storage/saveStore';
@@ -34,7 +36,7 @@ export function GameRoot({ onExit, onStudySession, onDiagnostic, databaseName = 
       }),
     [databaseName],
   );
-  const [fontsLoaded] = useFonts({ DotGothic16_400Regular, PressStart2P_400Regular });
+  const [fontsLoaded] = useFonts({ DotGothic16_400Regular, PressStart2P_400Regular, KleeOne_600SemiBold });
 
   useEffect(() => {
     void store.getState().boot();
@@ -67,11 +69,13 @@ export function GameRoot({ onExit, onStudySession, onDiagnostic, databaseName = 
     // Own SafeAreaProvider: the game must not depend on what the host app provides.
     <SafeAreaProvider>
       <GameStoreProvider value={store}>
+        <FontProvider>
         <View style={styles.root}>
           <GameErrorBoundary report={(e) => diagnosticRef.current?.(e)} onExit={onExit}>
             <Router onExit={onExit} />
           </GameErrorBoundary>
         </View>
+        </FontProvider>
       </GameStoreProvider>
     </SafeAreaProvider>
   );

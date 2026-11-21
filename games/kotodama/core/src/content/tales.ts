@@ -1,5 +1,6 @@
 import type { Passage } from './passages';
 import type { WellArea } from './words';
+import { FOLK_TALES } from './folktales';
 
 // The Well of Old Tales: four Japanese folk tales (mukashi-banashi) to READ, not
 // to be tested on while reading. Each is retold here in plain hiragana with a
@@ -14,16 +15,19 @@ import type { WellArea } from './words';
 // (save-file keys: append, never renumber).
 
 export interface TalePage {
+  /** Kana, with a space between words. */
   ja: string;
   en: string;
+  /** The same page written with kanji, as an adult would print it (optional). */
+  kanji?: string;
 }
 
 export interface Tale {
   id: string;
   title: string;
   titleJa: string;
-  /** The floor it is read on. */
-  area: WellArea;
+  /** Where it is read: a floor of the well, or a signboard out in the world. */
+  area: WellArea | 'board';
   pages: TalePage[];
 }
 
@@ -80,7 +84,44 @@ export const TALES: readonly Tale[] = [
   },
 ];
 
-const BY_ID = new Map(TALES.map((t) => [t.id, t]));
+// ── Tales on signboards out in the world ─────────────────────────────────
+// Readable by anyone at any time, in kana or in kanji (the reader has a switch).
+// Kept out of TALES, which is exactly the well's four floors.
+const k = (ja: string, kanji: string, en: string): TalePage => ({ ja, kanji, en });
+
+export const BOARD_TALES: readonly Tale[] = [
+  {
+    id: 'kappa', title: "The Kappa's Arm", titleJa: 'かっぱの うで', area: 'board',
+    pages: [
+      k('むかし むかし、 かわの そばの むらに、 いたずらな かっぱが すんで いました。',
+        '昔々、川のそばの村に、いたずらなかっぱが住んでいました。',
+        'Long, long ago, a mischievous kappa lived in the river beside a village.'),
+      k('かっぱの あたまには、 みずの はいった おさらが あります。 その みずが ある かぎり、 かっぱは とても つよいのです。',
+        'かっぱの頭には、水の入ったお皿があります。その水がある限り、かっぱはとても強いのです。',
+        "On a kappa's head is a dish full of water. As long as that water stays, the kappa is very strong."),
+      k('かっぱは よる、 うまや こどもを かわへ ひっぱって、 むらの ひとを こまらせて いました。',
+        'かっぱは夜、馬や子どもを川へ引っぱって、村の人を困らせていました。',
+        'At night the kappa dragged horses and children toward the river, and the villagers were afraid.'),
+      k('あるひ、 かっぱは ちからの つよい さむらいの うまを ひっぱりました。 さむらいは かっぱの うでを つかんで、 ぐいっと ひきました。',
+        'ある日、かっぱは力の強い侍の馬を引っぱりました。侍はかっぱの腕をつかんで、ぐいっと引きました。',
+        "One day the kappa pulled at the horse of a strong samurai. The samurai seized the kappa's arm and pulled hard."),
+      k('すると、 かっぱの うでが すぽんと ぬけて しまいました。 かっぱは なきながら かわへ にげました。',
+        'すると、かっぱの腕がすぽんと抜けてしまいました。かっぱは泣きながら川へ逃げました。',
+        'Pop! The arm came right off. The kappa fled into the river, crying.'),
+      k('その よる、 かっぱが きて いいました。 「うでを かえして ください。 もう わるい ことは しません。 やくそくします。」',
+        'その夜、かっぱが来て言いました。「腕を返してください。もう悪いことはしません。約束します。」',
+        'That night the kappa came and said: "Please give back my arm. I will never do wrong again. I promise."'),
+      k('さむらいが うでを かえすと、 かっぱは うでを つけて、 おれいに きずの くすりの つくりかたを おしえました。',
+        '侍が腕を返すと、かっぱは腕をつけて、お礼に傷の薬の作り方を教えました。',
+        'When the samurai gave it back, the kappa fixed its arm on again and, in thanks, taught him how to make a medicine for wounds.'),
+      k('それから、 むらの ひとは なつに きゅうりを かわへ ながし、 かっぱは むらを まもりました。 めでたし めでたし。',
+        'それから、村の人は夏にきゅうりを川へ流し、かっぱは村を守りました。めでたしめでたし。',
+        'From then on the villagers floated cucumbers down the river each summer, and the kappa guarded the village. And so it ends well.'),
+    ],
+  },
+];
+
+const BY_ID = new Map([...TALES, ...BOARD_TALES, ...FOLK_TALES].map((t) => [t.id, t]));
 
 export function getTale(id: string): Tale {
   const t = BY_ID.get(id);
@@ -120,7 +161,8 @@ const QUESTIONS: Row[] = [
 export type TalePassage = Omit<Passage, 'area'> & { area: WellArea; taleId: string };
 
 export const TALE_PASSAGES: readonly TalePassage[] = QUESTIONS.map(([taleId, text, question, answer, wrong], n) => ({
-  id: `t-${n + 1}`, text, question, answer, wrong, taleId, area: getTale(taleId).area,
+  // Only the well's tales have questions, so the area is always a floor.
+  id: `t-${n + 1}`, text, question, answer, wrong, taleId, area: getTale(taleId).area as WellArea,
 }));
 
 const PASSAGE_BY_ID = new Map(TALE_PASSAGES.map((t) => [t.id, t]));

@@ -185,7 +185,7 @@ const river_crossing: MapDef = {
     'TW~~~~~~H~~~~~WWWWWWWT',
     'TWW~~~~~H~~~~~~WWWWWWT',
     'T~~~ss..=..ss~~~~WWWWT',
-    'Tss.....=......ss~~WWT',
+    '=ss.....=......ss~~WWT',
     'T....,,,=,,,......ss~T',
     'T...,,,,=,,,,,=======T',
     'T...,,,,=,,,,.......sT',
@@ -193,6 +193,7 @@ const river_crossing: MapDef = {
   ],
   warps: [
     { x: 2, y: 0, to: 'sakura_village', toX: 9, toY: 15 },
+    { x: 0, y: 12, to: 'kappa_pond', toX: 14, toY: 7 },
     { x: 20, y: 14, to: 'ninja_hideout', toX: 1, toY: 8, requires: 'beat_bjorn',
       lockedText: 'A Viking scout blocks the eastern path with a rune-shield.' },
   ],
@@ -219,6 +220,42 @@ const river_crossing: MapDef = {
     { familyId: 'kobi', weight: 1, levels: [6, 7] },
   ],
   music: 'river', weather: 'sakura', rideable: true,
+};
+
+// The Kappa Pond: a reed-fringed pond west of the River Crossing, where the river
+// imps live. A signboard holds the folk tale of the kappa's arm (kana or kanji), and
+// one kappa has given up mischief for teaching.
+const kappa_pond: MapDef = {
+  id: 'kappa_pond', name: 'Kappa Pond', nameJa: 'かっぱの いけ', area: 'river',
+  rows: [
+    'TTTTTTTTTTTTTTTT',
+    'T~~~~WWWWWW~~~.T',
+    'T~WWWWWWWWWWW~.T',
+    'T~WWWWWWWWWWW~,T',
+    'T~~WWWWWWWWW~~,T',
+    'Tss~~~~~~~~~~s,T',
+    'T.sssss.,,,sss.T',
+    'T..,,,...,,,...=',
+    'T..,,,.*..,,,..T',
+    'T.*...........*T',
+    'TTTTTTTTTTTTTTTT',
+  ],
+  warps: [{ x: 15, y: 7, to: 'river_crossing', toX: 1, toY: 12 }],
+  npcs: [
+    { id: 'kappa_board', name: 'Tale Board', x: 7, y: 6, sprite: 'board', facing: 'down', readsTale: 'kappa',
+      dialogue: [
+        { speaker: 'Tale Board', ja: 'かっぱの うで', text: 'A weathered board by the water: "The Kappa\'s Arm", the old tale of this pond. Read it in kana, or switch to kanji.' },
+      ] },
+    { id: 'kappa_teacher', name: 'Kappa Kawataro', x: 13, y: 6, sprite: 'suiko0', facing: 'left',
+      dialogue: [
+        { speaker: 'Kawataro', ja: 'きゅうり、 だいすき！', text: 'Kyuuri daisuki: I love cucumbers! That is why cucumber sushi rolls are called かっぱまき, kappa-maki. True story.' },
+        { speaker: 'Kawataro', ja: 'おさらの みず', text: 'Osara no mizu: the water in my head-dish. Bow to a kappa and it bows back, spills its water, and loses its strength. Japanese manners beat any sword.' },
+        { speaker: 'Kawataro', text: 'The wild kappa in the reeds are not tame like me. They answer to さしすせそ. Mind し and す: they love to trick you with them.' },
+      ] },
+  ],
+  encounterRate: 0.16,
+  encounters: [{ familyId: 'suiko', weight: 1, levels: [6, 8] }],
+  music: 'river', weather: 'fireflies', rideable: false,
 };
 
 const ninja_hideout: MapDef = {
@@ -390,5 +427,5 @@ const broken_gate: MapDef = {
 };
 
 export const ARC1_MAPS: readonly MapDef[] = [
-  hayate_dojo, sakura_village, bamboo_grove, river_crossing, ninja_hideout, mountain_pass, moon_shrine, broken_gate,
+  hayate_dojo, sakura_village, bamboo_grove, river_crossing, kappa_pond, ninja_hideout, mountain_pass, moon_shrine, broken_gate,
 ];

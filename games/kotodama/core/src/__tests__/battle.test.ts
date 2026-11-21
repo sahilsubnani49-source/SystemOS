@@ -199,3 +199,13 @@ describe('battle engine', () => {
     expect(canPurify({ ...s, enemies: s.enemies.map((e) => ({ ...e, hp: 1 })) })).toBe(false);
   });
 });
+
+describe('answer timer setting', () => {
+  it('stretches timed moves, removes the timer when off, and never times an untimed move', async () => {
+    const { answerTimeLimit } = await import('../battle/engine');
+    expect(answerTimeLimit(4000, undefined)).toBe(4000);
+    expect(answerTimeLimit(4000, 12000)).toBe(12000);
+    expect(answerTimeLimit(4000, null)).toBeNull();
+    expect(answerTimeLimit(null, 12000)).toBeNull();
+  });
+});

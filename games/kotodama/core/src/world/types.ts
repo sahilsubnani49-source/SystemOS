@@ -149,6 +149,10 @@ export interface NpcDef {
   travelsTo?: { map: string; x: number; y: number };
   /** Talking opens this folk tale to read; finishing it sets `read_<tale id>`. */
   readsTale?: string;
+  /** The keeper of a Storyteller's Hall (arc number): talks about that arc's tales. */
+  storyteller?: number;
+  /** Keeps their post (a teacher by their board): turns and works in place, never walks off. */
+  stationary?: boolean;
 }
 
 export interface EncounterEntry {
@@ -210,9 +214,20 @@ export function visibleNpcs(map: ParsedMap, flags: Record<string, boolean>): Npc
   return map.def.npcs.filter((n) => (!n.hideIf || !flags[n.hideIf]) && (!n.showIf || flags[n.showIf]));
 }
 
-export function isWalkable(map: ParsedMap, x: number, y: number, flags: Record<string, boolean>): boolean {
+/** Live NPC positions by id (the movement engine); without them NPCs stand at home. */
+export type NpcPositions = Record<string, { x: number; y: number }>;
+
+/** The visible NPC standing on (x, y), wherever the movement engine has walked them. */
+export function npcAt(map: ParsedMap, x: number, y: number, flags: Record<string, boolean>, live?: NpcPositions): NpcDef | undefined {
+  return visibleNpcs(map, flags).find((n) => {
+    const p = live?.[n.id] ?? n;
+    return p.x === x && p.y === y;
+  });
+}
+
+export function isWalkable(map: ParsedMap, x: number, y: number, flags: Record<string, boolean>, live?: NpcPositions): boolean {
   if (TILE_PROPS[tileAt(map, x, y)].solid) return false;
-  return !visibleNpcs(map, flags).some((n) => n.x === x && n.y === y);
+  return !npcAt(map, x, y, flags, live);
 }
 
 export function step(x: number, y: number, facing: Facing): [number, number] {

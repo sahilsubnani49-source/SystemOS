@@ -1,4 +1,6 @@
-import type { LessonArea, WellArea, WordArea } from './words';
+import { HONSAI_SENTENCES } from './honsai/forge';
+import { PARTICLE_SENTENCES } from './honsai/particles';
+import type { LessonArea, WellArea, WordArea, HonsaiArea } from './words';
 
 // Arc 4 context sentences: read a whole sentence and pick the word for the blank.
 // Each sentence lists its OWN wrong answers, chosen by hand so that none of them
@@ -15,12 +17,12 @@ export interface Sentence {
   en: string;
   answer: string;
   wrong: [string, string, string];
-  area: Extract<WordArea, 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks'> | WellArea | LessonArea;
+  area: Extract<WordArea, 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks'> | WellArea | LessonArea | HonsaiArea;
   /** Grammar sentences only: the rule the blank tests, shown when the answer is revealed. */
   note?: string;
 }
 
-type N4Area = Exclude<Sentence['area'], WellArea | LessonArea>;
+type N4Area = Exclude<Sentence['area'], WellArea | LessonArea | HonsaiArea>;
 
 type Row = [text: string, en: string, answer: string, wrong: [string, string, string]];
 
@@ -279,7 +281,7 @@ export function lessonGrammarFor(area: LessonArea): Sentence[] {
   return LESSON_GRAMMAR.filter((s) => s.area === area);
 }
 
-const BY_ID = new Map([...SENTENCES, ...GRAMMAR, ...LESSON_GRAMMAR].map((s) => [s.id, s]));
+const BY_ID = new Map([...SENTENCES, ...GRAMMAR, ...LESSON_GRAMMAR, ...HONSAI_SENTENCES, ...PARTICLE_SENTENCES].map((s) => [s.id, s]));
 
 export function getSentence(id: string): Sentence {
   const s = BY_ID.get(id);

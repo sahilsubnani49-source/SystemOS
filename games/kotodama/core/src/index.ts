@@ -13,6 +13,8 @@ export * from './world/types';
 export * from './save/schema';
 export * from './save/party';
 export * from './save/audio';
+export * from './save/fonts';
+export * from './save/skip';
 export * from './util/rng';
 export * from './util/dates';
 export {
@@ -20,6 +22,7 @@ export {
   foeCombatant, nextStreak, horseSpeed, SEALS, sealBonus,
 } from './progression';
 export * from './world/maps';
+export * from './world/checkpoints';
 export * from './content/words';
 export * from './content/items';
 export * from './content/kanji';
@@ -31,4 +34,12 @@ export * from './content/phrases';
 export * from './content/tales';
 export * from './content/puzzles';
 export * from './content/listening';
+export * from './content/lessons';
+export * from './world/townsfolk';
+export * from './world/taleSites';
+export * from './world/npcEngine';
+export * from './world/storyHalls';
+export * from './content/honsai/ledger';
+export { HONSAI_WORDS } from './content/honsai/words';
+export * from './content/folktales';
 export { kanaToPhonemes, phonemesToIds, kokoroTokens, KOKORO_MAX_TOKENS } from './speech/kokoroJa';

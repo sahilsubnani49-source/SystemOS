@@ -1,3 +1,6 @@
+import { honsaiArea, libraryArea, LIBRARY_WINGS } from './honsai/words';
+import { forgeIdsUpTo, honsaiSentencesIn } from './honsai/forge';
+import { PARTICLE_GROUPS, particleIds } from './honsai/particles';
 import { kanaWhere, type KanaKind, type KanaRow, type Script } from './kana';
 import { wordsForArea, type LessonArea, type WordArea } from './words';
 import { listeningFor } from './listening';
@@ -14,7 +17,7 @@ import { passagesForArea, type PassageArea } from './passages';
  */
 export interface AreaCurriculum {
   id: string;
-  arc: 1 | 2 | 3 | 4 | 5;
+  arc: 1 | 2 | 3 | 4 | 5 | 6;
   label: string;
   script: Script;
   /** Rows introduced IN this area (shown on the area banner). */
@@ -41,6 +44,12 @@ export interface AreaCurriculum {
   listening?: LessonArea[];
   /** The Terakoya's exam halls: JLPT ★ sentence-building questions of these levels. */
   stars?: Star['level'][];
+  /** Honsai (Arc 6): this district's grammar and Verb Forge questions. */
+  honsai?: number;
+  /** Honsai: only the conjugation questions of districts up to this one (the forge smith). */
+  forge?: number;
+  /** The Hall of Joints: these particle groups' sentences. */
+  particles?: number[];
 }
 
 const BASIC_ALL: KanaRow[] = ['a', 'k', 's', 't', 'n', 'h', 'm', 'y', 'r', 'w', 'nn'];
@@ -73,7 +82,7 @@ function lesson(n: number, label: string): AreaCurriculum {
   return area({ id: `lesson${n}`, arc: 3, label, newRows: [], rows: [], kinds: [], words: sets, lessonGrammar: sets, listening: sets });
 }
 
-export const CURRICULUM: Record<string, AreaCurriculum> = {
+const BASE_CURRICULUM: Record<string, AreaCurriculum> = {
   // ── Arc 1: Sakura Valley (hiragana) ─────────────────────────────────
   dojo: area({ id: 'dojo', arc: 1, label: 'Vowels', newRows: ['a'], rows: ['a'], kinds: ['basic'] }),
   bamboo: area({ id: 'bamboo', arc: 1, label: 'K-row', newRows: ['k'], rows: ['a', 'k'], kinds: ['basic'] }),
@@ -144,6 +153,59 @@ export const CURRICULUM: Record<string, AreaCurriculum> = {
   jlpt4: area({ id: 'jlpt4', arc: 3, label: 'JLPT N4 mock exam', newRows: [], rows: [], kinds: [], words: LESSONS.slice(6), lessonGrammar: LESSONS.slice(6), listening: LESSONS.slice(6), stars: ['n5', 'n4'] }),
 };
 
+/**
+ * The story arcs teach grammar and vocabulary too, not only kanji: each Arc 3 and Arc 4
+ * area also draws on the Terakoya's lessons, in course order as the story moves on
+ * (N5 lessons through the castle city, N4 lessons up the mountain). The words, grammar
+ * sentences and listening drills are the same items the school uses, so practice in one
+ * place counts in the other.
+ */
+const STORY_LESSONS: Record<string, LessonArea[]> = {
+  castle: ['lesson1'], market: ['lesson1', 'lesson2'], teahouse: ['lesson2', 'lesson3'],
+  gardens: ['lesson3', 'lesson4'], keep: ['lesson4', 'lesson5'], hall: ['lesson5', 'lesson6'],
+  foothills: ['lesson7'], village: ['lesson7', 'lesson8'], monastery: ['lesson8', 'lesson9'],
+  forest: ['lesson9', 'lesson10'], peaks: ['lesson10', 'lesson11'], summit: ['lesson10', 'lesson11'],
+};
+
+/** Honsai's districts: own words, grammar and forge questions, plus the last district's words. */
+function honsaiDistrict(n: number, label: string): AreaCurriculum {
+  const words: WordArea[] = [honsaiArea(n), ...(n > 1 ? [honsaiArea(n - 1)] : [])];
+  return { id: `honsai${n}`, arc: 6, label, script: 'hiragana', newRows: [], rows: [], kinds: [], words, honsai: n };
+}
+
+const HONSAI_CURRICULUM: Record<string, AreaCurriculum> = {
+  honsai1: honsaiDistrict(1, 'Honsai: greetings, people, numbers, time'),
+  honsai2: honsaiDistrict(2, 'Honsai: food, shopping, colours, adjectives'),
+  honsai3: honsaiDistrict(3, 'Honsai: home, family, everyday verbs'),
+  honsai4: honsaiDistrict(4, 'Honsai: motion verbs and the て-form'),
+  honsai5: honsaiDistrict(5, 'Honsai: school, work and the plain forms'),
+  honsai6: honsaiDistrict(6, 'Honsai: travel, places and "if" (たら, ば, と)'),
+  honsai7: honsaiDistrict(7, 'Honsai: feelings, the body; たい, よう, そう'),
+  honsai8: honsaiDistrict(8, 'Honsai: weather, nature; can, passive, なる'),
+  honsai9: honsaiDistrict(9, 'Honsai: festivals, hobbies; させる, giving'),
+  honsai10: honsaiDistrict(10, 'Honsai: the court; keigo'),
+  // The Great Library: the umbrella area (its map), then one practice pool per wing.
+  honsai_library: { id: 'honsai_library', arc: 6, label: 'The Great Library: common words', script: 'hiragana', newRows: [], rows: [], kinds: [], words: LIBRARY_WINGS.map(libraryArea) },
+  ...Object.fromEntries(LIBRARY_WINGS.map((n) => [`library${n}`, { id: `library${n}`, arc: 6, label: `The Great Library: wing ${n}`, script: 'hiragana', newRows: [], rows: [], kinds: [], words: [libraryArea(n)] } as AreaCurriculum])),
+  honsai11: honsaiDistrict(11, 'Honsai: the city, news; すぎる, そうだ, らしい'),
+  honsai12: honsaiDistrict(12, 'Honsai: ideas, language; させられる'),
+  honsai_forge6: { id: 'honsai_forge6', arc: 6, label: 'The Hill Forge: every form so far', script: 'hiragana', newRows: [], rows: [], kinds: [], forge: 6 },
+  honsai_forge9: { id: 'honsai_forge9', arc: 6, label: 'The Target Stall: every form so far', script: 'hiragana', newRows: [], rows: [], kinds: [], forge: 9 },
+  honsai_forge3: { id: 'honsai_forge3', arc: 6, label: 'The Verb Forge: conjugation', script: 'hiragana', newRows: [], rows: [], kinds: [], forge: 3 },
+  // The Hall of Joints first (its lesson scroll teaches the particles), then one practice pool per station.
+  honsai_joints: { id: 'honsai_joints', arc: 6, label: 'The Hall of Joints: particles', script: 'hiragana', newRows: [], rows: [], kinds: [], particles: PARTICLE_GROUPS.map((g) => g.n) },
+  ...Object.fromEntries(PARTICLE_GROUPS.map((g) => [`joints${g.n}`,
+    { id: `joints${g.n}`, arc: 6, label: `Particles: ${g.title}`, script: 'hiragana', newRows: [], rows: [], kinds: [], particles: [g.n] } as AreaCurriculum])),
+};
+
+export const CURRICULUM: Record<string, AreaCurriculum> = Object.fromEntries(
+  Object.entries(BASE_CURRICULUM).map(([id, a]) => {
+    const lessons = STORY_LESSONS[id];
+    if (!lessons) return [id, a];
+    return [id, { ...a, words: [...(a.words ?? []), ...lessons], lessonGrammar: lessons, listening: lessons }];
+  }).concat(Object.entries(HONSAI_CURRICULUM)),
+);
+
 function kanjiArea(id: string, label: string, kanji: KanjiGroup[], words: WordArea[], arc: 3 | 4 = 3): AreaCurriculum {
   return { id, arc, label, script: 'hiragana', newRows: [], rows: [], kinds: [], kanji, words };
 }
@@ -180,5 +242,8 @@ export function poolForArea(areaId: string): string[] {
     ...(a.lessonGrammar ?? []).flatMap((set) => lessonGrammarFor(set).map((s) => s.id)),
     ...(a.listening ?? []).flatMap((set) => listeningFor(set).map((l) => l.id)),
     ...(a.stars ?? []).flatMap((level) => starsFor(level).map((q) => q.id)),
+    ...(a.honsai ? honsaiSentencesIn(a.honsai).map((q) => q.id) : []),
+    ...(a.forge ? forgeIdsUpTo(a.forge) : []),
+    ...(a.particles ? particleIds(a.particles) : []),
   ];
 }

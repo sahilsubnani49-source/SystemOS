@@ -45,3 +45,13 @@ describe('which music plays', () => {
     expect([...new Set(ALL_MAPS.map((m) => m.music))].filter((slot) => !tracks.has(slot))).toEqual([]);
   });
 });
+
+import { fontSettings } from '../index';
+
+describe('font settings', () => {
+  it('defaults to the pixel faces and ignores unknown choices', () => {
+    expect(fontSettings(undefined)).toEqual({ ja: 'pixel', latin: 'pixel' });
+    expect(fontSettings({ font: { ja: 'textbook' } })).toEqual({ ja: 'textbook', latin: 'pixel' });
+    expect(fontSettings({ font: { ja: 'comic-sans', latin: 'clear' } })).toEqual({ ja: 'pixel', latin: 'clear' });
+  });
+});

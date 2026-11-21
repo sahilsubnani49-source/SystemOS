@@ -1,14 +1,22 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { C, F } from '../theme';
+import { fontStyle, useFontSettings } from './fonts';
 
 /** Bordered pixel panel: the game's window frame. */
 export function Panel({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.panel, style]}>{children}</View>;
 }
 
+/** Press Start 2P has no ō or ū: the pixel face shows Momotarō as Momotaro rather than a fallback glyph. */
+const plainLatin = (node: React.ReactNode): React.ReactNode =>
+  typeof node === 'string' ? node.normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC') : Array.isArray(node) ? node.map(plainLatin) : node;
+
 export function PText({ children, style, ja }: { children: React.ReactNode; style?: StyleProp<TextStyle>; ja?: boolean }) {
-  return <Text style={[ja ? styles.ja : styles.pixel, style]}>{children}</Text>;
+  const fonts = useFontSettings();
+  const base = ja ? styles.ja : styles.pixel;
+  // The chosen face goes last: it decides the family (and, for English, the size).
+  return <Text style={[base, style, fontStyle(fonts, !!ja, [base, style])]}>{ja ? children : plainLatin(children)}</Text>;
 }
 
 export function PButton({
@@ -23,6 +31,7 @@ export function PButton({
   testID?: string;
 }) {
   const color = { gold: C.gold, red: C.red, jade: C.jade, violet: C.violet, dim: C.panelEdge }[tone];
+  const fonts = useFontSettings();
   return (
     <Pressable
       testID={testID}
@@ -36,8 +45,8 @@ export function PButton({
         style,
       ]}
     >
-      <Text style={[styles.buttonLabel, { color: tone === 'dim' ? C.paper : color }]}>{label}</Text>
-      {sub ? <Text style={styles.buttonSub}>{sub}</Text> : null}
+      <Text style={[styles.buttonLabel, { color: tone === 'dim' ? C.paper : color }, fontStyle(fonts, false, styles.buttonLabel)]}>{plainLatin(label)}</Text>
+      {sub ? <Text style={[styles.buttonSub, fontStyle(fonts, true, styles.buttonSub)]}>{sub}</Text> : null}
     </Pressable>
   );
 }

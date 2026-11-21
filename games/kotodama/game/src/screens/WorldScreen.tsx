@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { CURRICULUM, getMap, horseSpeed, type Facing } from '@kotodama/core';
+import { CURRICULUM, getMap, horseSpeed, lessonFor, type Facing } from '@kotodama/core';
 import { WorldCanvas } from '../overworld/WorldCanvas';
 import { DPad, RoundButton, useHeldDirection } from '../input/DPad';
 import { DialogueBox } from '../ui/DialogueBox';
 import { GameMenu } from '../ui/GameMenu';
 import { playSfx } from '../audio/music';
 import { TaleReader } from '../ui/TaleReader';
+import { LessonScroll } from '../ui/LessonScroll';
 import { PText } from '../ui/Pixel';
 import { useGame, useGameApi } from '../state/context';
 import { C } from '../theme';
@@ -21,6 +22,8 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
   const stepId = useGame((s) => s.stepId);
   const dialogue = useGame((s) => s.dialogue);
   const tale = useGame((s) => s.tale);
+  const lesson = useGame((s) => s.lesson);
+  const people = useGame((s) => s.npcs);
   const banner = useGame((s) => s.banner);
   const toast = useGame((s) => s.toast);
   const { width, height } = useWindowDimensions();
@@ -44,9 +47,16 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
     () => setMenu((m) => !m),
   );
 
+  // The townspeople's clock: a few decisions a second (the store skips it while anything is open).
+  useEffect(() => {
+    const t = setInterval(() => api.getState().tickNpcs(), 150);
+    return () => clearInterval(t);
+  }, [api]);
+
   useEffect(() => {
     if (!banner) return;
-    const t = setTimeout(() => api.getState().clearBanner(), 2200);
+    // Long enough to read both the Japanese and the English name.
+    const t = setTimeout(() => api.getState().clearBanner(), 5000);
     return () => clearTimeout(t);
   }, [banner, api]);
   useEffect(() => {
@@ -56,15 +66,15 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
   }, [toast, api]);
   // Stop walking the moment a dialogue or battle takes over.
   useEffect(() => {
-    if (dialogue || tale) stop();
-  }, [dialogue, tale, stop]);
+    if (dialogue || tale || lesson) stop();
+  }, [dialogue, tale, lesson, stop]);
 
   if (!save) return null;
   const area = CURRICULUM[getMap(save.mapId).def.area];
 
   return (
     <View style={styles.root}>
-      <WorldCanvas save={save} stepId={stepId} stepMs={stepMs} width={width} height={height} />
+      <WorldCanvas save={save} stepId={stepId} stepMs={stepMs} width={width} height={height} people={people} />
 
       <SafeAreaView style={styles.hud} pointerEvents="box-none">
         <View style={styles.topRow} pointerEvents="box-none">
@@ -72,7 +82,12 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
             <PText style={styles.chipText}>Lv {save.heroLevel}</PText>
             <PText style={[styles.chipText, { color: C.gold }]}>🔥{save.streakDays}</PText>
           </View>
-          <RoundButton label="≡" sub="menu" size={46} color={C.panelEdge} onPress={() => { playSfx('menuClick'); setMenu(true); }} />
+          <View style={styles.topButtons}>
+            {lessonFor(getMap(save.mapId).def.area) ? (
+              <RoundButton label="巻" sub="lesson" size={46} color={'#6B4A2E'} onPress={() => { playSfx('menuClick'); api.getState().openLesson(); }} />
+            ) : null}
+            <RoundButton label="≡" sub="menu" size={46} color={C.panelEdge} onPress={() => { playSfx('menuClick'); setMenu(true); }} />
+          </View>
         </View>
 
         {banner ? (
@@ -88,7 +103,7 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
           </Animated.View>
         ) : null}
 
-        {!dialogue && !menu && !tale ? (
+        {!dialogue && !menu && !tale && !lesson ? (
           <View style={styles.controls} pointerEvents="box-none">
             <DPad start={start} stop={stop} />
             <View style={styles.buttons}>
@@ -103,6 +118,7 @@ export function WorldScreen({ onExit }: { onExit?: () => void }) {
 
       {dialogue ? <DialogueBox dialogue={dialogue} onAdvance={() => api.getState().advanceDialogue()} /> : null}
       {tale ? <TaleReader reading={tale} onTurn={(dir) => api.getState().turnTalePage(dir)} onClose={() => api.getState().closeTale()} /> : null}
+      {lesson && !dialogue ? <LessonScroll open={lesson} onClose={(retreat) => api.getState().closeLesson(retreat)} /> : null}
       {menu ? (
         <GameMenu
           save={save}
@@ -140,6 +156,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   chipText: { fontSize: 9 },
+  topButtons: { flexDirection: 'row', gap: 10 },
   banner: {
     position: 'absolute',
     top: '18%',
