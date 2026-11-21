@@ -314,7 +314,7 @@ When code and docs disagree, the code wins — and update the doc.
 ### Kotodama (`games/kotodama/`)
 
 ```bash
-npm run test --workspace @kotodama/core        # the repo's only automated tests (697)
+npm run test --workspace @kotodama/core        # the repo's only automated tests (717)
 cd games/kotodama/app && npx expo run:android  # standalone app (or run:ios / npm run web)
 ```
 

@@ -155,7 +155,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 
 ### SYS-014 — No automated test suite covers the engine
 
-- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 697 Vitest tests; see SYS-019.)
+- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 717 Vitest tests; see SYS-019.)
 - **Priority:** P1
 - **Area:** `mobile/`, `backend/`
 - **Current behavior:** SystemOS has no test runner or test files.
@@ -233,6 +233,12 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
   voice now also refuses to load without its native module. Verified on a Pixel 8 emulator
   (Android 15): the release APK opens, a new game reaches the dojo. Not verified: a real phone,
   the neural voice download and speech on Android, music on Android, the EAS build itself.
+- **State (2026-11-21): N4 gaps closed.** Checked against KANJIDIC2's old JLPT lists, the
+  course taught 99% of N5 and 82% of N4 kanji one by one; 33 kanji were added and it now
+  teaches all of both. An item-by-item check against a standard N4 grammar list found ~20
+  points missing and ~20 drilled only once; 64 sentences were added to Terakoya rooms 7-11.
+  Verified: tests (`n4coverage.test.ts`). Not verified: the new sentences on screen, a native
+  speaker's check, and that a learner would pass N4: listening practice is still light.
 - **State (2026-11-21): Honsai complete, 5,046 words.** Districts 10-12: Kotonoha Court
   (keigo: honorific and humble verbs, お〜になる, お〜する), Kawaraban Row (the city and news;
   すぎる, hearsay そうだ, らしい, ようだ) and the Tower of Silence (ideas and language;

@@ -258,11 +258,11 @@ listening line and exam question was written for this game. Nothing is copied fr
 | 5 | `terakoya_5` / `lesson5` | plain past, describing nouns, もう/まだ, comparing, つもり, なる | Sensei Kudo |
 | 6 | `terakoya_6` / `lesson6` | んです, すぎる, ほうが いい, ので, なければ, でしょう | Sensei Nakamura |
 | N5 hall | `terakoya_n5` / `jlpt5` | everything from rooms 1-6, plus JLPT ★ questions | Proctor Ishida |
-| 7 | `terakoya_7` / `lesson7` | potential, し, そう (looks), てみる, なら, かもしれない, giving | Sensei Rin |
-| 8 | `terakoya_8` / `lesson8` | volitional, ておく, relative clauses, てくれる/もらう | Sensei Aoki |
-| 9 | `terakoya_9` / `lesson9` | そう (hearsay), って, たら, transitive pairs, てしまう, ながら | Skald Eyvind |
-| 10 | `terakoya_10` / `lesson10` | honorific and humble Japanese, はず, かどうか, やすい | Chamberlain Hosokawa |
-| 11 | `terakoya_11` / `lesson11` | passive, てある, あいだに, causative, ば, のに | Master Kurama |
+| 7 | `terakoya_7` / `lesson7` | potential, ことができる, ようになる, し, そう (looks), ようだ, てみる, なら, かもしれない, にくい, V-かた, giving | Sensei Rin |
+| 8 | `terakoya_8` / `lesson8` | volitional, よてい, ことにする/ことになる, ようにする, ところ, あとで, ておく, ちゃう, relative clauses, てくれる/もらう | Sensei Aoki |
+| 9 | `terakoya_9` / `lesson9` | そう (hearsay), らしい, って, たら, ばあい, だろう, けど/でも/しかし, あまり, ずに, ることがある, とおりに, transitive pairs, てしまう, ながら | Skald Eyvind |
+| 10 | `terakoya_10` / `lesson10` | honorific and humble Japanese, はず, かどうか, やすい, てもかまわない, の/さ nominalisers, ほど〜ない, あいだ | Chamberlain Hosokawa |
+| 11 | `terakoya_11` / `lesson11` | passive, てある, あいだに, causative, ば, のに, ように言う/頼む, imperative and な, たがる, なくては, つづける/おわる, までに | Master Kurama |
 | N4 hall | `terakoya_n4` / `jlpt4` | everything from rooms 7-11, plus ★ questions of both levels | Grand Examiner Kanda |
 
 Each classroom has 16 words (`n-` ids, `words.ts`), 12 grammar sentences with a rule note
@@ -272,6 +272,12 @@ also review the room before. Passing an exam sets `pass_lessonN` (or `pass_jlpt5
 battles; the exam halls have no wild spirits and an attendant who heals. Rewards: Warashi
 (room 4), Yamabiko (N5 hall), Baku (N4 hall), and the two exam certificates, which sit in
 `SEALS` as small permanent party bonuses.
+
+The N4 rooms were checked item by item against a standard N4 grammar list, and the kanji
+against KANJIDIC2's (pre-2010) JLPT lists. The gaps found were closed: 64 more sentences in
+rooms 7-11 (`N4_GAPS` in `sentences.ts`, ids `b-x<room>-<n>` so the positional `b-` ids
+never move), and 33 kanji added to the N5 and N4 groups, so every kanji on the N5 and N4
+lists is now taught on its own. `n4coverage.test.ts` keeps both closed.
 
 **Listening** is its own prompt kind, `hear`: a speaker, an English question, English
 answers, never timed, replay by tapping; the text and translation appear on the reveal.

@@ -25,8 +25,8 @@ describe('romaji converter', () => {
 });
 
 describe('N5 kanji data', () => {
-  it('has 106 N5 + ~130 N4 unique kanji with unique primary meanings across both levels', () => {
-    expect(kanjiAt('N5')).toHaveLength(106);
+  it('has 107 N5 + ~160 N4 unique kanji with unique primary meanings across both levels', () => {
+    expect(kanjiAt('N5')).toHaveLength(107);
     expect(kanjiAt('N4').length).toBeGreaterThanOrEqual(125);
     expect(new Set(KANJI.map((k) => k.char)).size).toBe(KANJI.length);
     expect(new Set(KANJI.map((k) => k.meanings[0])).size).toBe(KANJI.length);

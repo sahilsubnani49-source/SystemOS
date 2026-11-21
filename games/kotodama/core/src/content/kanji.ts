@@ -57,6 +57,8 @@ const N5: Partial<Record<KanjiGroup, Row[]>> = {
     ['子', 'child', 'シ ス', 'こ'], ['父', 'father', 'フ', 'ちち'], ['母', 'mother', 'ボ', 'はは'],
     ['友', 'friend', 'ユウ', 'とも'], ['先', 'ahead; previous', 'セン', 'さき'], ['生', 'life; birth', 'セイ ショウ', 'い.きる う.まれる なま'],
     ['学', 'study; learning', 'ガク', 'まな.ぶ'], ['名', 'name', 'メイ ミョウ', 'な'],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['何', 'what', 'カ', 'なに なん'],
   ],
   body: [
     ['口', 'mouth', 'コウ ク', 'くち'], ['目', 'eye', 'モク', 'め'], ['耳', 'ear', 'ジ', 'みみ'],
@@ -128,11 +130,15 @@ const N4: Partial<Record<KanjiGroup, Row[]>> = {
     ['験', 'examination', 'ケン', ''], ['答', 'answer', 'トウ', 'こた.える'], ['問', 'question', 'モン', 'と.う'],
     ['題', 'topic', 'ダイ', ''], ['文', 'writing; sentence', 'ブン モン', 'ふみ'], ['字', 'letter; character', 'ジ', 'あざ'],
     ['英', 'England; excellent', 'エイ', ''], ['漢', 'Han China', 'カン', ''],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['紙', 'paper', 'シ', 'かみ'],
   ],
   n4health: [
     ['心', 'heart; mind', 'シン', 'こころ'], ['頭', 'head', 'トウ ズ', 'あたま'], ['顔', 'face', 'ガン', 'かお'],
     ['声', 'voice', 'セイ', 'こえ'], ['病', 'illness', 'ビョウ', 'や.む やまい'], ['院', 'institution', 'イン', ''],
     ['死', 'death', 'シ', 'し.ぬ'],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['薬', 'medicine (to take)', 'ヤク', 'くすり'], ['首', 'neck', 'シュ', 'くび'], ['力', 'power; strength', 'リョク リキ', 'ちから'],
   ],
   n4movement: [
     ['歩', 'walk', 'ホ', 'ある.く'], ['走', 'run', 'ソウ', 'はし.る'], ['起', 'wake up', 'キ', 'お.きる お.こす'],
@@ -141,6 +147,8 @@ const N4: Partial<Record<KanjiGroup, Row[]>> = {
     ['通', 'pass through', 'ツウ', 'とお.る かよ.う'], ['止', 'stop', 'シ', 'と.まる と.める'], ['使', 'use', 'シ', 'つか.う'],
     ['持', 'hold', 'ジ', 'も.つ'], ['借', 'borrow', 'シャク', 'か.りる'], ['貸', 'lend', 'タイ', 'か.す'],
     ['写', 'copy', 'シャ', 'うつ.す'],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['回', 'turn around; times', 'カイ', 'まわ.る まわ.す'], ['集', 'gather', 'シュウ', 'あつ.まる あつ.める'], ['切', 'cut', 'セツ サイ', 'き.る き.れる'], ['洗', 'wash', 'セン', 'あら.う'],
   ],
   n4town: [
     ['町', 'town', 'チョウ', 'まち'], ['村', 'village', 'ソン', 'むら'], ['京', 'capital', 'キョウ ケイ', ''],
@@ -148,6 +156,8 @@ const N4: Partial<Record<KanjiGroup, Row[]>> = {
     ['堂', 'hall', 'ドウ', ''], ['室', 'room', 'シツ', ''], ['場', 'place', 'ジョウ', 'ば'],
     ['地', 'ground', 'チ ジ', ''], ['図', 'diagram; map', 'ズ ト', 'はか.る'], ['世', 'generation; world', 'セ セイ', 'よ'],
     ['界', 'boundary', 'カイ', ''],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['市', 'city; market', 'シ', 'いち'], ['住', 'live; reside', 'ジュウ', 'す.む'], ['所', 'spot; location', 'ショ', 'ところ'], ['池', 'pond', 'チ', 'いけ'], ['銀', 'silver', 'ギン', ''], ['建', 'build', 'ケン コン', 'た.てる た.つ'], ['工', 'craft; construction', 'コウ ク', ''],
   ],
   n4nature: [
     ['海', 'sea', 'カイ', 'うみ'], ['風', 'wind', 'フウ フ', 'かぜ'], ['野', 'field', 'ヤ', 'の'],
@@ -166,6 +176,9 @@ const N4: Partial<Record<KanjiGroup, Row[]>> = {
     ['不', 'not; un-', 'フ ブ', ''], ['有', 'possess; exist', 'ユウ ウ', 'あ.る'], ['無', 'nothing', 'ム ブ', 'な.い'],
     ['以', 'by means of', 'イ', ''], ['方', 'direction; way', 'ホウ', 'かた'], ['発', 'depart; emit', 'ハツ ホツ', ''],
     ['開', 'open', 'カイ', 'ひら.く あ.く あ.ける'], ['作', 'make', 'サク サ', 'つく.る'], ['業', 'industry', 'ギョウ ゴウ', 'わざ'],
+    // Added: N4 kanji the course had not taught one by one (KANJIDIC2 old JLPT lists).
+    ['合', 'fit; join', 'ゴウ ガッ', 'あ.う あ.わせる'], ['代', 'replace; generation', 'ダイ タイ', 'か.わる か.える よ'], ['度', 'degree; occasion', 'ド', 'たび'], ['質', 'quality; matter', 'シツ シチ', ''], ['元', 'origin', 'ゲン ガン', 'もと'], ['台', 'pedestal; counter for machines', 'ダイ タイ', ''], ['服', 'clothes', 'フク', ''],
+    ['暗', 'dark', 'アン', 'くら.い'], ['短', 'short (length)', 'タン', 'みじか.い'], ['低', 'low', 'テイ', 'ひく.い ひく.める'], ['太', 'fat; thick', 'タイ タ', 'ふと.い ふと.る'], ['明', 'bright', 'メイ ミョウ', 'あか.るい あ.かり'], ['好', 'fond of; like', 'コウ', 'す.き この.む'], ['真', 'true; genuine', 'シン', 'ま まこと'], ['正', 'correct', 'セイ ショウ', 'ただ.しい ただ.す'], ['特', 'special', 'トク', ''], ['菜', 'vegetable; greens', 'サイ', 'な'],
   ],
 };
 

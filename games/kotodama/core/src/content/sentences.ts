@@ -273,9 +273,97 @@ const LESSON_GRAMMAR_DATA: Record<LessonArea, GrammarRow[]> = {
   ],
 };
 
-export const LESSON_GRAMMAR: readonly Sentence[] = (Object.keys(LESSON_GRAMMAR_DATA) as LessonArea[])
-  .flatMap((area) => LESSON_GRAMMAR_DATA[area].map(([text, en, answer, wrong, note]) => ({ text, en, answer, wrong, note, area })))
-  .map((s, n) => ({ ...s, id: `b-${n + 1}` }));
+/**
+ * The rest of N4, added after an item-by-item check against a standard N4 grammar list.
+ * Kept apart from LESSON_GRAMMAR_DATA because those ids are positions across every room:
+ * a row inserted into room 7 would renumber rooms 8-11 and scramble saved review history.
+ * These ids are `b-x<room>-<n>`, so each room can grow on its own. Append only.
+ */
+const N4_GAPS: Partial<Record<LessonArea, GrammarRow[]>> = {
+  lesson7: [
+    ['わたしは かんじを ひゃく かく ＿＿が できます。', 'I can write a hundred kanji.', 'こと', ['もの', 'ところ', 'ため'], 'Dictionary form + ことが できる = can do.'],
+    ['やっと じてんしゃに のれる ＿＿ なりました。', 'At last I have become able to ride a bicycle.', 'ように', ['ために', 'ほうに', 'そうに'], 'Potential + ように なる = come to be able to.'],
+    ['この くすりは にがくて のみ＿＿です。', 'This medicine is bitter and hard to swallow.', 'にくい', ['やすい', 'たい', 'すぎ'], 'ます-stem + にくい = hard to do; + やすい = easy to do.'],
+    ['あめの ひは みちが すべって ＿＿です。', 'On rainy days the road is slippery and hard to walk on.', 'あるきにくい', ['あるくにくい', 'あるいてにくい', 'あるかにくい'], 'ます-stem + にくい: あるきます → あるきにくい.'],
+    ['すみません、 この きっぷの かい＿＿を おしえて ください。', 'Excuse me, please tell me how to buy this ticket.', 'かた', ['こと', 'もの', 'ところ'], 'ます-stem + かた = the way of doing: かいかた, how to buy.'],
+    ['はしの ＿＿が わかりません。', "I don't know how to use chopsticks.", 'つかいかた', ['つかうかた', 'つかってかた', 'つかいほう'], 'つかいます → つかいかた: how to use.'],
+    ['にほんの おふろに はいって ＿＿たいです。', "I'd like to try a Japanese bath.", 'み', ['し', 'く', 'あ'], '～て みる = try doing: はいって みたい.'],
+    ['かおが あかいですね。 ねつが ある＿＿ しれません。', 'Your face is red. You might have a fever.', 'かも', ['から', 'まで', 'ので'], '～かもしれません = maybe, might.'],
+    ['でんきが きえて います。 だれも いない ＿＿です。', 'The lights are off. Nobody seems to be in.', 'よう', ['ほう', 'つもり', 'ばかり'], 'Plain form + ようです = it seems (from what I can see).'],
+  ],
+  lesson8: [
+    ['らいしゅうの げつようびに しゅっちょうする ＿＿です。', "I'm scheduled to go on a business trip next Monday.", 'よてい', ['ほう', 'まま', 'ごろ'], 'Dictionary form + よていです = it is scheduled.'],
+    ['ひこうきは ごご さんじに つく ＿＿です。', 'The plane is due to arrive at 3pm.', 'よてい', ['ほう', 'まま', 'ごろ'], 'よてい: what is planned or timetabled. つもり is your own intention.'],
+    ['あしたから まいあさ はしる ＿＿ しました。', "I've decided to run every morning from tomorrow.", 'ことに', ['ほうに', 'ために', 'そうに'], 'Dictionary form + ことに する = decide to (your own choice).'],
+    ['きょうは どこへも いかない ＿＿ しました。', "I've decided not to go anywhere today.", 'ことに', ['ほうに', 'そうに', 'までに'], 'ない-form + ことに する = decide not to.'],
+    ['らいげつ おおさかへ てんきんする ＿＿ なりました。', "It's been decided that I'll transfer to Osaka next month.", 'ことに', ['ほうに', 'そうに', 'までに'], 'ことに なる = it has been decided, by others or by circumstances.'],
+    ['かいぎは あした ひらかれる ＿＿ なりました。', 'It has been decided that the meeting will be held tomorrow.', 'ことに', ['ほうに', 'そうに', 'までに'], 'ことに なりました: a decision was made, not necessarily by me.'],
+    ['しゅくだいを ぜんぶ やっ＿＿。', "I've gone and done all my homework. (casual)", 'ちゃった', ['じゃった', 'ちった', 'しまた'], '～て しまった, said casually: ～ちゃった (～で しまった → ～じゃった).'],
+    ['かぜを ひかない ＿＿ して います。', "I'm careful not to catch a cold.", 'ように', ['ために', 'までに', 'ほうに'], 'ない-form + ように する = make sure not to.'],
+    ['いまから ばんごはんを たべる ＿＿です。', "I'm just about to eat dinner.", 'ところ', ['ところで', 'ところが', 'ところを'], 'Dictionary form + ところ = just about to.'],
+    ['いま、 しゅくだいを して いる ＿＿です。', "I'm in the middle of doing my homework.", 'ところ', ['ところで', 'ところが', 'ところを'], 'ている + ところ = in the middle of doing.'],
+    ['いま えきに ついた ＿＿です。', 'I have just arrived at the station.', 'ところ', ['ところで', 'ところが', 'ところを'], 'た-form + ところ = have just done. (ばかり is looser: "recently".)'],
+    ['しゅくだいを した ＿＿、 テレビを みます。', "After doing my homework, I'll watch TV.", 'あとで', ['まえに', 'ながら', 'あいだ'], 'た-form + あとで = after doing. まえに takes the dictionary form.'],
+    ['じゅぎょうの ＿＿、 としょかんへ いきます。', "After class, I'll go to the library.", 'あとで', ['てから', 'ながら', 'たら'], 'Noun + の + あとで = after.'],
+    ['おきゃくさんが くるので、 へやを そうじして ＿＿。', "Guests are coming, so I'll clean the room ahead of time.", 'おきます', ['おくます', 'おかます', 'おいます'], '～て おく = do it ahead of time: おく → おきます.'],
+  ],
+  lesson9: [
+    ['あしたは たぶん はれる＿＿。', "It'll probably be sunny tomorrow. (casual)", 'だろう', ['だった', 'ですろう', 'でしだろう'], 'Plain form + だろう = probably: the casual でしょう.'],
+    ['きょうは にちようびだから、 あの みせは しまって いる ＿＿だ。', "It's Sunday, so that shop should be closed.", 'はず', ['ほう', 'まま', 'ごろ'], 'はずだ = it should be so (I reason).'],
+    ['じしんの ＿＿は、 つくえの したに はいって ください。', 'In case of an earthquake, get under a desk.', 'ばあい', ['ため', 'まま', 'ごろ'], 'Noun + の + ばあいは = in the case of.'],
+    ['かいぎに おくれる ＿＿は、 れんらくして ください。', 'If you are going to be late for the meeting, please let us know.', 'ばあい', ['ため', 'まま', 'ごろ'], 'Dictionary form + ばあいは = in the event that.'],
+    ['この みせは やすい＿＿、 あまり おいしく ない。', "This shop is cheap, but it isn't very tasty.", 'けど', ['でも', 'しかし', 'それで'], 'けど (けれど) joins two clauses: but. でも and しかし begin a new sentence.'],
+    ['にほんごは むずかしい＿＿、 たのしいです。', 'Japanese is hard, but fun.', 'けど', ['でも', 'しかし', 'それで'], 'Plain or polite form + けど = but.'],
+    ['きのうは あめでした。 ＿＿、 しあいは ありました。', 'It rained yesterday. Even so, the match went ahead.', 'でも', ['ので', 'から', 'のに'], 'でも at the start of a sentence = but, even so.'],
+    ['たくさん れんしゅうしました。 ＿＿、 まけました。', 'I practised a lot. However, I lost.', 'しかし', ['ので', 'から', 'のに'], 'しかし = however (written, formal). Spoken Japanese says でも.'],
+    ['この えいがは ＿＿ おもしろく ありませんでした。', "This film wasn't very interesting.", 'あまり', ['たくさん', 'ぜひ', 'どうぞ'], 'あまり + negative = not very.'],
+    ['わたしは さかなが ＿＿ すきじゃ ありません。', "I don't like fish very much.", 'あまり', ['たくさん', 'ぜひ', 'どうぞ'], 'あまり 〜ない = not much, not very.'],
+    ['かさを ＿＿に でかけて、 ぬれて しまいました。', 'I went out without an umbrella and got wet.', 'もたず', ['もたない', 'もちず', 'もつず'], 'ない-stem + ずに = without doing (= もたないで).'],
+    ['ときどき あさごはんを たべない ＿＿ あります。', 'Sometimes I skip breakfast.', 'ことが', ['ものが', 'ところが', 'ほうが'], 'Dictionary or ない-form + ことが ある = sometimes.'],
+    ['この みちは あさ こむ ＿＿が あります。', 'This road sometimes gets crowded in the morning.', 'こと', ['もの', 'ため', 'ほう'], 'ることが ある: it sometimes happens.'],
+    ['わたしが いう ＿＿ かいて ください。', 'Please write it exactly as I say.', 'とおりに', ['ほどに', 'までに', 'ために'], 'Dictionary form + とおりに = exactly as.'],
+    ['ちずの ＿＿ いけば、 えきに つきます。', 'If you go as the map shows, you will reach the station.', 'とおりに', ['ほどに', 'までに', 'ために'], 'Noun + の + とおりに = following, just like.'],
+    ['あの レストランは とても たかい＿＿よ。', 'I hear that restaurant is really expensive.', 'らしい', ['らしく', 'らしくて', 'らしさ'], 'らしい = apparently (from what I have heard).'],
+  ],
+  lesson10: [
+    ['ここで しゃしんを とっても ＿＿か。', 'Do you mind if I take a photo here?', 'かまいません', ['いけません', 'ください', 'なりません'], '～ても かまいません = it is all right to.'],
+    ['ペンが なければ、 えんぴつで かいても ＿＿。', "If you don't have a pen, writing in pencil is fine.", 'かまいません', ['いけません', 'ください', 'なりません'], '～ても かまわない = it does not matter if.'],
+    ['この みずが のめる ＿＿ わかりません。', "I don't know whether this water is drinkable.", 'かどうか', ['かどれか', 'かだれか', 'かいつか'], 'Plain form + かどうか = whether or not.'],
+    ['わたしは えを かく＿＿が すきです。', 'I like drawing pictures.', 'の', ['を', 'に', 'で'], 'の turns a verb into a noun: かくのが すき. (こと also works.)'],
+    ['かぎを かける＿＿を わすれました。', 'I forgot to lock the door.', 'の', ['を', 'に', 'で'], 'Verb + のを わすれる = forget to do.'],
+    ['この やまの たか＿＿は どのくらいですか。', 'How high is this mountain?', 'さ', ['く', 'い', 'か'], 'い-adjective minus い + さ = a noun: たかさ, height.'],
+    ['にほんの なつの あつ＿＿に びっくりしました。', 'I was surprised by the heat of the Japanese summer.', 'さ', ['く', 'い', 'か'], 'あつい → あつさ: the heat.'],
+    ['きょうは きのう ＿＿ さむく ありません。', "Today isn't as cold as yesterday.", 'ほど', ['ばかり', 'まで', 'ごろ'], 'A は B ほど 〜ない = A is not as ~ as B.'],
+    ['この アパートは えきに ちかい＿＿、 やすいし、 とても いいです。', 'This flat is near the station and cheap too: really good.', 'し', ['を', 'に', 'の'], '～し、～し lists reasons.'],
+    ['なつやすみの ＿＿、 ずっと いなかに いました。', 'I was in the countryside all through the summer holidays.', 'あいだ', ['あいだに', 'ながら', 'までに'], 'あいだ = for the whole time; あいだに = at some point during.'],
+  ],
+  lesson11: [
+    ['せんせいは がくせいに しずかに する ＿＿ いいました。', 'The teacher told the students to be quiet.', 'ように', ['ために', 'ことに', 'ほうに'], 'Dictionary form + ように いう = tell someone to do.'],
+    ['ははに はやく かえる ＿＿ たのまれました。', 'My mother asked me to come home early.', 'ように', ['ために', 'ことに', 'ほうに'], '～ように たのむ = ask someone to do (here passive: I was asked).'],
+    ['＿＿！ あぶない！', 'Stop! Danger!', 'とまれ', ['とまり', 'とまる', 'とまら'], 'Imperative: Group 1 moves to the え-row: とまる → とまれ. Signs and emergencies use it.'],
+    ['はやく ＿＿！ ちこくするぞ！', "Get up! You'll be late!", 'おきろ', ['おきら', 'おきり', 'おくろ'], 'Group 2 imperative: drop る, add ろ: おきる → おきろ.'],
+    ['ここで たばこを すう＿＿。', "No smoking here! (blunt, like a sign)", 'な', ['ない', 'なく', 'なれ'], 'Dictionary form + な = do not! (a blunt prohibition).'],
+    ['おとうとは あたらしい ゲームを やり＿＿ います。', 'My little brother is eager to play the new game.', 'たがって', ['たくて', 'たい', 'たかって'], "Someone else's want: ます-stem + たがる. やりたがって いる."],
+    ['こどもは みんな そとで あそび＿＿。', 'All children want to play outside.', 'たがります', ['たいます', 'たがいます', 'たくます'], '～たがる: "want to", said about other people.'],
+    ['くすりは まいにち のまなくては ＿＿。', 'You have to take the medicine every day.', 'いけません', ['いいです', 'ください', 'かまいません'], 'ない-form: い → くては いけない = must.'],
+    ['その しごとは わたしに ＿＿ ください。', 'Please let me do that job.', 'させて', ['すさせて', 'されて', 'しさせて'], 'する → させる; させて ください = please let me do it.'],
+    ['ははに もっと ゆっくり ＿＿ ほしいです。', 'I want my mother to rest more.', 'やすんで', ['やすみ', 'やすむ', 'やすみて'], '～て ほしい = I want someone to do it.'],
+    ['あめが みっか ふり＿＿ います。', 'It has kept raining for three days.', 'つづけて', ['つづけって', 'つづきて', 'つづくて'], 'ます-stem + つづける = keep on doing.'],
+    ['かれは ごじかん はしり＿＿ました。', 'He kept running for five hours.', 'つづけ', ['つづけて', 'つづく', 'つづか'], 'はしります → はしりつづける.'],
+    ['この ほんは きのう よみ＿＿ました。', 'I finished reading this book yesterday.', 'おわり', ['おわって', 'おわる', 'おわら'], 'ます-stem + おわる = finish doing.'],
+    ['ごご ごじ＿＿ かえって きて ください。', 'Please come back by 5pm.', 'までに', ['まで', 'ばかり', 'だけ'], 'までに = by (a deadline); まで = until.'],
+    ['この くつは きのう かった ＿＿です。', 'I only bought these shoes yesterday.', 'ばかり', ['ほう', 'ごろ', 'まで'], 'た-form + ばかり = just did (it still feels recent).'],
+  ],
+};
+
+export const LESSON_GRAMMAR: readonly Sentence[] = [
+  ...(Object.keys(LESSON_GRAMMAR_DATA) as LessonArea[])
+    .flatMap((area) => LESSON_GRAMMAR_DATA[area].map(([text, en, answer, wrong, note]) => ({ text, en, answer, wrong, note, area })))
+    .map((s, n) => ({ ...s, id: `b-${n + 1}` })),
+  ...(Object.keys(N4_GAPS) as LessonArea[]).flatMap((area) =>
+    (N4_GAPS[area] as GrammarRow[]).map(([text, en, answer, wrong, note], n) => ({ text, en, answer, wrong, note, area, id: `b-x${area.slice('lesson'.length)}-${n + 1}` })),
+  ),
+];
 
 export function lessonGrammarFor(area: LessonArea): Sentence[] {
   return LESSON_GRAMMAR.filter((s) => s.area === area);
