@@ -16,6 +16,9 @@ export function TaleReader({ reading, onTurn, onClose }: { reading: TaleReading;
   const tale = getTale(reading.taleId);
   const page = tale.pages[reading.page];
   const [showEnglish, setShowEnglish] = useState(false);
+  // Tales printed with kanji too can be read either way; the choice lasts the whole tale.
+  const hasKanji = tale.pages.some((p) => p.kanji);
+  const [script, setScript] = useState<'kana' | 'kanji'>('kana');
 
   // Each new page starts in Japanese only: try to read it first.
   useEffect(() => setShowEnglish(false), [reading.page, reading.taleId]);
@@ -34,11 +37,16 @@ export function TaleReader({ reading, onTurn, onClose }: { reading: TaleReading;
         <ScrollView style={styles.pageBox} contentContainerStyle={styles.pageInner}>
           {/* One Text per word, so a line never breaks inside a word: the spaces are the
               only word boundaries a hiragana-only page has. */}
-          <View style={styles.words}>
-            {page.ja.split(/\s+/).filter(Boolean).map((word, i) => (
-              <PText key={`${i}-${word}`} ja style={styles.ja}>{word}</PText>
-            ))}
-          </View>
+          {script === 'kanji' && page.kanji ? (
+            // Kanji text is printed without spaces, as Japanese books are: it wraps anywhere.
+            <PText ja style={styles.ja}>{page.kanji}</PText>
+          ) : (
+            <View style={styles.words}>
+              {page.ja.split(/\s+/).filter(Boolean).map((word, i) => (
+                <PText key={`${i}-${word}`} ja style={styles.ja}>{word}</PText>
+              ))}
+            </View>
+          )}
           <Pressable
             testID="tale-english"
             accessibilityRole="button"
@@ -54,6 +62,15 @@ export function TaleReader({ reading, onTurn, onClose }: { reading: TaleReading;
           <Pressable onPress={() => speakJa(page.ja)} accessibilityRole="button" accessibilityLabel="hear this page" style={styles.speaker}>
             <PText style={styles.speakerIcon}>🔊</PText>
           </Pressable>
+          {hasKanji ? (
+            <View style={styles.scripts}>
+              {(['kana', 'kanji'] as const).map((sc) => (
+                <Pressable key={sc} testID={`tale-script-${sc}`} accessibilityRole="button" onPress={() => setScript(sc)} style={[styles.script, script === sc && styles.scriptOn]}>
+                  <PText ja style={[styles.scriptText, script === sc && { color: C.ink }]}>{sc === 'kana' ? 'かな' : '漢字'}</PText>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <PText style={styles.count}>{reading.page + 1} / {tale.pages.length}</PText>
         </View>
 
@@ -84,5 +101,9 @@ const styles = StyleSheet.create({
   speaker: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, borderWidth: 2, borderColor: C.panelEdge },
   speakerIcon: { fontSize: 18, lineHeight: 24 },
   count: { fontSize: 9, color: C.dim },
+  scripts: { flexDirection: 'row', gap: 4 },
+  script: { borderWidth: 2, borderColor: C.panelEdge, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 },
+  scriptOn: { backgroundColor: C.gold, borderColor: C.gold },
+  scriptText: { fontSize: 14, lineHeight: 20, color: C.paper },
   nav: { flex: 1 },
 });

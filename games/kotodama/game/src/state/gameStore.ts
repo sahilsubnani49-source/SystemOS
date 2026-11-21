@@ -4,7 +4,9 @@ import {
   migrateSave, newGame, nextStreak, PARTY_SIZE, reduce, rollEncounter, spiritCombatant, startBattle,
   releaseSpirit, spiritToReserve, spiritToTeam, swapSpirits,
   step as stepFrom, toDateStr, visibleNpcs, warpAt,
-  audioSettings, type AudioSettings,
+  audioSettings, fontSettings, type FontSettings, bossLessonFlag, FOLK_SITES, taleReward,
+  foundFlag, hallRewardFlag, storytellerLines,
+  createNpcWorld, npcAt, npcFacePlayer, npcPositions, npcResume, tickNpcs as tickNpcWorld, type NpcWorld, checkpointFor, lessonFlag, lessonFor, skipToArc, type ArcStart, type AudioSettings,
   type BattleAction, type BattleState, type DialogueLine, type Facing, type FoeSpec, type HeroClass,
   type NpcDef, type OwnedSpirit, type Save,
 } from '@kotodama/core';
@@ -27,6 +29,12 @@ export interface TaleReading {
   page: number;
 }
 
+/** A lesson scroll open over the world; with `boss`, its FIGHT button starts that duel. */
+export interface LessonOpen {
+  area: string;
+  boss?: { name: string; winFlag: string };
+}
+
 export interface BattleContext {
   state: BattleState;
   /** Story battle: flag set on victory. Wild battles have none. */
@@ -43,6 +51,8 @@ export interface GameState {
   dialogue: Dialogue | null;
   /** The folk tale open in the reader, if any. Walking and talking wait for it. */
   tale: TaleReading | null;
+  /** The lesson scroll being read, if any. Walking and talking wait for it. */
+  lesson: LessonOpen | null;
   battle: BattleContext | null;
   /** Map banner ("Bamboo Grove / たけばやし"), cleared by the UI after showing. */
   banner: { name: string; nameJa: string; label: string } | null;
@@ -52,6 +62,8 @@ export interface GameState {
   toast: string | null;
   /** The game menu is open over the world (the music follows it). */
   menuOpen: boolean;
+  /** Where the people of the current map are and what they are doing (never saved). */
+  npcs: NpcWorld | null;
 
   boot(): Promise<void>;
   openHeroSelect(): void;
@@ -64,6 +76,10 @@ export interface GameState {
   turnTalePage(dir?: 1 | -1): void;
   /** Put the tale down without finishing it. */
   closeTale(): void;
+  /** Unroll the scroll for this map's area (the HUD button). */
+  openLesson(): void;
+  /** Roll the scroll up; before a boss this starts the duel, unless the player retreats. */
+  closeLesson(retreat?: boolean): void;
   battleAction(action: BattleAction): void;
   /** Swap two spirits' places: team with reserve, or the order within the team. */
   swapSpirits(uidA: string, uidB: string): void;
@@ -76,9 +92,17 @@ export interface GameState {
   closeBattle(): void;
   /** Choose the voice Japanese is read in (undefined: let the game pick). */
   setVoice(voiceId: string | undefined): void;
+  /** TESTER TOOL: jump to the start of a later arc (see skipToArc in core). */
+  skipToArc(start: ArcStart): void;
+  /** Answer timer for timed moves (ms; null = off; undefined = each move's own). */
+  setTimer(timerMs: number | null | undefined): void;
   /** Change sound settings (music or effects volume, mute). Saved at once. */
   setAudio(patch: Partial<AudioSettings>): void;
+  /** Change the reading fonts (Japanese and English). Saved at once. */
+  setFont(patch: Partial<FontSettings>): void;
   toggleRide(): void;
+  /** Advance the townspeople: called a few times a second by the world screen. */
+  tickNpcs(): void;
   clearBanner(): void;
   clearToast(): void;
   persist(): Promise<void>;
@@ -121,6 +145,31 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       void get().persist();
     };
 
+    /** The duel a pre-boss scroll is waiting to start. */
+    let pendingBoss: NpcDef | null = null;
+
+    /** Arriving in an area for the first time unrolls its scroll. */
+    const lessonOnArrival = (mapId: string): LessonOpen | null => {
+      const area = getMap(mapId).def.area;
+      const save = get().save;
+      if (!save || save.flags[lessonFlag(area)] || !lessonFor(area)) return null;
+      return { area };
+    };
+
+    /** The NPC world for the map the player is on, built fresh on arrival. */
+    const npcWorld = (): NpcWorld | null => {
+      const save = get().save;
+      if (!save) return null;
+      const w = get().npcs;
+      return w && w.mapId === save.mapId ? w : createNpcWorld(save.mapId, save.flags, now(), (now() & 0xffff) + 1);
+    };
+    /** Live positions, only while they describe the map the player is on. */
+    const livePositions = () => {
+      const save = get().save;
+      const w = get().npcs;
+      return save && w && w.mapId === save.mapId ? npcPositions(w) : undefined;
+    };
+
     const say = (lines: DialogueLine[], npc?: NpcDef) => set({ dialogue: { lines, index: 0, npc } });
 
     const startStoryOrWildBattle = (foes: FoeSpec[], opts: { isBoss: boolean; area: string; winFlag?: string; title: string }) => {
@@ -132,7 +181,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       // Seals (the Well of Old Tales) ride on the save's flags; so does knowing FOCUS.
       const party = [heroCombatant(save), ...save.party.slice(0, PARTY_SIZE).map((p) => spiritCombatant(p, save.srs, save.flags))];
       const state = startBattle({
-        party, enemies, kanaPool: pool, focusPool: focusPool(save.flags), srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32,
+        party, enemies, kanaPool: pool, timerMs: save.timerMs, focusPool: focusPool(save.flags), srs: save.srs, isBoss: opts.isBoss, seed: rng.next() * 2 ** 32,
       });
       update((s) => ({
         ...s,
@@ -145,6 +194,15 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
     const runNpcEffects = (npc: NpcDef) => {
       const save = get().save as Save;
       if (npc.battle && (npc.battle.repeatable || !save.flags[npc.battle.winFlag])) {
+        // A boss is studied for first: the scroll's FIGHT button comes back here.
+        const area = npc.battle.pool ?? getMap(save.mapId).def.area;
+        const isBoss = (npc.battle.isBoss ?? true) && !npc.battle.repeatable;
+        if (isBoss && pendingBoss !== npc && !save.flags[bossLessonFlag(npc.battle.winFlag)] && lessonFor(area)) {
+          pendingBoss = npc;
+          set({ lesson: { area, boss: { name: npc.name ?? 'the boss', winFlag: npc.battle.winFlag } } });
+          return;
+        }
+        pendingBoss = null;
         startStoryOrWildBattle(npc.battle.foes, {
           isBoss: npc.battle.isBoss ?? true,
           area: npc.battle.pool ?? getMap(save.mapId).def.area,
@@ -165,18 +223,29 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         });
         void get().persist();
       }
+      if (npc.storyteller) {
+        const { reward } = storytellerLines(npc.storyteller, save.flags, (id) => getMap(id).def.name);
+        if (reward > 0) {
+          update((s) => ({ ...s, gold: s.gold + reward, flags: { ...s.flags, [hallRewardFlag(npc.storyteller as number)]: true } }));
+          set({ toast: `+${reward} gold from the storyteller.` });
+          void get().persist();
+        }
+      }
       if (npc.heals) set({ toast: 'Your party is fully rested.' });
       if (npc.readsTale) set({ tale: { taleId: npc.readsTale, page: 0 } });
       if (npc.travelsTo) {
         const t = npc.travelsTo;
+        // Reaching a folk tale's place lights its lantern in the Storyteller's Hall.
+        const tale = t.map.startsWith('tale_') ? t.map.slice(5) : null;
         update((s) => ({
           ...s,
+          flags: tale ? { ...s.flags, [foundFlag(tale)]: true } : s.flags,
           mapId: t.map,
           x: t.x,
           y: t.y,
           horse: { ...s.horse, riding: s.horse.riding && getMap(t.map).def.rideable },
         }));
-        set({ banner: bannerFor(t.map), toast: null });
+        set({ banner: bannerFor(t.map), toast: null, lesson: lessonOnArrival(t.map) });
         void get().persist();
       }
     };
@@ -187,11 +256,13 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       hasSave: false,
       dialogue: null,
       tale: null,
+      lesson: null,
       battle: null,
       banner: null,
       stepId: 0,
       toast: null,
       menuOpen: false,
+      npcs: null,
 
       async boot() {
         try {
@@ -210,8 +281,9 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       async startNewGame(hero, name) {
         // A new game keeps how this device is set up to sound: the voice and the volumes.
         const prev = get().save;
-        const save = { ...newGame(hero, name, new Date(now()).toISOString(), now()), voiceId: prev?.voiceId, audio: prev?.audio };
+        const save = { ...newGame(hero, name, new Date(now()).toISOString(), now()), voiceId: prev?.voiceId, audio: prev?.audio, timerMs: prev?.timerMs, font: prev?.font };
         set({ save, hasSave: true, screen: 'world', banner: bannerFor(save.mapId), dialogue: null, tale: null, battle: null });
+        set({ lesson: lessonOnArrival(save.mapId) });
         await get().persist();
       },
 
@@ -220,20 +292,27 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         if (!save) return;
         const today = toDateStr(new Date(now()));
         // Saves written by a newer layout are re-validated before use.
-        const valid = migrateSave(save) ?? save;
+        const migrated = migrateSave(save) ?? save;
+        // Tales read before the halls existed still count as found: light their lanterns.
+        const backfill = Object.keys(migrated.flags).filter((f) => f.startsWith('read_')).map((f) => foundFlag(f.slice(5)));
+        const valid = backfill.some((f) => !migrated.flags[f])
+          ? { ...migrated, flags: { ...migrated.flags, ...Object.fromEntries(backfill.map((f) => [f, true])) } }
+          : migrated;
         set({
           save: { ...valid, streakDays: nextStreak(valid.lastPlayedDate, valid.streakDays, today), lastPlayedDate: today },
           screen: 'world',
           banner: bannerFor(valid.mapId),
+          // A save from before the scrolls existed still gets this region's lesson once.
+          lesson: lessonOnArrival(valid.mapId),
         });
       },
 
       tryStep(dir) {
-        const { save, dialogue, tale, battle, screen } = get();
-        if (!save || dialogue || tale || battle || screen !== 'world') return 'busy';
+        const { save, dialogue, tale, lesson, battle, screen } = get();
+        if (!save || dialogue || tale || lesson || battle || screen !== 'world') return 'busy';
         const map = getMap(save.mapId);
         const [nx, ny] = stepFrom(save.x, save.y, dir);
-        if (!isWalkable(map, nx, ny, save.flags)) {
+        if (!isWalkable(map, nx, ny, save.flags, livePositions())) {
           if (save.facing !== dir) update((s) => ({ ...s, facing: dir }));
           return 'blocked';
         }
@@ -267,7 +346,7 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
             // Indoors you dismount automatically.
             horse: { ...s.horse, riding: s.horse.riding && dest.def.rideable },
           }));
-          set({ banner: bannerFor(warp.to) });
+          set({ banner: bannerFor(warp.to), lesson: lessonOnArrival(warp.to) });
           void get().persist();
           return 'moved';
         }
@@ -292,12 +371,19 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
 
       interact() {
-        const { save, dialogue, tale, battle } = get();
-        if (!save || battle || tale) return;
+        const { save, dialogue, tale, lesson, battle } = get();
+        if (!save || battle || tale || lesson) return;
         if (dialogue) return get().advanceDialogue();
         const [fx, fy] = stepFrom(save.x, save.y, save.facing);
-        const npc = visibleNpcs(getMap(save.mapId), save.flags).find((n) => n.x === fx && n.y === fy);
+        const npc = npcAt(getMap(save.mapId), fx, fy, save.flags, livePositions());
         if (!npc) return;
+        // They stop what they are doing and turn to you.
+        const w = npcWorld();
+        if (w) set({ npcs: npcFacePlayer(w, npc.id, { x: save.x, y: save.y }) });
+        if (npc.storyteller) {
+          say(storytellerLines(npc.storyteller, save.flags, (id) => getMap(id).def.name).lines, npc);
+          return;
+        }
         const beaten = npc.battle && save.flags[npc.battle.winFlag];
         say(beaten && npc.afterDialogue ? npc.afterDialogue : npc.dialogue, npc);
       },
@@ -310,6 +396,8 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
           return;
         }
         set({ dialogue: null });
+        const w = get().npcs;
+        if (w) set({ npcs: npcResume(w, now()) });
         if (d.npc) runNpcEffects(d.npc);
       },
 
@@ -327,8 +415,22 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         // The last page is turned: the tale is read, and its hero can be called up.
         const flag = taleReadFlag(tale.id);
         const first = !save.flags[flag];
-        update((s) => ({ ...s, flags: { ...s.flags, [flag]: true } }));
+        update((s) => ({ ...s, flags: { ...s.flags, [flag]: true, [foundFlag(tale.id)]: true } }));
         set({ tale: null });
+        // A folk tale from the signposts pays out once, the first time it is finished.
+        if (first && FOLK_SITES.some((site) => site.tale.id === tale.id)) {
+          const already = FOLK_SITES.filter((site) => save.flags[taleReadFlag(site.tale.id)]).length;
+          const { gold, xp } = taleReward(tale, already);
+          if (gold > 0 || xp > 0) {
+            update((s) => {
+              const hero = applyXp(s.heroLevel, s.heroXp, xp);
+              return { ...s, gold: s.gold + gold, heroLevel: hero.level, heroXp: hero.xp };
+            });
+            set({ toast: `Tale finished: +${gold} gold, +${xp} XP.` });
+          }
+          void get().persist();
+          return;
+        }
         if (first) {
           say([{ speaker: 'System', text: `You read ${tale.title}. Something stirs at the far end of the hall: the one who lived this tale.` }]);
           void get().persist();
@@ -336,6 +438,30 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       },
 
       closeTale: () => set({ tale: null }),
+
+      openLesson() {
+        const { save, dialogue, tale, battle } = get();
+        if (!save || dialogue || tale || battle) return;
+        const area = getMap(save.mapId).def.area;
+        if (lessonFor(area)) set({ lesson: { area } });
+      },
+
+      closeLesson(retreat = false) {
+        const open = get().lesson;
+        if (!open) return;
+        if (retreat) {
+          // Not ready for the duel: no flag, so the scroll comes back next time.
+          pendingBoss = null;
+          set({ lesson: null });
+          return;
+        }
+        const flag = open.boss ? bossLessonFlag(open.boss.winFlag) : lessonFlag(open.area);
+        update((s) => ({ ...s, flags: { ...s.flags, [flag]: true } }));
+        set({ lesson: null });
+        void get().persist();
+        const boss = pendingBoss;
+        if (open.boss && boss) runNpcEffects(boss);
+      },
 
       battleAction(action) {
         const ctx = get().battle;
@@ -389,8 +515,9 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
           }
         }
         if (after.phase === 'lost') {
-          // Defeat: wake up in the dojo, healed. Lose a third of your gold, keep everything learned.
-          next = { ...next, mapId: 'hayate_dojo', x: 6, y: 4, facing: 'up', gold: Math.floor(next.gold * 0.67) };
+          // Defeat: wake up beside this arc's healer. Lose a third of your gold, keep everything learned.
+          const cp = checkpointFor(next.mapId);
+          next = { ...next, mapId: cp.mapId, x: cp.x, y: cp.y, facing: cp.facing, gold: Math.floor(next.gold * 0.67) };
         }
 
         set({
@@ -404,8 +531,10 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
         const ctx = get().battle;
         if (!ctx?.result) return;
         const lost = ctx.result.outcome === 'lost';
-        set({ battle: null, screen: 'world', banner: lost ? bannerFor('hayate_dojo') : null });
-        if (lost) say([{ speaker: 'Master Kaito', text: 'You were carried back to the dojo. Rest. Every mistake you made is now a kana you will remember.' }]);
+        // The save has already moved to the checkpoint; its keeper greets you there.
+        const cp = lost && get().save ? checkpointFor(get().save!.mapId) : null;
+        set({ battle: null, screen: 'world', banner: cp ? bannerFor(cp.mapId) : null });
+        if (cp) say([{ speaker: cp.speaker, text: cp.text }]);
         const save = get().save;
         if (!ctx.winFlag || !save) return;
         // Story battles continue the NPC's after-dialogue automatically.
@@ -418,8 +547,26 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
       spiritToReserve: (uid) => manageSpirits((s) => spiritToReserve(s, uid)),
       releaseSpirit: (uid) => manageSpirits((s) => releaseSpirit(s, uid)),
 
+      skipToArc(start) {
+        const save = get().save;
+        if (!save || get().battle) return;
+        const next = skipToArc(save, start, () => `sp-${now()}-${Math.floor(Math.random() * 1e6)}`);
+        set({ save: next, banner: bannerFor(next.mapId), dialogue: null, tale: null, lesson: lessonOnArrival(next.mapId), menuOpen: false, toast: `Jumped to ${start.label}.` });
+        void get().persist();
+      },
+
+      setTimer(timerMs) {
+        update((s) => ({ ...s, timerMs }));
+        void get().persist();
+      },
+
       setAudio(patch) {
         update((s) => ({ ...s, audio: { ...audioSettings(s), ...patch } }));
+        void get().persist();
+      },
+
+      setFont(patch) {
+        update((s) => ({ ...s, font: { ...fontSettings(s), ...patch } }));
         void get().persist();
       },
 
@@ -436,6 +583,14 @@ export function createGameStore(deps: GameDeps): StoreApi<GameState> {
           return;
         }
         update((s) => ({ ...s, horse: { ...s.horse, riding: !s.horse.riding } }));
+      },
+
+      tickNpcs() {
+        const { save, dialogue, tale, lesson, battle, screen, menuOpen } = get();
+        if (!save || dialogue || tale || lesson || battle || menuOpen || screen !== 'world') return;
+        const w = npcWorld();
+        if (!w) return;
+        set({ npcs: tickNpcWorld(w, { flags: save.flags, player: { x: save.x, y: save.y }, now: now() }) });
       },
 
       clearBanner: () => set({ banner: null }),

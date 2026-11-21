@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOutUp, ZoomIn, useSharedValue, withSequence, withTiming, useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { BlendColor, Canvas, Circle, Group, Image, LinearGradient, Oval, Rect, useClock, vec } from '@shopify/react-native-skia';
@@ -107,6 +107,23 @@ export function BattleScreen() {
   const seq = useRef(0);
   const shake = useSharedValue(0);
   const lastEvents = useRef<BattleEvent[] | null>(null);
+  // The answer board stays until the player taps: reading the explanation is the lesson.
+  const tapRef = useRef<(() => void) | null>(null);
+  const [tapReady, setTapReady] = useState(false);
+  /** Resolves on the first tap after `minMs` (so the tap that answered cannot dismiss it). */
+  const waitForTap = (minMs: number) =>
+    new Promise<void>((resolve) => {
+      tapRef.current = null;
+      setTapReady(false);
+      setTimeout(() => {
+        setTapReady(true);
+        tapRef.current = () => {
+          tapRef.current = null;
+          setTapReady(false);
+          resolve();
+        };
+      }, minMs);
+    });
 
   const state = ctx?.state;
 
@@ -173,8 +190,8 @@ export function BattleScreen() {
             setVerdict({ ok, text: ok ? '正解!' : ev.grade === 'timeout' ? 'TOO SLOW' : 'MISSED', sub });
             // A two-line reveal carries an explanation (a grammar rule, a proverb's image, why
             // a riddle's answer is the answer): leave time to read it, even when right.
-            const explained = sub.includes('\n');
-            await sleep(ok ? (explained ? 1600 : 650) : explained ? 2800 : 1700);
+            await waitForTap(450);
+            if (!alive()) return;
             setVerdict(null);
             break;
           }
@@ -331,6 +348,7 @@ export function BattleScreen() {
           <Animated.View entering={ZoomIn.duration(160)} style={[styles.verdict, { borderColor: verdict.ok ? C.jade : C.red }]} pointerEvents="none">
             <PText ja style={[styles.verdictText, { color: verdict.ok ? C.jade : C.hpLow }]}>{verdict.text}</PText>
             {verdict.sub ? <PText ja style={styles.verdictSub}>{verdict.sub}</PText> : null}
+            <PText style={[styles.tapHint, !tapReady && { opacity: 0 }]}>TAP TO CONTINUE ▶</PText>
           </Animated.View>
         ) : null}
       </View>
@@ -353,6 +371,10 @@ export function BattleScreen() {
           )}
         </Panel>
       </View>
+      {verdict ? (
+        // The whole screen is the "continue" button while the answer board is up.
+        <Pressable testID="verdict-continue" accessibilityRole="button" accessibilityLabel="continue" style={StyleSheet.absoluteFill} onPress={() => tapRef.current?.()} />
+      ) : null}
     </View>
   );
 }
@@ -509,6 +531,7 @@ const styles = StyleSheet.create({
   },
   verdictText: { fontSize: 28, lineHeight: 36 },
   verdictSub: { fontSize: 18, lineHeight: 24, color: C.paper, textAlign: 'center' },
+  tapHint: { fontSize: 8, color: C.dim, marginTop: 10 },
   panelArea: { flex: 1, padding: 10, justifyContent: 'flex-start' },
   command: { gap: 8 },
   waiting: { fontSize: 9, color: C.dim, textAlign: 'center', paddingVertical: 20 },

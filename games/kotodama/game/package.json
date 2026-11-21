@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo-google-fonts/dotgothic16": "^0.4.2",
+    "@expo-google-fonts/klee-one": "^0.4.2",
     "@expo-google-fonts/press-start-2p": "^0.4.1",
     "@kotodama/core": "*",
     "expo-file-system": "~56.0.11",

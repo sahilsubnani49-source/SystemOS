@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Canvas, Circle, Group, Image, RadialGradient, Rect, RoundedRect, useClock, vec } from '@shopify/react-native-skia';
 import { useDerivedValue, useSharedValue, withTiming, Easing, type SharedValue } from 'react-native-reanimated';
-import { getMap, visibleNpcs, type NpcDef, type Save } from '@kotodama/core';
-import { characterImage, horseImage, mapImage, spriteImage } from '../art/atlas';
+import { getMap, visibleNpcs, type NpcActor, type NpcDef, type NpcWorld, type Save } from '@kotodama/core';
+import { characterImage, emoteImage, horseImage, mapImage, spriteImage } from '../art/atlas';
 import { PIXEL_SAMPLING, SpriteImage } from '../ui/Sprite';
 import { Weather } from '../fx/Weather';
 
@@ -14,7 +14,12 @@ interface Props {
   stepMs: number;
   width: number;
   height: number;
+  /** Live townspeople (the movement engine); null until the first tick. */
+  people: NpcWorld | null;
 }
+
+/** How long an NPC takes to glide one tile: a stroll, slower than the player. */
+const NPC_STEP_MS = 380;
 
 /** Camera offset that centres the player but never shows past the map's edge. */
 function cameraAxis(pos: number, tile: number, view: number, mapTiles: number): number {
@@ -25,7 +30,7 @@ function cameraAxis(pos: number, tile: number, view: number, mapTiles: number): 
   return Math.min(0, Math.max(view - mapPx, want));
 }
 
-export function WorldCanvas({ save, stepId, stepMs, width, height }: Props) {
+export function WorldCanvas({ save, stepId, stepMs, width, height, people }: Props) {
   const map = getMap(save.mapId);
   const tile = Math.floor(width / TILES_ACROSS);
   const heroKey = save.hero;
@@ -74,7 +79,11 @@ export function WorldCanvas({ save, stepId, stepMs, width, height }: Props) {
   const torch = useDerivedValue(() => vec(screenX.value, screenY.value));
   const shadow = useDerivedValue(() => [{ translateX: playerX.value }, { translateY: py.value * tile }]);
 
-  const npcs = visibleNpcs(map, save.flags).slice().sort((a, b) => a.y - b.y);
+  const live = people && people.mapId === save.mapId ? people.actors : undefined;
+  // Back to front by where each person stands NOW, so walkers pass behind and in front.
+  const npcs = visibleNpcs(map, save.flags)
+    .map((n) => ({ npc: n, actor: live?.[n.id] }))
+    .sort((a, b) => (a.actor?.y ?? a.npc.y) - (b.actor?.y ?? b.npc.y));
   const riding = save.horse.riding;
   const darkness = map.def.darkness ?? 0;
 
@@ -90,8 +99,8 @@ export function WorldCanvas({ save, stepId, stepMs, width, height }: Props) {
           height={map.height * tile}
           sampling={PIXEL_SAMPLING}
         />
-        {npcs.map((n) => (
-          <NpcSprite key={n.id} npc={n} tile={tile} pending={!!n.battle && !save.flags[n.battle.winFlag]} />
+        {npcs.map(({ npc, actor }) => (
+          <NpcSprite key={`${save.mapId}:${npc.id}`} npc={npc} actor={actor} tile={tile} pending={!!npc.battle && !save.flags[npc.battle.winFlag]} />
         ))}
         {/* shadow under the player */}
         <Group transform={shadow}>
@@ -122,26 +131,74 @@ export function WorldCanvas({ save, stepId, stepMs, width, height }: Props) {
   );
 }
 
-function NpcSprite({ npc, tile, pending }: { npc: NpcDef; tile: number; pending: boolean }) {
+function NpcSprite({ npc, actor, tile, pending }: { npc: NpcDef; actor?: NpcActor; tile: number; pending: boolean }) {
+  const x = actor?.x ?? npc.x;
+  const y = actor?.y ?? npc.y;
+  const facing = actor?.facing ?? npc.facing;
+  const sx = useSharedValue(x);
+  const sy = useSharedValue(y);
+  const [frame, setFrame] = useState<0 | 1>(0);
+
+  // Glide one tile per step, legs moving; anything further is a jump (a new map).
+  useEffect(() => {
+    if (Math.abs(sx.value - x) + Math.abs(sy.value - y) > 1.01) {
+      sx.value = x;
+      sy.value = y;
+      return;
+    }
+    const cfg = { duration: NPC_STEP_MS, easing: Easing.linear };
+    sx.value = withTiming(x, cfg);
+    sy.value = withTiming(y, cfg);
+    setFrame(1);
+    const t = setTimeout(() => setFrame(0), NPC_STEP_MS * 0.6);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [x, y]);
+
+  // At work the body keeps moving: a sweep, a cast of the line, a bow.
+  const busy = actor?.state === 'task' && !!actor.task;
+  useEffect(() => {
+    if (!busy) return;
+    const t = setInterval(() => setFrame((f) => (f ? 0 : 1)), 480);
+    return () => {
+      clearInterval(t);
+      setFrame(0);
+    };
+  }, [busy]);
+
+  const drawX = useDerivedValue(() => sx.value * tile);
+  const drawY = useDerivedValue(() => sy.value * tile - tile * 0.25);
+  const shadow = useDerivedValue(() => [{ translateX: sx.value * tile }, { translateY: sy.value * tile }]);
+  const bubbleX = useDerivedValue(() => sx.value * tile + tile * 0.3);
+  const bubbleY = useDerivedValue(() => sy.value * tile - tile * 0.95);
+  const alertX = useDerivedValue(() => sx.value * tile + tile / 2);
+  const alertY = useDerivedValue(() => sy.value * tile - tile * 0.5);
+
   return (
     <>
-      <RoundedRect x={npc.x * tile + tile * 0.2} y={npc.y * tile + tile * 0.78} width={tile * 0.6} height={tile * 0.18} r={tile * 0.09} color="rgba(0,0,0,0.28)" />
-      <SpriteImage image={spriteImage(npc.sprite, npc.facing, 0)} x={npc.x * tile} y={npc.y * tile - tile * 0.25} size={tile} />
-      {pending ? <Alert x={npc.x * tile + tile / 2} y={npc.y * tile - tile * 0.5} tile={tile} /> : null}
+      <Group transform={shadow}>
+        <RoundedRect x={tile * 0.2} y={tile * 0.78} width={tile * 0.6} height={tile * 0.18} r={tile * 0.09} color="rgba(0,0,0,0.28)" />
+      </Group>
+      <SpriteImage image={spriteImage(npc.sprite, facing, frame)} x={drawX} y={drawY} size={tile} />
+      {busy && actor?.task ? <SpriteImage image={emoteImage(actor.task)} x={bubbleX} y={bubbleY} size={tile * 0.5} /> : null}
+      {pending ? <Alert x={alertX} y={alertY} tile={tile} /> : null}
     </>
   );
 }
 
 /** Bobbing "!" over NPCs who will fight you. */
-function Alert({ x, y, tile }: { x: number; y: number; tile: number }) {
+function Alert({ x, y, tile }: { x: SharedValue<number>; y: SharedValue<number>; tile: number }) {
   const clock = useClock();
-  const bob: SharedValue<{ translateY: number }[]> = useDerivedValue(() => [{ translateY: Math.sin(clock.value / 180) * 2 }]);
+  const bob = useDerivedValue(() => [
+    { translateX: x.value },
+    { translateY: y.value + Math.sin(clock.value / 180) * 2 },
+  ]);
   const s = tile * 0.12;
   return (
     <Group transform={bob}>
-      <Circle cx={x} cy={y} r={tile * 0.22} color="#E8B04B" />
-      <Rect x={x - s / 2} y={y - s * 1.3} width={s} height={s * 1.6} color="#120C18" />
-      <Rect x={x - s / 2} y={y + s * 0.6} width={s} height={s * 0.6} color="#120C18" />
+      <Circle cx={0} cy={0} r={tile * 0.22} color="#E8B04B" />
+      <Rect x={-s / 2} y={-s * 1.3} width={s} height={s * 1.6} color="#120C18" />
+      <Rect x={-s / 2} y={s * 0.6} width={s} height={s * 0.6} color="#120C18" />
     </Group>
   );
 }

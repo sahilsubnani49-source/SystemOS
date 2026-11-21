@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { fontStyle } from './fonts';
 import {
-  KANJI, KANJI_GROUPS, MAX_STAGE, PARTY_SIZE, SEALS, VOLUME_STEPS, audioSettings, canReleaseSpirit, stepVolume, dueCount, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
+  ARC_STARTS, FOLK_SITES, HONSAI_GOAL, HONSAI_DISTRICTS, honsaiLedger, JA_FONTS, LATIN_FONTS, fontSettings, type JaFont, type LatinFont, getMap, taleReadFlag, KANJI, KANJI_GROUPS, MAX_STAGE, PARTY_SIZE, SEALS, TIMER_CHOICES_S, type ArcStart, VOLUME_STEPS, audioSettings, canReleaseSpirit, stepVolume, dueCount, SPIRIT_FAMILIES, WORDS, familyStage, getFamily, horseSpeed, kanaWhere, primaryReading, xpToNext,
   type KanaRow, type KanjiGroup, type Save, type Script, type SpiritFamily,
 } from '@kotodama/core';
 import { characterImage, spiritImage } from '../art/atlas';
@@ -44,9 +45,15 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
           {tab === 'dex' && <DexTab save={save} />}
           {tab === 'system' && (
             <View style={{ gap: 10 }}>
+              <FontSection save={save} />
+              <TimerSection save={save} />
+              {TESTER_TOOLS ? <SkipSection onDone={onClose} /> : null}
               <SoundSection save={save} />
               <NeuralSection />
               <VoiceSection save={save} />
+              <PText style={styles.dim}>
+                Honsai's words: meanings, readings and verb classes from JMdict, © the Electronic Dictionary Research and Development Group, used under CC BY-SA 4.0.
+              </PText>
               <PText style={styles.dim}>Your game saves automatically on every map change and after every battle.</PText>
               <PButton label="SAVE NOW" sub="セーブ" onPress={onSave} />
               <PButton label="TITLE SCREEN" tone="dim" onPress={onTitle} />
@@ -61,6 +68,142 @@ export function GameMenu({ save, onClose, onSave, onTitle, onExit }: {
 }
 
 const VOICE_SAMPLE = 'こんにちは。 むかし むかし、 ある ところに、 おじいさんと おばあさんが いました。';
+
+/**
+ * TESTER TOOLS: a shortcut to skip arcs already played. Set to false before shipping
+ * to players.
+ */
+const TESTER_TOOLS = true;
+
+function SkipSection({ onDone }: { onDone: () => void }) {
+  const api = useGameApi();
+  const [picked, setPicked] = useState<ArcStart | null>(null);
+  return (
+    <View testID="skip-section" style={[styles.spirit, { borderColor: C.violet }]}>
+      <PText style={[styles.name, { color: C.violet }]}>TESTER: SKIP TO ARC</PText>
+      <PText style={styles.dim}>
+        For testing. Marks every earlier arc's story as done, raises your hero and team to that arc's level, and moves you to its first town. What you have learned is kept.
+      </PText>
+      {picked ? (
+        <View style={{ gap: 6 }}>
+          <PText style={[styles.dim, { color: C.gold }]}>Jump to {picked.label} at level {picked.level}? This cannot be undone.</PText>
+          <View style={styles.actions}>
+            <SmallButton testID="skip-yes" label="YES, JUMP" color={C.violet} onPress={() => { api.getState().skipToArc(picked); setPicked(null); onDone(); }} />
+            <SmallButton testID="skip-no" label="CANCEL" color={C.paper} onPress={() => setPicked(null)} />
+          </View>
+        </View>
+      ) : (
+        <View style={{ gap: 6 }}>
+          {ARC_STARTS.map((s) => (
+            <SmallButton key={s.arc} testID={`skip-arc-${s.arc}`} label={`${s.label.toUpperCase()} (LV ${s.level})`} color={C.violet} onPress={() => setPicked(s)} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const timerLabel = (ms: number | null | undefined) =>
+  ms === undefined ? 'STANDARD (4-6 SEC)' : ms === null ? 'NO TIMER' : `${Math.round(ms / 1000)} SECONDS`;
+
+/** How long timed moves (the ninja's Shuriken Storm and friends) give you to answer. */
+const JA_FONT_NAMES: Record<JaFont, { name: string; note: string }> = {
+  pixel: { name: 'PIXEL', note: 'The game look. Dense kanji can blur.' },
+  textbook: { name: 'TEXTBOOK', note: 'Drawn like a school textbook: every stroke clear.' },
+  clear: { name: 'CLEAR', note: "Your phone's own Japanese font." },
+};
+const LATIN_FONT_NAMES: Record<LatinFont, string> = { pixel: 'PIXEL', clear: 'CLEAR' };
+/** Kanji that turn to mush at pixel resolution, plus kana pairs learners mix up. */
+const FONT_SAMPLE = '曜日 議論 機械 さ ち シ ツ';
+
+/** Reading fonts: three Japanese faces, previewed in themselves, and two English ones. */
+function FontSection({ save }: { save: Save }) {
+  const api = useGameApi();
+  const current = fontSettings(save);
+  return (
+    <View testID="font-section" style={styles.spirit}>
+      <PText style={styles.name}>FONT</PText>
+      <PText style={styles.dim}>If kanji are hard to make out, pick TEXTBOOK or CLEAR. Everything in the game switches at once.</PText>
+      <PText style={styles.dim}>JAPANESE</PText>
+      {JA_FONTS.map((f) => {
+        const on = current.ja === f;
+        return (
+          <Pressable
+            key={f}
+            testID={`font-ja-${f}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Japanese font: ${JA_FONT_NAMES[f].name}`}
+            onPress={() => { playSfx('menuClick'); api.getState().setFont({ ja: f }); }}
+            style={[styles.fontOption, on && styles.fontOptionOn]}
+          >
+            <View style={styles.volumeHead}>
+              <PText style={[styles.smallText, { color: on ? C.gold : C.paper }]}>{JA_FONT_NAMES[f].name}</PText>
+              {on ? <PText style={[styles.smallText, { color: C.gold }]}>✓</PText> : null}
+            </View>
+            {/* Each sample is drawn in its own face, whatever is chosen now. */}
+            <Text style={[styles.fontSample, fontStyle({ ...current, ja: f }, true, styles.fontSample)]}>{FONT_SAMPLE}</Text>
+            <PText style={styles.dim}>{JA_FONT_NAMES[f].note}</PText>
+          </Pressable>
+        );
+      })}
+      <PText style={styles.dim}>ENGLISH</PText>
+      <View style={styles.actions}>
+        {LATIN_FONTS.map((f) => {
+          const on = current.latin === f;
+          return (
+            <Pressable
+              key={f}
+              testID={`font-latin-${f}`}
+              accessibilityRole="button"
+              onPress={() => { playSfx('menuClick'); api.getState().setFont({ latin: f }); }}
+              style={[styles.small, { borderColor: on ? C.gold : C.panelEdge }]}
+            >
+              <Text style={[styles.smallText, { color: on ? C.gold : C.paper }, fontStyle({ ...current, latin: f }, false, styles.smallText)]}>
+                {LATIN_FONT_NAMES[f]} Aa
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function TimerSection({ save }: { save: Save }) {
+  const api = useGameApi();
+  const [open, setOpen] = useState(false);
+  const choose = (ms: number | null | undefined) => {
+    playSfx('menuClick');
+    api.getState().setTimer(ms);
+    setOpen(false);
+  };
+  const options: (number | null | undefined)[] = [undefined, ...TIMER_CHOICES_S.map((s) => (s === 0 ? null : s * 1000))];
+  return (
+    <View testID="timer-section" style={styles.spirit}>
+      <PText style={styles.name}>ANSWER TIMER</PText>
+      <PText style={styles.dim}>
+        {save.hero === 'ninja' ? 'Your ninja moves are timed: answer fast to strike. ' : 'Some moves are timed: answer fast to strike. '}
+        New to Japanese? Give yourself more time. A quick answer still lands a critical hit.
+      </PText>
+      <Pressable testID="timer-picker" accessibilityRole="button" onPress={() => setOpen((o) => !o)} style={styles.dropdown}>
+        <PText style={styles.dropdownText}>{timerLabel(save.timerMs)}</PText>
+        <PText style={styles.dropdownText}>{open ? '▲' : '▼'}</PText>
+      </Pressable>
+      {open ? (
+        <View style={styles.dropdownList}>
+          {options.map((ms) => {
+            const on = ms === save.timerMs;
+            return (
+              <Pressable key={String(ms)} testID={`timer-${ms === undefined ? 'standard' : ms === null ? 'off' : ms / 1000}`} onPress={() => choose(ms)} style={[styles.dropdownItem, on && styles.dropdownItemOn]}>
+                <PText style={[styles.dropdownText, on && { color: C.ink }]}>{timerLabel(ms)}</PText>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 /** One volume control: a row of notches, quieter and louder, and a mute switch. */
 function VolumeRow({ id, label, volume, muted, onVolume, onMute }: {
@@ -367,14 +510,47 @@ function KanaTab({ save }: { save: Save }) {
   );
 }
 
+/** Arc 6: how many of Honsai's words have been taken back from Wapul. */
+function WordLedger({ save }: { save: Save }) {
+  const ledger = honsaiLedger(save.srs);
+  const DISTRICT_NAMES = ['Kotoba Gate', 'Ichiba Market', 'Ie-no-Sato', 'Kakehashi', 'Manabi Hill', 'Minato Harbour', 'Kokoro Garden', 'Kaze Valley', 'Matsuri Town', 'Kotonoha Court', 'Kawaraban Row', 'Tower of Silence', 'Great Library'];
+  return (
+    <View testID="word-ledger" style={styles.ledger}>
+      <PText style={styles.name}>WORD LEDGER · ことばの ちょう</PText>
+      <PText style={styles.dim}>Words restored from Wapul: remembered for a full day in review. Met: asked at least once.</PText>
+      <View style={styles.volumeHead}>
+        <PText style={[styles.smallText, { color: C.gold }]}>{ledger.restored} RESTORED</PText>
+        <PText style={styles.smallText}>{ledger.met} met of {ledger.total} so far</PText>
+      </View>
+      <View style={styles.ledgerBar}>
+        <View style={[styles.ledgerFill, { width: `${Math.min(100, (ledger.restored / HONSAI_GOAL) * 100)}%` }]} />
+      </View>
+      <PText style={styles.dim}>Goal: {HONSAI_GOAL}+ words across {HONSAI_DISTRICTS} districts.</PText>
+      {ledger.districts.map((d) => (
+        <View key={d.district} style={styles.volumeHead}>
+          <PText style={styles.smallText}>{d.district}. {DISTRICT_NAMES[d.district - 1] ?? `District ${d.district}`}</PText>
+          <PText style={[styles.smallText, { color: d.restored === d.total ? C.jade : C.paper }]}>{d.restored} / {d.total}</PText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function WordsTab({ save }: { save: Save }) {
   const seen = WORDS.filter((w) => save.srs[w.id]);
   const vocab = seen.filter((w) => w.kind === 'vocab').length;
+  const ledger = save.flags.honsai_open ? <WordLedger save={save} /> : null;
   if (seen.length === 0) {
-    return <PText style={styles.dim}>Loanwords are taught in the Rune Watchtower of Frost Harbor (Arc 2).</PText>;
+    return (
+      <>
+        {ledger}
+        <PText style={styles.dim}>Loanwords are taught in the Rune Watchtower of Frost Harbor (Arc 2).</PText>
+      </>
+    );
   }
   return (
     <>
+      {ledger}
       <PText style={styles.dim}>
         {seen.length}/{WORDS.length} words met ({vocab} kanji words). Colour = mastery. Tap to hear it.
       </PText>
@@ -399,7 +575,8 @@ function WordsTab({ save }: { save: Save }) {
 
 function DexTab({ save }: { save: Save }) {
   return (
-    <View style={styles.dexGrid}>
+    <>
+      <View style={styles.dexGrid}>
       {SPIRIT_FAMILIES.map((f) => {
         const caught = save.dex.caught.includes(f.id);
         const seen = caught || save.dex.seen.includes(f.id);
@@ -413,11 +590,45 @@ function DexTab({ save }: { save: Save }) {
           </View>
         );
       })}
+      </View>
+      <Storybook save={save} />
+    </>
+  );
+}
+
+/** Every folk tale and the map its signpost stands on; read ones are ticked. */
+function Storybook({ save }: { save: Save }) {
+  const read = FOLK_SITES.filter((s) => save.flags[taleReadFlag(s.tale.id)]).length;
+  return (
+    <View style={styles.storybook}>
+      <PText style={styles.name}>FOLK TALES · {read} / {FOLK_SITES.length} READ</PText>
+      <PText style={styles.dim}>Look for wooden signposts. Each leads to a tale's place, its people and its board.</PText>
+      {FOLK_SITES.map((s) => {
+        const done = !!save.flags[taleReadFlag(s.tale.id)];
+        return (
+          <View key={s.tale.id} style={styles.taleRow}>
+            <PText style={[styles.smallText, { color: done ? C.jade : C.dim, width: 14 }]}>{done ? '✓' : '·'}</PText>
+            <View style={{ flex: 1 }}>
+              <PText ja style={[styles.taleJa, !done && { color: C.paperDim }]}>{s.tale.titleJa}</PText>
+              <PText style={styles.dim}>{s.tale.title} · {getMap(s.host).def.name}</PText>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  storybook: { marginTop: 14, gap: 6 },
+  ledger: { gap: 6, borderWidth: 2, borderColor: C.gold, borderRadius: 4, padding: 10, marginBottom: 12 },
+  ledgerBar: { height: 10, borderRadius: 3, backgroundColor: '#2A2740', overflow: 'hidden' },
+  ledgerFill: { height: 10, backgroundColor: C.gold },
+  fontOption: { borderWidth: 2, borderColor: C.panelEdge, borderRadius: 4, padding: 8, gap: 4 },
+  fontOptionOn: { borderColor: C.gold, backgroundColor: '#1E1A30' },
+  fontSample: { color: C.paper, fontSize: 20, lineHeight: 28 },
+  taleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3, borderBottomWidth: 1, borderBottomColor: '#2A2740' },
+  taleJa: { fontSize: 14, lineHeight: 20, color: C.paper },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(5,4,12,0.72)', justifyContent: 'center', padding: 12 },
   sheet: { maxHeight: '92%' },
   tabs: { flexDirection: 'row', gap: 6, marginBottom: 12 },
@@ -430,6 +641,11 @@ const styles = StyleSheet.create({
   spiritTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   actions: { flexDirection: 'row', gap: 6 },
   volumeHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  dropdown: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 2, borderColor: C.gold, borderRadius: 4, paddingHorizontal: 12, minHeight: 44 },
+  dropdownText: { fontSize: 9, color: C.gold },
+  dropdownList: { borderWidth: 2, borderColor: C.panelEdge, borderRadius: 4 },
+  dropdownItem: { paddingHorizontal: 12, paddingVertical: 10 },
+  dropdownItemOn: { backgroundColor: C.gold },
   notches: { flexDirection: 'row', gap: 3 },
   notch: { flex: 1, height: 8, borderRadius: 2, backgroundColor: '#2A2740' },
   small: { flex: 1, minHeight: 40, borderWidth: 2, borderRadius: 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },

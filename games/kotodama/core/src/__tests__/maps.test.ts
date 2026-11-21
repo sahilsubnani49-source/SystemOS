@@ -17,8 +17,8 @@ const ALL_FLAGS = Object.fromEntries(
 function explore(flags: Record<string, boolean>) {
   const seen = new Set<string>();
   const queue: [string, number, number][] = [[START_MAP, START_POS.x, START_POS.y]];
-  while (queue.length) {
-    const [id, x, y] = queue.shift() as [string, number, number];
+  for (let head = 0; head < queue.length; head++) {
+    const [id, x, y] = queue[head] as [string, number, number];
     const key = `${id}:${x}:${y}`;
     if (seen.has(key)) continue;
     const m = getMap(id);
@@ -81,15 +81,29 @@ describe('Arc 1 maps', () => {
 
   it('makes every map and every NPC reachable once the story is complete', () => {
     const reach = explore(ALL_FLAGS);
+    const reachedMaps = new Set([...reach].map((k) => k.split(':')[0]));
+    // Most NPCs drop no flags, so most checks share one exploration.
+    const explored = new Map<string, Set<string>>([['', reach]]);
+    const exploreWithout = (drop: string[]) => {
+      const key = drop.sort().join(',');
+      let r = explored.get(key);
+      if (!r) {
+        const flags = { ...ALL_FLAGS };
+        drop.forEach((f) => delete flags[f]);
+        r = explore(flags);
+        explored.set(key, r);
+      }
+      return r;
+    };
     for (const d of ALL_MAPS) {
-      expect([...reach].some((k) => k.startsWith(`${d.id}:`)), `${d.id} unreachable`).toBe(true);
+      expect(reachedMaps.has(d.id), `${d.id} unreachable`).toBe(true);
       for (const n of visibleNpcs(getMap(d.id), {})) {
         // NPCs hidden later still had to be reachable while they existed: check with
         // the flags their own story beat needs (everything except their own flags).
-        const flags = { ...ALL_FLAGS };
-        if (n.hideIf) delete flags[n.hideIf];
-        if (n.battle) delete flags[n.battle.winFlag];
-        expect(canTalkTo(explore(flags), d.id, n.x, n.y), `${d.id}/${n.id} unreachable`).toBe(true);
+        // A repeatable sparring battle (forge, Library keeper) never hides anyone or opens a
+        // gate, so its flag changes nothing: don't explore the world again without it.
+        const drop = [n.hideIf, n.battle?.repeatable ? undefined : n.battle?.winFlag].filter((f): f is string => !!f);
+        expect(canTalkTo(exploreWithout(drop), d.id, n.x, n.y), `${d.id}/${n.id} unreachable`).toBe(true);
       }
     }
   });

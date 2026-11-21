@@ -155,7 +155,7 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
 
 ### SYS-014 — No automated test suite covers the engine
 
-- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 282 Vitest tests; see SYS-019.)
+- **Status:** 🔴 OPEN for SystemOS. (Kotodama's `@kotodama/core` has 697 Vitest tests; see SYS-019.)
 - **Priority:** P1
 - **Area:** `mobile/`, `backend/`
 - **Current behavior:** SystemOS has no test runner or test files.
@@ -226,6 +226,80 @@ Status key: ✅ **FIXED** · 🟡 **PARTIALLY FIXED** (the rest is listed under 
   and could be fought again. The core has 282 Vitest tests, including a map validator, a
   boss-pacing simulation over all 33 bosses and the Daily Trial, and data checks on every
   kanji reading, word, sentence and passage.
+- **State (2026-11-13): Android release build.** Two fixes to `onnxruntime-react-native`
+  1.24.3, applied by `patch-package` (`patches/`, root `postinstall`): its Gradle script used
+  `VersionNumber` (gone in Gradle 9), and its stray `unimodule.json` made Expo autolinking skip
+  it on Android, so the native module was missing and the app crashed at launch. The neural
+  voice now also refuses to load without its native module. Verified on a Pixel 8 emulator
+  (Android 15): the release APK opens, a new game reaches the dojo. Not verified: a real phone,
+  the neural voice download and speech on Android, music on Android, the EAS build itself.
+- **State (2026-11-21): Honsai complete, 5,046 words.** Districts 10-12: Kotonoha Court
+  (keigo: honorific and humble verbs, お〜になる, お〜する), Kawaraban Row (the city and news;
+  すぎる, hearsay そうだ, らしい, ようだ) and the Tower of Silence (ideas and language;
+  causative-passive, わけ, はず, べき; two Seals of Silence, then Demon Lord Wapul and an
+  ending with Kaito). The Great Library, off the court, adds 3,150 JMdict common words in 15
+  wings, each with a repeatable keeper battle. Verified: tests, the Library and a keeper
+  battle on the iOS simulator. Not verified: a play-through of 10-12 or the Wapul fight on
+  screen, a native speaker's check of the keigo sentences, Android. Known weakness: Library
+  words are picked by rule (kanji frequency), so some are dry compounds (下期, 員数); a real
+  word-frequency list would rank them better.
+- **State (2026-11-21): Honsai districts 7-9.** A ship from Minato Harbour reaches Kokoro
+  Garden (feelings, the body; たい, volitional, そう), then Kaze Valley (weather, nature;
+  potential, passive, くなる) and Matsuri Town (festivals, hobbies; causative, てあげる/くれる/
+  もらう, ながら; a repeatable target-stall forge). Honsai now has 1,528 words, 108 grammar
+  sentences and about 4,350 Verb Forge questions. Verified: tests, Kokoro Garden on the iOS
+  simulator. Not verified: a play-through of 7-9, Kaze Valley and Matsuri Town on screen, a
+  native speaker's check, Android. Districts 10-12 (Kotonoha, keigo) not built.
+- **State (2026-11-21): Honsai districts 4-6.** Kakehashi (て-form, ている; two Bridge Spirits
+  build its bridges), Manabi Hill (plain past and negative; a second repeatable forge) and
+  Minato Harbour (ば and たら) bring Honsai to 1,080 JMdict-checked words, 72 grammar
+  sentences and 1,833 Verb Forge questions. The engine gained ている and たら. Verified: tests,
+  Kakehashi on the iOS simulator. Not verified: a play-through of districts 4-6, Manabi Hill
+  and Minato Harbour on screen, a native speaker's check, Android. Districts 7-12 not built.
+- **State (2026-11-21): the Hall of Joints.** A particle school in Honsai: six keepers teach
+  before testing, six practice boards, and a lieutenant boss; 89 particle sentences. Verified:
+  tests, the hall and its lesson scroll on the iOS simulator. Not verified: a native speaker's
+  check of the sentences (particles are where a second valid answer is easiest to miss), Android.
+- **State (2026-11-18): Arc 6, Honsai (districts 1-3 of 12).** Post-game Kaito opens Honsai;
+  Kotoba Gate, Ichiba Market and Ie-no-Sato are playable with 570 JMdict-checked words, 36
+  hand-written grammar sentences and about 500 Verb Forge conjugation questions, three
+  lieutenant bosses, a repeatable forge sparring battle, silenced villagers, the Word Ledger,
+  an Arc 6 checkpoint and tester skip. Verified: tests, the opening by store script, Kotoba
+  Gate on the iOS simulator. Not verified: a full play-through of the three districts, the
+  Japanese by a native speaker, Android. Districts 4-12 (て-form bridges onward) are not built.
+- **State (2026-11-17): Storyteller's Halls.** One per arc (`core/src/world/storyHalls.ts`),
+  its gate on the arc's hub map, shown once the arc's final boss falls. Inside: a lit
+  lantern for every folk tale found (`found_<tale>`, set on reaching the tale's place or
+  reading it; old saves are backfilled from `read_` flags on Continue) that carries you
+  there, an unlit one naming the map still to search, and a keeper who counts, hints at a
+  missing tale and pays 300 gold x arc once every tale of the arc is read. Verified: store
+  flow by script, the Arc 1 hall on the iOS simulator. Not verified: Android.
+- **State (2026-11-17): moving NPCs.** `core/src/world/npcEngine.ts` walks townspeople
+  around their homes, sends them to work spots read from the map (fishing by water, sweeping
+  on tatami, praying at a torii, tending lanterns, forging, chatting with a neighbour) and
+  shows what they do as a bubble. Guards, ferrymen, bosses and anyone standing somewhere
+  narrow stay at their post and work in place. Positions are never saved. Safety rule: a
+  walker only stands inside a fully open 3x3 and never beside another NPC, so it cannot block
+  a path; `npcEngine.test.ts` runs every map for 600 ticks and checks that no reachable tile
+  is ever cut off. Verified on the iOS simulator in Sakura Village. Not verified: Android,
+  performance on a low-end phone with many walkers.
+- **State (2026-11-17): folk tales in the world.** 85 Japanese folk tales (duplicates in the
+  tester's list of 100 merged, e.g. the three sparrow tales) each get a signpost on a story
+  map and a small scene of their own: the tale board (kana or kanji, 4 pages), the tale's
+  object or central figure, and up to three of its people, all talking in character
+  (`core/src/content/folktales/`, `world/taleSites.ts`, 57 new props in `game/src/art/props.ts`).
+  The DEX tab lists every tale and where its signpost is. Verified on the iOS simulator: the
+  Peach River and Treasure Ship scenes, the Momotarō board and reader. Not verified: the other
+  83 scenes on screen (the maps test checks every one is reachable and well-formed), Android.
+- **State (2026-11-17): tester feedback batch.** The answer board waits for a tap; defeat
+  returns to the arc's checkpoint; kanji reading questions ask the main reading (the Shadow
+  Shogun's "no right answer" was a rare reading like 一→いつ); the region banner stays 5 s;
+  Arc 3-4 battles add the matching Terakoya grammar, words and listening; the kappa pond off
+  the river with a tale board readable in kana or kanji; lesson scrolls before new areas and
+  bosses; an answer-timer setting; 62 teaching townsfolk; a tester arc skip. Verified on the
+  iOS simulator: the Vowels scroll on Continue, the dojo townsfolk. The boss scroll flow was
+  checked by driving the game store in a script. Not verified: every scroll and townsperson
+  on screen, Android, SystemOS's build.
 - **State (2026-11-13): music and sound effects.** 25 tracks and 12 effects wired through
   `expo-audio`, with volume and mute for each in the System tab. Verified on the iOS
   simulator: the app bundles and runs with the audio code, the Sound controls change and

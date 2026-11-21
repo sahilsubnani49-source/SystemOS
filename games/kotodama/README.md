@@ -139,6 +139,79 @@ across, and RELEASE lets a spirit go for good after a yes/no. The rules are pure
 in `core/src/save/party.ts`: a player who owns a spirit always has one on the team, and the
 last spirit cannot be released. There is no switching during a battle.
 
+## Lessons, townsfolk and checkpoints
+
+- **Lesson scrolls** (`core/src/content/lessons.ts`, `game/src/ui/LessonScroll.tsx`): a
+  scroll unrolls the first time the player enters an area (flag `lesson_<area>`) and before
+  every story boss (`lesson_boss_<winFlag>`; FIGHT or TRAIN MORE). `lessonFor(area)` builds it
+  from the curriculum: only what that area is the first to teach (kana by row and kind,
+  kanji with the reading the battles ask, words, sentences with their rule), or the whole
+  pool as REVIEW. Tap any row to hear it. The 巻 button reopens the current area's scroll.
+- **Townsfolk** (`core/src/world/townsfolk.ts`): 62 unique people, one or two on every story
+  map, each teaching a word, rule or custom. They join the maps in `world/maps/index.ts` and
+  wear a look hashed from their id (`folk:<id>`). Tiles were chosen inside fully open 3x3
+  areas so no one blocks a path; `townsfolk.test.ts` checks names, looks and lines never repeat.
+- **Arc 6: Honsai** (`core/src/world/maps/honsai.ts`, `core/src/content/honsai/`): after the
+  ending, Master Kaito sends the Scribe to Honsai, the land of speech, where Wapul eats
+  forgotten words. All twelve districts are built (Kotoba Gate, Ichiba Market, Ie-no-Sato in
+  `honsai.ts`; Kakehashi, Manabi Hill, Minato Harbour in `honsai2.ts`; Kokoro Garden, Kaze
+  Valley, Matsuri Town in `honsai3.ts`; Kotonoha Court, Kawaraban Row and the Tower of Silence,
+  where Demon Lord Wapul is fought, in `honsai4.ts`): 1,896 hand-picked words. The **Great
+  Library**, through the court's west door, adds 3,150 of JMdict's common words in 15 wings
+  (verbs, adjectives, adverbs, ten noun wings, two loanword wings), each with a keeper who
+  spars on that wing as often as you like: 5,046 words in all. Library words are chosen by
+  `tools/honsai/pick_library.py`, not by hand, and have their own ids (`x-l-<romaji>`). The
+  Forge drills polite forms (1–3), て/ている (4), plain past and negative (5), ば/たら (6), たい,
+  volitional and adjective そう (7), potential, passive and adverb く/に (8), causative and
+  ませんでした (9), すぎる (11) and the causative-passive (12); the court (10) teaches keigo
+  through its words and grammar instead. `forge.ts` skips forms nobody says (降りたい, 分かれる as "can understand",
+  赤そう), and casual ら抜き potentials (食べれる) are never offered as wrong answers. Kakehashi's two rivers are held by Bridge Spirits, beaten
+  to build each bridge. Words come from hand-curated lists checked against
+  JMdict (`tools/honsai/`, see its README), as `x-` word items. Grammar and the **Verb Forge**
+  are `q-` fill-in-the-blank items: hand-written sentences, and conjugation questions made by
+  `conjugate.ts` (every class and form, tested) with plausible wrong forms from other
+  classes' rules. Each district's villagers are silenced (two NPCs per tile, hideIf/showIf the
+  lieutenant's flag) and speak their lost words once it falls. The menu's WORDS tab holds the
+  **Word Ledger** (words restored = survived a day in review).
+- **The Hall of Joints** (`core/src/content/honsai/particles.ts`, map `honsai_joints`): Honsai's
+  particle school, through a gate in Kotoba Gate once the Gatekeeper falls. Six `stationary`
+  keepers teach a group each in dialogue (は/が; を; に/で; へ/から/まで/までに; と/や/も;
+  の/か/ね/よ) beside a repeatable practice board (`joints1`–`joints6`); the Jointless tests all
+  of them (`honsai_joints`). 89 sentences (`q-p<group>-<n>`), each with its rule; any second
+  particle that would also be grammatical is kept out of the wrong choices.
+- **Moving NPCs** (`core/src/world/npcEngine.ts`): a pure engine like the battle one.
+  `createNpcWorld` on arrival, `tickNpcs` about 7 times a second from `WorldScreen` (paused
+  while any dialogue, menu or scroll is open). Behaviours: `still` (boards, signposts, story
+  objects), `turn` (fighters, ferrymen, readers, anyone whose home is a narrow tile: they
+  work in place), `wander` (everyone else: walk within 4 steps of home, do the job a spot's
+  surroundings suggest, chat, go home). Collisions and talking use live positions
+  (`isWalkable(..., live)`, `npcAt`). Walkers never leave tiles inside an open 3x3 nor stand
+  beside each other, so they can never block a path; the engine test proves it per map.
+- **Folk tales** (`core/src/content/folktales/`, `core/src/world/taleSites.ts`): 85 tales,
+  each a `TaleSite`: the tale (4 pages: kana with spaces, kanji, English), a host story map,
+  a scene kind (house, inn, shrine, shore, cave, night...) and the people in it. The builder
+  turns each into a 13x9 map with fixed slots (board, heart, three people) and puts a
+  `signpost` NPC on the host, on an open tile it finds itself. Sprites: characters, spirits,
+  `folk:<preset>:<id>` (old man, princess, monk, ghost...; `characters.ts`) or `prop:<name>`
+  (`game/src/art/props.ts`). `folktales.test.ts` checks scripts and uniqueness; adding a tale
+  is data only. A host with no room left makes the build throw at load, naming the map.
+- **Storyteller's Halls** (`core/src/world/storyHalls.ts`): one per arc, gate on the hub
+  map (`HALLS`), hidden until the arc's final boss is beaten. The hall is generated to fit
+  its tales: rows of six lanterns, `lit_<tale>` (showIf `found_<tale>`, travels to the
+  tale's scene) over `unlit_<tale>` (hideIf, names the host map). The keeper's NPC has
+  `storyteller: <arc>`; the store asks `storytellerLines()` what to say and pays the reward.
+- **Checkpoints** (`core/src/world/checkpoints.ts`): defeat returns the party to the current
+  arc's healer, not Arc 1.
+- **Fonts** (System tab, `save.font`, `core/src/save/fonts.ts`, `game/src/ui/fonts.tsx`):
+  Japanese in PIXEL (DotGothic16), TEXTBOOK (Klee One SemiBold, textbook-style strokes,
+  bundled: about 8 MB) or CLEAR (the phone's own font); English in PIXEL or CLEAR. Every
+  `PText` and `PButton` reads the choice from `FontProvider`; a clear English face is drawn
+  1.45x larger because every size was picked for the very wide Press Start 2P.
+- **Answer timer:** System tab, STANDARD or 4-20 seconds or none (`save.timerMs`).
+- **Tester skip** (System tab, `TESTER_TOOLS` in `GameMenu.tsx`): jumps to the start of a
+  later arc with the earlier story flags and levels (`core/src/save/skip.ts`). Turn the
+  constant off before a release.
+
 ## Voice
 
 Japanese is read aloud in one of two ways, chosen per line by `speakJa`

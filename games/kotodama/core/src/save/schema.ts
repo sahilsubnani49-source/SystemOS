@@ -38,8 +38,12 @@ export interface SaveV1 {
   playSeconds: number;
   /** The player's chosen text-to-speech voice (a device voice id). Unset: the game picks the best one. */
   voiceId?: string;
+  /** Answer timer for timed moves, in ms; null = no timer; unset = each move's own limit. */
+  timerMs?: number | null;
   /** Sound settings (see save/audio.ts). Unset fields take the defaults. */
   audio?: { musicVolume?: number; musicMuted?: boolean; sfxVolume?: number; sfxMuted?: boolean };
+  /** Reading fonts chosen in the menu (see save/fonts.ts). Absent: the pixel fonts. */
+  font?: { ja?: string; latin?: string };
   /** RNG state for overworld encounters, so reloading can't re-roll them. */
   seed: number;
 }

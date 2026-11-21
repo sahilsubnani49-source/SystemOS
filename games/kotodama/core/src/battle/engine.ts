@@ -86,6 +86,8 @@ export interface BattleState {
   srs: SrsTable;
   isBoss: boolean;
   seed: number;
+  /** See BattleSetup.timerMs. */
+  timerMs?: number | null;
 }
 
 export type BattleAction =
@@ -103,7 +105,25 @@ export interface BattleSetup {
   srs: SrsTable;
   isBoss?: boolean;
   seed: number;
+  /**
+   * The player's answer-timer setting for timed moves: a number of ms, `null` for no timer,
+   * or undefined to use each move's own limit.
+   */
+  timerMs?: number | null;
 }
+
+/**
+ * A timed move's limit after the player's setting. Untimed moves stay untimed; the
+ * setting only ever changes how long the timed ones give you.
+ */
+export function answerTimeLimit(moveLimitMs: number | null, timerMs: number | null | undefined): number | null {
+  if (moveLimitMs === null) return null;
+  if (timerMs === undefined) return moveLimitMs;
+  return timerMs;
+}
+
+/** Choices offered in the menu, in seconds (0 = no timer). */
+export const TIMER_CHOICES_S = [4, 6, 8, 10, 12, 14, 16, 18, 20, 0] as const;
 
 /** A foe below this HP fraction can be purified (recruited). */
 export const PURIFY_THRESHOLD = 0.35;
@@ -129,6 +149,7 @@ export function startBattle(setup: BattleSetup): BattleState {
     srs: setup.srs,
     isBoss: setup.isBoss ?? false,
     seed: setup.seed,
+    timerMs: setup.timerMs,
   };
 }
 
@@ -194,7 +215,7 @@ export function reduce(state: BattleState, action: BattleAction): BattleState {
       // passage in the pool (a Daily Trial), Rune Scroll would ask it every turn.
       const useDedicated = dedicated.some((id) => id !== lastItem);
       const itemId = pickNextPrompt(useDedicated ? dedicated : s.kanaPool, s.srs, action.now, rng, lastItem);
-      s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, move.timeLimitMs);
+      s.prompt = buildPrompt(move.prompt, itemId, s.kanaPool, rng, answerTimeLimit(move.timeLimitMs, s.timerMs));
       s.pendingMove = action.move;
       s.phase = 'answer';
       s.events.push({ type: 'prompt', prompt: s.prompt });

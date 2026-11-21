@@ -1,0 +1,210 @@
+# District 4: Kakehashi, the Bridge City. Verbs of motion and action (the て-form bridges), roads, bridges, places.
+渡る|わたる
+通る|とおる
+戻る|もどる
+進む|すすむ
+止まる|とまる
+止める|とめる
+曲がる|まがる
+登る|のぼる
+上がる|あがる
+下がる|さがる
+落ちる|おちる|=to fall; to drop (by itself)
+落とす|おとす|=to drop (something); to lose
+飛ぶ|とぶ
+転ぶ|ころぶ
+倒れる|たおれる|=to fall over; to collapse
+倒す|たおす|=to knock down; to defeat
+運ぶ|はこぶ
+動く|うごく|=to move (by itself)
+動かす|うごかす|=to move (something)
+回る|まわる|=to turn; to go round (by itself)
+回す|まわす|=to turn (something); to spin
+押す|おす
+引く|ひく
+投げる|なげる
+拾う|ひろう
+捨てる|すてる
+取る|とる
+届く|とどく|=to arrive; to reach (a letter arrives)
+届ける|とどける|=to deliver (something)
+着く|つく
+向かう|むかう
+急ぐ|いそぐ
+逃げる|にげる
+追う|おう
+追いかける|おいかける|=to run after (someone)
+迎える|むかえる
+見送る|みおくる
+案内する|あんないする
+散歩する|さんぽする
+旅行する|りょこうする
+運転する|うんてんする
+出発する|しゅっぱつする
+到着する|とうちゃくする
+引っ越す|ひっこす
+集まる|あつまる|=to gather (people come together)
+集める|あつめる|=to collect; to gather (something)
+並ぶ|ならぶ|=to line up (people stand in line)
+並べる|ならべる|=to line up; to arrange (things)
+離れる|はなれる
+近づく|ちかづく
+越える|こえる
+渡す|わたす
+寄る|よる|=to drop by; to stop in
+過ぎる|すぎる
+続く|つづく|=to continue; to go on (by itself)
+続ける|つづける|=to continue (doing something)
+変わる|かわる|=to change (become different)
+変える|かえる|=to change (something)
+決める|きめる
+決まる|きまる|=to be decided
+開く|あく|=to open (by itself)
+閉まる|しまる|=to close; to shut (by itself)
+付く|つく|=to be attached; to come on (a light)
+消える|きえる
+建てる|たてる
+壊す|こわす
+壊れる|こわれる|=to break (by itself); to be broken
+直す|なおす
+直る|なおる|=to be fixed; to get repaired
+割る|わる|=to break (something); to split
+割れる|われる|=to break; to crack (by itself)
+折る|おる|=to break; to fold (something)
+折れる|おれる|=to snap; to break (by itself)
+曲げる|まげる
+結ぶ|むすぶ
+掛ける|かける|=to hang (something); to make (a call)
+掛かる|かかる|=to take (time or money); to hang
+外す|はずす
+繋ぐ|つなぐ
+切れる|きれる
+破る|やぶる
+汚す|よごす|=to make (something) dirty
+汚れる|よごれる|=to get dirty
+濡れる|ぬれる
+乾く|かわく
+冷える|ひえる|=to get cold
+冷やす|ひやす|=to cool; to chill (something)
+温める|あたためる
+沸く|わく|=to boil (water boils)
+沸かす|わかす|=to boil (water); to heat (something)
+燃える|もえる|=to burn (catch fire)
+燃やす|もやす|=to burn (something)
+光る|ひかる
+鳴る|なる|=to ring; to sound (by itself)
+鳴らす|ならす|=to ring (a bell); to sound (something)
+叩く|たたく
+打つ|うつ
+蹴る|ける
+踏む|ふむ
+握る|にぎる
+掴む|つかむ
+触る|さわる
+抱く|だく
+守る|まもる
+助ける|たすける
+戦う|たたかう
+勝つ|かつ
+負ける|まける
+比べる|くらべる
+調べる|しらべる
+頼む|たのむ
+断る|ことわる
+許す|ゆるす
+謝る|あやまる
+褒める|ほめる
+叱る|しかる
+怒る|おこる
+笑う|わらう
+泣く|なく
+喜ぶ|よろこぶ
+驚く|おどろく
+困る|こまる
+迷う|まよう
+信じる|しんじる
+祈る|いのる
+誘う|さそう
+招待する|しょうたいする
+約束する|やくそくする
+相談する|そうだんする
+説明する|せつめいする
+紹介する|しょうかいする
+準備する|じゅんびする
+練習する|れんしゅうする
+失敗する|しっぱいする
+成功する|せいこうする
+我慢する|がまんする
+心配する|しんぱいする
+注意する|ちゅういする
+予約する|よやくする
+確認する|かくにんする
+連絡する|れんらくする
+橋|はし
+川|かわ
+道|みち
+道路|どうろ
+交差点|こうさてん
+信号|しんごう
+角|かど
+横断歩道|おうだんほどう
+歩道|ほどう
+坂|さか
+向こう|むこう
+手前|てまえ
+真ん中|まんなか
+隣|となり
+近く|ちかく
+遠く|とおく
+側|そば
+後ろ|うしろ
+上|うえ
+下|した
+中|なか
+外|そと
+右|みぎ
+左|ひだり
+東|ひがし
+西|にし
+南|みなみ
+北|きた
+距離|きょり
+方向|ほうこう
+地図|ちず
+目印|めじるし
+岸|きし
+流れ|ながれ
+石|いし
+岩|いわ
+木|き
+森|もり
+林|はやし
+公園|こうえん
+広場|ひろば
+町|まち
+村|むら
+建物|たてもの
+塔|とう
+門|もん
+工事|こうじ
+道具|どうぐ
+縄|なわ
+板|いた
+柱|はしら
+大工|だいく
+職人|しょくにん
+速い|はやい|=fast (speed)
+危ない|あぶない
+安全|あんぜん
+丈夫|じょうぶ
+強い|つよい
+弱い|よわい
+狭い|せまい
+広い|ひろい
+低い|ひくい
+深い|ふかい
+浅い|あさい
+近い|ちかい
+遠い|とおい
+真っ直ぐ|まっすぐ
+急|きゅう

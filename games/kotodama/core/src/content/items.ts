@@ -29,9 +29,9 @@ export type StudyItem =
   | { kind: 'puzzle'; id: string; puzzle: Puzzle }
   | { kind: 'listening'; id: string; listening: Listening };
 
-export const isWordId = (id: string) => id.startsWith('w-') || id.startsWith('v-') || id.startsWith('n-');
+export const isWordId = (id: string) => id.startsWith('w-') || id.startsWith('v-') || id.startsWith('n-') || id.startsWith('x-');
 export const isKanjiId = (id: string) => id.startsWith('j-');
-export const isSentenceId = (id: string) => id.startsWith('c-') || id.startsWith('g-') || id.startsWith('b-');
+export const isSentenceId = (id: string) => id.startsWith('c-') || id.startsWith('g-') || id.startsWith('b-') || id.startsWith('q-');
 export const isListeningId = (id: string) => id.startsWith('l-');
 export const isPassageId = (id: string) => id.startsWith('p-') || id.startsWith('t-');
 export const isPhraseId = (id: string) => id.startsWith('f-');

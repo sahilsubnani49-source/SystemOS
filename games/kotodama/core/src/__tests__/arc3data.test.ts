@@ -69,3 +69,21 @@ describe('N5 vocabulary', () => {
     }
   });
 });
+
+describe('kanji reading questions', () => {
+  it('always ask for the main reading, and never offer another valid reading as a wrong answer', async () => {
+    const { KANJI, kanjiReadings } = await import('../content/kanji');
+    const { buildPrompt, mainReading } = await import('../battle/prompts');
+    const { createRng } = await import('../util/rng');
+    const rng = createRng(11);
+    for (const k of KANJI) {
+      for (let i = 0; i < 3; i++) {
+        const p = buildPrompt('reading', k.id, [k.id], rng, null);
+        expect(p.answer, k.char).toBe(mainReading(k));
+        const valid = new Set(kanjiReadings(k));
+        expect(p.choices.filter((c) => valid.has(c)), k.char).toEqual([p.answer]);
+      }
+    }
+    expect(mainReading(KANJI.find((k) => k.char === '一')!)).toBe('いち');
+  });
+});

@@ -234,6 +234,82 @@ export const CHARACTERS: Record<string, CharacterSpec> = {
   jarl: { skin: '#F0C2A0', hair: '#1E1E2A', hairStyle: 'helmet', top: '#2A1A2E', trim: '#7FF4FF', bottom: '#14141E', gear: ['axe', 'shield'], eye: '#7FF4FF' },
 };
 
+// ── Townsfolk: a look of their own for every person in the world ──────────
+// An NPC whose sprite key is 'folk:<anything>' gets a character built from that
+// key, so no two townspeople share an outfit while the same key always draws the
+// same person.
+
+const SKINS = ['#F2C9A0', '#E8B98E', '#D9A87E', '#F4D2B4', '#C89A72', '#EBC29C', '#B98560', '#F0C2A0'];
+const HAIRS = ['#1B1420', '#3A2418', '#7A4A2A', '#C9A15A', '#E8D08A', '#9AA4AE', '#F4E9D0', '#5A1E2E', '#2A3A5A'];
+const CLOTH = ['#B3262E', '#4E7A5A', '#2E5A8A', '#7A4E8A', '#C8784A', '#3A6A8A', '#8A6A2A', '#5A7A5A', '#6A2A5A', '#2A4A3A', '#A84A6A', '#4A4A6A', '#D8B04A', '#3A5A3A'];
+const STYLES: HairStyle[] = ['topknot', 'long', 'bald', 'kasa', 'bun', 'hood', 'helmet', 'kabuto'];
+const GEARS: Gear[][] = [[], [], ['fan'], ['staff'], ['beard'], ['katana'], ['beard', 'staff'], ['scarf'], ['shield'], ['club'], ['axe'], ['beard', 'fan']];
+
+function hashKey(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+export function folkSpec(key: string): CharacterSpec {
+  const h = hashKey(key);
+  const pick = <T,>(list: readonly T[], shift: number) => list[(h >>> shift) % list.length] as T;
+  const top = pick(CLOTH, 3);
+  const base: CharacterSpec = {
+    skin: pick(SKINS, 0),
+    hair: pick(HAIRS, 5),
+    hairStyle: pick(STYLES, 9),
+    top,
+    trim: pick(CLOTH, 13) === top ? '#E8E0C8' : pick(CLOTH, 13),
+    bottom: shade(pick(CLOTH, 17), -0.25),
+    gear: pick(GEARS, 21),
+  };
+  // 'folk:<preset>:<id>': the folk-tale people. The preset fixes what makes an old man
+  // read as an old man (white hair, a beard); the id still varies everything else.
+  const preset = key.split(':')[1] ?? '';
+  const look = PRESETS[preset];
+  return look ? { ...base, ...look(pick) } : base;
+}
+
+type Pick = <T>(list: readonly T[], shift: number) => T;
+const GREYS = ['#F4E9D0', '#DDD6C8', '#9AA4AE'];
+const DARKS = ['#1B1420', '#3A2418', '#15101C', '#2A1E14'];
+const RICH = ['#B3262E', '#A84A6A', '#7A4E8A', '#D8B04A', '#2E5A8A', '#6A2A5A'];
+const ROBES = ['#3A3A44', '#B8641E', '#4A4A6A', '#2A2A30', '#6F6A7E'];
+const PLAIN = ['#4E7A5A', '#8A6A2A', '#5A7A5A', '#6B4A2E', '#4A6A8A', '#7A6A5A'];
+
+const PRESETS: Record<string, (pick: Pick) => Partial<CharacterSpec>> = {
+  oldman: (p) => ({ hair: p(GREYS, 2), hairStyle: p(['bald', 'topknot', 'kasa'] as HairStyle[], 7), top: p(PLAIN, 11), gear: p([['beard'], ['beard', 'staff']] as Gear[][], 15) }),
+  oldwoman: (p) => ({ hair: p(GREYS, 2), hairStyle: 'bun', top: p([...PLAIN, '#7A4E8A'], 11), gear: p([[], ['staff']] as Gear[][], 15) }),
+  man: (p) => ({ hair: p(DARKS, 2), hairStyle: p(['topknot', 'kasa', 'bun'] as HairStyle[], 7), top: p(PLAIN, 11), gear: [] }),
+  woman: (p) => ({ hair: p(DARKS, 2), hairStyle: p(['long', 'bun'] as HairStyle[], 7), top: p([...RICH, ...PLAIN], 11), gear: p([[], ['fan']] as Gear[][], 15) }),
+  boy: (p) => ({ hair: p(DARKS, 2), hairStyle: 'topknot', top: p([...RICH, ...PLAIN], 11), gear: p([[], ['katana']] as Gear[][], 15) }),
+  girl: (p) => ({ hair: p(DARKS, 2), hairStyle: p(['bun', 'long'] as HairStyle[], 7), top: p(RICH, 11), gear: [] }),
+  princess: (p) => ({ hair: p(['#15101C', '#1B1420'], 2), hairStyle: 'long', top: p(RICH, 11), trim: '#E8B04B', gear: p([[], ['fan']] as Gear[][], 15) }),
+  monk: (p) => ({ hair: '#E8C09A', hairStyle: 'bald', top: p(ROBES, 11), trim: p(['#E8B04B', '#F4E9D0', '#2A2A30'], 13), gear: ['staff'] }),
+  noble: (p) => ({ hair: p(DARKS, 2), hairStyle: 'topknot', top: p(RICH, 11), trim: '#E8B04B', gear: ['fan'] }),
+  warrior: (p) => ({ hair: p(DARKS, 2), hairStyle: p(['kabuto', 'helmet', 'topknot'] as HairStyle[], 7), top: p(RICH, 11), gear: p([['katana'], ['katana', 'shield'], ['club']] as Gear[][], 15) }),
+  ghost: (p) => ({ skin: '#E2ECEE', hair: '#15101C', hairStyle: 'long', top: '#F4F1EA', trim: p(['#C9D2DC', '#B8C4D0', '#A8B8C8'], 13), bottom: '#DDE4E8', gear: [], eye: '#5A6A7A' }),
+  fisher: (p) => ({ hairStyle: 'kasa', top: p(['#2E5A8A', '#3A6A8A', '#4A6A8A', '#2A4A6A'], 11), gear: [] }),
+  farmer: (p) => ({ hairStyle: 'kasa', top: p(PLAIN, 11), gear: [] }),
+  merchant: (p) => ({ hair: p(DARKS, 2), hairStyle: 'topknot', top: p(['#3A6A8A', '#6A2A5A', '#8A6A2A', '#2A4A3A'], 11), gear: p([[], ['fan']] as Gear[][], 15) }),
+};
+
+/** A wooden notice board (tatefuda) on two posts, with a paper notice pinned on. */
+export function drawSignboard(): PixelCanvas {
+  const c = new PixelCanvas(16, 16);
+  const wood = '#8A5A32';
+  c.rect(3, 9, 2, 7, shade(wood, -0.2));
+  c.rect(11, 9, 2, 7, shade(wood, -0.2));
+  c.rect(1, 2, 14, 9, wood);
+  c.rect(1, 1, 14, 1, shade(wood, 0.2));
+  c.rect(2, 3, 12, 7, '#EFE6CC');
+  for (const y of [4, 6, 8]) c.rect(4, y, 8, 1, '#3A2A2A');
+  c.rect(6, 3, 4, 1, '#B3262E');
+  c.outline(OUTLINE);
+  return c;
+}
+
 /** 16×16 warhorse, side view (mirror for left). frame 1 = gallop pose. */
 export function drawHorse(facing: Facing, frame: 0 | 1): PixelCanvas {
   if (facing === 'left') return drawHorse('right', frame).flipX();

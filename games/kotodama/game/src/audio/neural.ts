@@ -1,3 +1,4 @@
+import { NativeModules } from 'react-native';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import { kokoroTokens } from '@kotodama/core';
@@ -68,9 +69,13 @@ type Ort = typeof import('onnxruntime-react-native');
 
 /**
  * Required lazily: importing the package calls into native code at once, and
- * throws in a build made before the native module was added.
+ * throws in a build made without the native module (as Android builds were until
+ * the package's stray unimodule.json was patched out: see patches/).
  */
 function loadOrt(): Ort | null {
+  // Never even require the package without its native half: in a release build an error
+  // thrown while a module loads is reported as fatal before any catch below can see it.
+  if (!NativeModules.Onnxruntime && (globalThis as { OrtApi?: unknown }).OrtApi === undefined) return null;
   try {
     return require('onnxruntime-react-native') as Ort;
   } catch {

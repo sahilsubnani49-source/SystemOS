@@ -1,3 +1,4 @@
+import { HONSAI_WORDS } from './honsai/words';
 import { toRomaji } from '../util/romaji';
 
 // Words the game teaches as whole units. Multiple-choice only, never typed:
@@ -12,7 +13,15 @@ export type WordArea =
   | 'foothills' | 'village' | 'monastery' | 'forest' | 'peaks' // Arc 4 N4
   | 'coast' | 'glacier' | 'forge' | 'valor' | 'runeforge' // Arc 5 N3
   | WellArea // The Well of Old Tales (hiragana only)
-  | LessonArea; // The Terakoya, Castle Town's school (kana only)
+  | LessonArea // The Terakoya, Castle Town's school (kana only)
+  | HonsaiArea; // Arc 6, Honsai: the districts of the land of speech
+
+/** The twelve districts of Honsai (Arc 6). */
+export type HonsaiArea =
+  | 'honsai1' | 'honsai2' | 'honsai3' | 'honsai4' | 'honsai5' | 'honsai6'
+  | 'honsai7' | 'honsai8' | 'honsai9' | 'honsai10' | 'honsai11' | 'honsai12'
+  | 'honsai_joints' // the Hall of Joints, Honsai's particle school
+  | `honsai_lib${number}`; // the Great Library's wings (district 13)
 
 /**
  * The Terakoya's eleven classrooms, in the order the two standard beginners'
@@ -78,7 +87,7 @@ const build = (rows: Row[], area: WordArea): Word[] =>
 // area or an earlier one (checked by arc3.test.ts). ─────────────────────────
 type VocabRow = [text: string, reading: string, meaning: string];
 
-const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship' | WellArea | LessonArea>, VocabRow[]> = {
+const VOCAB: Record<Exclude<WordArea, 'tower' | 'longship' | WellArea | LessonArea | HonsaiArea>, VocabRow[]> = {
   // numbers + days
   castle: [
     ['一つ', 'ひとつ', 'one (thing)'], ['二つ', 'ふたつ', 'two (things)'], ['三つ', 'みっつ', 'three (things)'],
@@ -369,9 +378,10 @@ export const NATIVE_WORDS: readonly Word[] = [...(Object.keys(NATIVE) as (keyof 
 );
 
 /** Every word of every kind. `WORDS` stays loanwords + kanji vocabulary only. */
-export const EVERY_WORD: readonly Word[] = [...WORDS, ...NATIVE_WORDS];
+export const EVERY_WORD: readonly Word[] = [...WORDS, ...NATIVE_WORDS, ...HONSAI_WORDS];
 
 const BY_ID = new Map(EVERY_WORD.map((w) => [w.id, w]));
+
 
 export function getWord(id: string): Word {
   const w = BY_ID.get(id);

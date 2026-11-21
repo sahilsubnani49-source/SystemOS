@@ -229,7 +229,7 @@ const runeforge_throne: MapDef = {
         { speaker: 'System', text: 'N3 MOCK EXAM: every N3 kanji, word and reading passage. Read each passage to the end before you answer.' },
       ],
       battle: { winFlag: 'beat_jarl', isBoss: true, foes: [
-        { familyId: 'nykr', level: 70, name: 'Jarl Ulfhild', nameJa: 'ウルフヒルド', sprite: 'jarl', recruitable: false, hpScale: 3.6 },
+        { familyId: 'nykr', level: 70, name: 'Jarl Ulfhild', nameJa: 'ウルフヒルド', sprite: 'jarl', recruitable: false, hpScale: 4 },
       ] } },
     { id: 'ending', name: 'Jarl Ulfhild', x: 6, y: 3, sprite: 'jarl', facing: 'down', showIf: 'beat_jarl', setsFlag: 'game_complete',
       dialogue: [
